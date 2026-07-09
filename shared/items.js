@@ -1,0 +1,255 @@
+// Zenithia — Item Data
+
+const ITEMS = {
+  // === CONSUMABLES ===
+  potion_small: {
+    name: 'HP Potion (S)',
+    type: 'consumable',
+    subtype: 'potion',
+    description: 'Restores 30 HP',
+    healAmount: 30,
+    price: 50,
+    rarity: 'common',
+    icon: { bg: 0xF44336, fg: 0xFFFFFF, symbol: '+' },
+  },
+  potion_medium: {
+    name: 'HP Potion (M)',
+    type: 'consumable',
+    subtype: 'potion',
+    description: 'Restores 80 HP',
+    healAmount: 80,
+    price: 200,
+    rarity: 'uncommon',
+    icon: { bg: 0xE53935, fg: 0xFFFFFF, symbol: '++' },
+  },
+  mp_potion_small: {
+    name: 'MP Potion (S)',
+    type: 'consumable',
+    subtype: 'potion',
+    description: 'Restores 20 MP',
+    manaAmount: 20,
+    price: 60,
+    rarity: 'common',
+    icon: { bg: 0x2196F3, fg: 0xFFFFFF, symbol: '+' },
+  },
+  antidote: {
+    name: 'Antidote',
+    type: 'consumable',
+    subtype: 'medicine',
+    description: 'Cures poison',
+    curePoison: true,
+    price: 40,
+    rarity: 'common',
+    icon: { bg: 0x4CAF50, fg: 0xFFFFFF, symbol: '!' },
+  },
+  nasi_goreng: {
+    name: 'Nasi Goreng',
+    type: 'consumable',
+    subtype: 'food',
+    description: 'Restores 25 HP + ATK buff 5% for 60s',
+    healAmount: 25,
+    buff: { stat: 'atk', value: 0.05, duration: 60 },
+    price: 30,
+    rarity: 'common',
+    icon: { bg: 0xFF9800, fg: 0xFFF9C4, symbol: '~' },
+  },
+  sup_ayam: {
+    name: 'Sup Ayam',
+    type: 'consumable',
+    subtype: 'food',
+    description: 'Restores 40 HP + DEF buff 5% for 60s',
+    healAmount: 40,
+    buff: { stat: 'def', value: 0.05, duration: 60 },
+    price: 50,
+    rarity: 'common',
+    icon: { bg: 0xFFC107, fg: 0xFFFFFF, symbol: '~' },
+  },
+
+  // === MATERIALS (monster drops) ===
+  moss_shell: {
+    name: 'Moss Shell',
+    type: 'material',
+    description: 'Hard shell from Moss Beetle. Used in crafting.',
+    price: 8,
+    rarity: 'common',
+    icon: { bg: 0x4CAF50, fg: 0x81C784, symbol: '◆' },
+  },
+  thorn: {
+    name: 'Thorn',
+    type: 'material',
+    description: 'Sharp thorn from Thorn Lizard.',
+    price: 12,
+    rarity: 'common',
+    icon: { bg: 0x689F38, fg: 0xCDDC39, symbol: '▲' },
+  },
+  dust_pouch: {
+    name: 'Dust Pouch',
+    type: 'material',
+    description: 'Pouch of dust from Dust Mouse.',
+    price: 5,
+    rarity: 'common',
+    icon: { bg: 0xBCAAA4, fg: 0xEFEBE9, symbol: '○' },
+  },
+  frog_leg: {
+    name: 'Frog Leg',
+    type: 'material',
+    description: 'Leg of a Puddle Frog. Can be cooked.',
+    price: 10,
+    rarity: 'common',
+    icon: { bg: 0x00BCD4, fg: 0xE0F7FA, symbol: '▬' },
+  },
+  wind_essence: {
+    name: 'Wind Essence',
+    type: 'material',
+    description: 'Essence of wind from Wind Sprite. Rare and light.',
+    price: 20,
+    rarity: 'uncommon',
+    icon: { bg: 0x81D4FA, fg: 0xFFFFFF, symbol: '✦' },
+  },
+  stone_fragment: {
+    name: 'Stone Fragment',
+    type: 'material',
+    description: 'Fragment from Rock Crawler. Very hard.',
+    price: 15,
+    rarity: 'common',
+    icon: { bg: 0x9E9E9E, fg: 0xE0E0E0, symbol: '■' },
+  },
+  boar_tusk: {
+    name: 'Boar Tusk',
+    type: 'material',
+    description: 'Large tusk from Bramble Boar. Valuable.',
+    price: 30,
+    rarity: 'uncommon',
+    icon: { bg: 0x5D4037, fg: 0xFFF9C4, symbol: '◄' },
+  },
+  bramble_core: {
+    name: 'Bramble Core',
+    type: 'material',
+    description: 'Rare core from Bramble Boar. Glows faintly.',
+    price: 50,
+    rarity: 'rare',
+    icon: { bg: 0x33691E, fg: 0x76FF03, symbol: '◆' },
+  },
+
+  // === WEAPONS (Tier 1) ===
+  wooden_sword: {
+    name: 'Wooden Sword',
+    type: 'equipment',
+    slot: 'weapon',
+    classReq: ['guardian', 'blade_dancer'],
+    atk: 3,
+    price: 80,
+    rarity: 'common',
+    icon: { bg: 0x8D6E63, fg: 0xBCAAA4, symbol: '/' },
+  },
+  wooden_staff: {
+    name: 'Wooden Staff',
+    type: 'equipment',
+    slot: 'weapon',
+    classReq: ['sage', 'cleric'],
+    atk: 2,
+    mp: 10,
+    price: 80,
+    rarity: 'common',
+    icon: { bg: 0x795548, fg: 0xD7CCC8, symbol: '|' },
+  },
+  rusty_dagger: {
+    name: 'Rusty Dagger',
+    type: 'equipment',
+    slot: 'weapon',
+    classReq: ['shadow'],
+    atk: 4,
+    crit: 0.05,
+    price: 80,
+    rarity: 'common',
+    icon: { bg: 0x616161, fg: 0xBDBDBD, symbol: '\\' },
+  },
+
+  // === ARMOR (Tier 1) ===
+  cloth_shirt: {
+    name: 'Cloth Shirt',
+    type: 'equipment',
+    slot: 'armor',
+    def: 2,
+    price: 60,
+    rarity: 'common',
+    icon: { bg: 0x90A4AE, fg: 0xCFD8DC, symbol: '□' },
+  },
+  leather_vest: {
+    name: 'Leather Vest',
+    type: 'equipment',
+    slot: 'armor',
+    def: 4,
+    price: 120,
+    rarity: 'common',
+    icon: { bg: 0x8D6E63, fg: 0xBCAAA4, symbol: '□' },
+  },
+
+  // === SHIELD ===
+  wooden_shield: {
+    name: 'Wooden Shield',
+    type: 'equipment',
+    slot: 'shield',
+    classReq: ['guardian'],
+    def: 5,
+    price: 100,
+    rarity: 'common',
+    icon: { bg: 0x6D4C41, fg: 0xA1887F, symbol: '◎' },
+  },
+
+  // === ACCESSORIES ===
+  copper_ring: {
+    name: 'Copper Ring',
+    type: 'equipment',
+    slot: 'accessory',
+    hp: 10,
+    price: 50,
+    rarity: 'common',
+    icon: { bg: 0xBF360C, fg: 0xFF8A65, symbol: '○' },
+  },
+  wind_charm: {
+    name: 'Wind Charm',
+    type: 'equipment',
+    slot: 'accessory',
+    spd: 3,
+    price: 75,
+    rarity: 'uncommon',
+    icon: { bg: 0x00ACC1, fg: 0x80DEEA, symbol: '✦' },
+  },
+};
+
+// Loot tables per monster
+const LOOT_TABLES = {
+  moss_beetle: [
+    { itemId: 'moss_shell', chance: 0.8, quantity: [1, 2] },
+    { itemId: 'potion_small', chance: 0.2, quantity: [1, 1] },
+  ],
+  dust_mouse: [
+    { itemId: 'dust_pouch', chance: 0.9, quantity: [1, 3] },
+    { itemId: 'potion_small', chance: 0.15, quantity: [1, 1] },
+  ],
+  thorn_lizard: [
+    { itemId: 'thorn', chance: 0.75, quantity: [1, 2] },
+    { itemId: 'potion_small', chance: 0.25, quantity: [1, 1] },
+  ],
+  puddle_frog: [
+    { itemId: 'frog_leg', chance: 0.8, quantity: [1, 2] },
+    { itemId: 'mp_potion_small', chance: 0.2, quantity: [1, 1] },
+  ],
+  wind_sprite: [
+    { itemId: 'wind_essence', chance: 0.6, quantity: [1, 1] },
+    { itemId: 'potion_medium', chance: 0.1, quantity: [1, 1] },
+  ],
+  rock_crawler: [
+    { itemId: 'stone_fragment', chance: 0.8, quantity: [1, 2] },
+    { itemId: 'copper_ring', chance: 0.05, quantity: [1, 1] },
+  ],
+  bramble_boar: [
+    { itemId: 'boar_tusk', chance: 0.7, quantity: [1, 2] },
+    { itemId: 'bramble_core', chance: 0.1, quantity: [1, 1] },
+    { itemId: 'potion_medium', chance: 0.3, quantity: [1, 1] },
+    { itemId: 'leather_vest', chance: 0.08, quantity: [1, 1] },
+  ],
+};
+
+module.exports = { ITEMS, LOOT_TABLES };
