@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { buildTerrain } from './terrain.js';
 import { createPlayerModel, createNPCModel, PALETTES, animateWalk, stopWalk } from './character.js';
 import { DialogueSystem } from './dialogue_ui.js';
+import { createMonsterModel, updateMonsterHPBar, animateMonster } from './monsters.js';
 
 // --- State ---
 const state = {
@@ -28,6 +29,8 @@ const state = {
   previewRenderer: null,
   previewModel: null,
   dialogue: null,
+  monsters: {},
+  damageNumbers: [],
 };
 
 const canvas = document.getElementById('game-canvas');
@@ -245,6 +248,72 @@ function handleServerMessage(msg) {
     case 'quest_started':
       addChatMessage('System', `Quest started: ${msg.questName}`);
       break;
+
+    case 'joined':
+      // Spawn existing monsters
+      if (msg.monsters) msg.monsters.forEach(m => spawnMonsterClient(m));
+      break;
+
+    case 'monster_spawn':
+      spawnMonsterClient(msg.monster);
+      break;
+
+    case 'monster_move':
+      if (state.monsters[msg.monsterId]) {
+        state.monsters[msg.monsterId].position.set(msg.x, 0, msg.z);
+      }
+      break;
+
+    case 'monster_hit': {
+      const mob = state.monsters[msg.monsterId];
+      if (mob) updateMonsterHPBar(mob, msg.hp, msg.maxHp);
+      showDamageNumber(msg.monsterId, msg.damage, msg.isCrit);
+      break;
+    }
+
+    case 'monster_died': {
+      const mob = state.monsters[msg.monsterId];
+      if (mob) {
+        state.scene.remove(mob);
+        delete state.monsters[msg.monsterId];
+      }
+      break;
+    }
+
+    case 'monster_attack': {
+      showDamageNumber(null, msg.damage, false, msg.targetId);
+      break;
+    }
+
+    case 'player_hit': {
+      updatePlayerHP(msg.hp, msg.maxHp);
+      break;
+    }
+
+    case 'player_died': {
+      updatePlayerHP(msg.hp, msg.hp);
+      addChatMessage('System', 'You died! Respawning at village...');
+      break;
+    }
+
+    case 'monster_killed': {
+      addChatMessage('System', `Defeated ${msg.monsterName}! +${msg.xp} XP, +${msg.gold} Gold`);
+      updatePlayerHP(msg.hp, msg.maxHp);
+      updatePlayerMP(msg.mp, msg.maxMp);
+      break;
+    }
+
+    case 'level_up': {
+      addChatMessage('System', `🎉 Level Up! You are now Level ${msg.level}!`);
+      updatePlayerHP(msg.maxHp, msg.maxHp);
+      updatePlayerMP(msg.maxMp, msg.maxMp);
+      break;
+    }
+
+    case 'combat_message': {
+      addChatMessage('Combat', msg.text);
+      break;
+    }
   }
 }
 
@@ -292,6 +361,84 @@ function addChatMessage(name, message) {
   el.appendChild(div);
   el.scrollTop = el.scrollHeight;
 }
+// ============================
+// COMBAT HELPERS
+// ============================
+const MONSTER_DATA = {
+  moss_beetle: { name: 'Moss Beetle', color: 0x4CAF50, size: 0.6 },
+  dust_mouse: { name: 'Dust Mouse', color: 0xBCAAA4, size: 0.35 },
+  thorn_lizard: { name: 'Thorn Lizard', color: 0x689F38, size: 0.7 },
+  puddle_frog: { name: 'Puddle Frog', color: 0x00BCD4, size: 0.55 },
+  wind_sprite: { name: 'Wind Sprite', color: 0x81D4FA, size: 0.4 },
+  rock_crawler: { name: 'Rock Crawler', color: 0x9E9E9E, size: 0.45 },
+  bramble_boar: { name: 'Bramble Boar', color: 0x5D4037, size: 1.2 },
+};
+
+function spawnMonsterClient(m) {
+  const data = MONSTER_DATA[m.type] || { name: m.name, color: 0x999999, size: 0.5 };
+  const model = createMonsterModel(m.type, { ...data, name: m.name, size: data.size });
+  model.position.set(m.x, 0, m.z);
+  model.userData = { id: m.id, type: 'monster', monsterType: m.type };
+  state.scene.add(model);
+  state.monsters[m.id] = model;
+}
+
+function showDamageNumber(monsterId, damage, isCrit, targetId) {
+  let pos;
+  if (monsterId && state.monsters[monsterId]) {
+    pos = state.monsters[monsterId].position.clone();
+    pos.y += 1.5;
+  } else if (targetId && state.players[targetId]) {
+    pos = state.players[targetId].position.clone();
+    pos.y += 1.5;
+  } else {
+    return;
+  }
+
+  // Create floating text sprite
+  const canvas = document.createElement('canvas');
+  canvas.width = 128;
+  canvas.height = 64;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = isCrit ? '#FFD700' : '#FF5252';
+  ctx.font = isCrit ? 'bold 36px Courier New' : '28px Courier New';
+  ctx.textAlign = 'center';
+  ctx.fillText(isCrit ? `${damage}!` : `-${damage}`, 64, 40);
+
+  const texture = new THREE.CanvasTexture(canvas);
+  const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: texture, transparent: true }));
+  sprite.position.copy(pos);
+  sprite.scale.set(0.8, 0.4, 1);
+  state.scene.add(sprite);
+
+  // Animate up and fade
+  const startTime = Date.now();
+  const animate = () => {
+    const elapsed = (Date.now() - startTime) / 1000;
+    if (elapsed > 1) {
+      state.scene.remove(sprite);
+      return;
+    }
+    sprite.position.y += 0.02;
+    sprite.material.opacity = 1 - elapsed;
+    requestAnimationFrame(animate);
+  };
+  animate();
+}
+
+function updatePlayerHP(hp, maxHp) {
+  const fill = document.getElementById('hp-fill');
+  const text = document.getElementById('hp-text');
+  if (fill) fill.style.width = `${(hp / maxHp) * 100}%`;
+  if (text) text.textContent = `${Math.round(hp)}/${maxHp}`;
+}
+
+function updatePlayerMP(mp, maxMp) {
+  const fill = document.getElementById('mp-fill');
+  const text = document.getElementById('mp-text');
+  if (fill) fill.style.width = `${(mp / maxMp) * 100}%`;
+  if (text) text.textContent = `${Math.round(mp)}/${maxMp}`;
+}
 
 // ============================
 // CLICK TO MOVE
@@ -321,6 +468,17 @@ canvas.addEventListener('click', (e) => {
   for (const npc of Object.values(state.npcs)) {
     if (npc.position.distanceTo(point) < 2) {
       state.ws.send(JSON.stringify({ type: 'interact_npc', npcId: npc.userData.id }));
+      return;
+    }
+  }
+
+  // Check Monster proximity — attack
+  for (const mob of Object.values(state.monsters)) {
+    if (mob.position.distanceTo(point) < 2) {
+      state.ws.send(JSON.stringify({ type: 'attack', monsterId: mob.userData.id }));
+      // Face the monster
+      const model = state.players[state.playerId];
+      if (model) model.lookAt(mob.position);
       return;
     }
   }
@@ -400,6 +558,10 @@ function gameLoop() {
     state.camera.position.z += (t.z + 20 - state.camera.position.z) * 0.05;
     state.camera.lookAt(t.x, t.y + 1, t.z);
   }
+
+  // Monster animation
+  const time = Date.now() * 0.001;
+  Object.values(state.monsters).forEach(m => animateMonster(m, time));
 
   if (state.scene && state.camera && state.renderer) {
     state.renderer.render(state.scene, state.camera);
