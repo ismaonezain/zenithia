@@ -45,7 +45,32 @@
   <!-- Login Screen -->
   <div id="login-screen" style="display:none;">
     <h2>Welcome to Zenithia</h2>
-    <input id="name-input" type="text" placeholder="Enter your name" maxlength="20">
+    <div id="customize-panel">
+      <div class="row">
+        <label>Name</label>
+        <input id="name-input" type="text" placeholder="Enter your name" maxlength="20">
+      </div>
+      <div class="row">
+        <label>Skin</label>
+        <div id="skin-picker" class="picker"></div>
+      </div>
+      <div class="row">
+        <label>Hair</label>
+        <div id="hair-color-picker" class="picker"></div>
+      </div>
+      <div class="row">
+        <label>Style</label>
+        <div id="hair-style-picker" class="picker"></div>
+      </div>
+      <div class="row">
+        <label>Outfit</label>
+        <div id="body-picker" class="picker"></div>
+      </div>
+      <!-- Preview -->
+      <div id="char-preview">
+        <canvas id="preview-canvas" width="200" height="250"></canvas>
+      </div>
+    </div>
     <button id="connect-wallet">Connect Phantom Wallet</button>
     <button id="start-game">Start Game</button>
   </div>
