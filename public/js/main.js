@@ -662,8 +662,10 @@ document.getElementById('chat-input').addEventListener('keydown', (e) => {
 });
 
 // ============================
-// PHANTOM WALLET (Solana)
+// PHANTOM WALLET (Solana) + CAPTCHA + SIWS
 // ============================
+let captchaMessage = null;
+
 async function connectPhantom() {
   const btn = document.getElementById('connect-wallet');
   if (window.solana && window.solana.isPhantom) {
@@ -674,6 +676,9 @@ async function connectPhantom() {
       btn.textContent = '✓ ' + state.walletAddress.slice(0, 6) + '...' + state.walletAddress.slice(-4);
       btn.style.background = '#4CAF50';
       console.log('[WALLET] Connected:', state.walletAddress);
+
+      // Fetch captcha challenge
+      await loadCaptcha();
     } catch (err) {
       console.error('[WALLET] Connection failed:', err);
       btn.textContent = 'Connect Failed — Retry';
@@ -684,7 +689,95 @@ async function connectPhantom() {
   }
 }
 
+async function loadCaptcha() {
+  const section = document.getElementById('captcha-section');
+  const question = document.getElementById('captcha-question');
+  const status = document.getElementById('captcha-status');
+
+  try {
+    const res = await fetch(`/api/captcha?wallet=${state.walletAddress}`);
+    const data = await res.json();
+    question.textContent = data.captcha;
+    captchaMessage = data.message;
+    section.style.display = 'block';
+    status.textContent = '';
+  } catch (e) {
+    status.textContent = 'Failed to load captcha. Refresh.';
+  }
+}
+
+async function signAndLogin() {
+  const status = document.getElementById('captcha-status');
+  const captchaAnswer = document.getElementById('captcha-input').value.trim();
+
+  if (!captchaAnswer) { status.textContent = 'Enter captcha answer'; return; }
+  if (!captchaMessage) { status.textContent = 'No challenge. Click Connect again.'; return; }
+
+  status.textContent = 'Signing with Phantom...';
+
+  try {
+    // Sign message with Phantom
+    const encodedMessage = new TextEncoder().encode(captchaMessage);
+    const signed = await window.solana.signMessage(encodedMessage, 'utf8');
+
+    // Base58 encode signature
+    const sigBase58 = bs58Encode(signed.signature);
+
+    // Verify with server
+    const res = await fetch('/api/verify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        wallet: state.walletAddress,
+        signature: sigBase58,
+        captchaAnswer,
+      }),
+    });
+
+    const data = await res.json();
+    if (data.verified) {
+      status.textContent = '✓ Verified! Joining...';
+      localStorage.setItem('zenithia_verified', 'true');
+      // Proceed to game
+      const name = document.getElementById('name-input').value.trim() || 'Adventurer';
+      connectWebSocket(name, state.walletAddress);
+    } else {
+      status.textContent = '❌ ' + (data.error || 'Verification failed');
+      await loadCaptcha(); // refresh captcha
+    }
+  } catch (e) {
+    status.textContent = '❌ Sign failed: ' + e.message;
+  }
+}
+
+// Base58 encode (browser-safe, no Buffer needed)
+function bs58Encode(bytes) {
+  const ALPHABET = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
+  let result = '';
+  let digits = [0];
+  for (let i = 0; i < bytes.length; i++) {
+    let carry = bytes[i];
+    for (let j = 0; j < digits.length; j++) {
+      carry += digits[j] << 8;
+      digits[j] = carry % 58;
+      carry = (carry / 58) | 0;
+    }
+    while (carry > 0) {
+      digits.push(carry % 58);
+      carry = (carry / 58) | 0;
+    }
+  }
+  for (let i = 0; bytes[i] === 0 && i < bytes.length - 1; i++) {
+    result += ALPHABET[0];
+  }
+  for (let i = digits.length - 1; i >= 0; i--) {
+    result += ALPHABET[digits[i]];
+  }
+  return result;
+}
+
 document.getElementById('connect-wallet').addEventListener('click', connectPhantom);
+document.getElementById('sign-wallet').addEventListener('click', signAndLogin);
 
 // ============================
 // START GAME
@@ -737,6 +830,15 @@ async function boot() {
 
   // Check localStorage for saved wallet
   const savedWallet = localStorage.getItem('zenithia_wallet');
+  const isVerified = localStorage.getItem('zenithia_verified') === 'true';
+
+  // If previously verified in this session, auto-join (no captcha needed)
+  if (savedWallet && isVerified) {
+    state.walletAddress = savedWallet;
+    loadingScreen.style.display = 'none';
+    connectWebSocket('Adventurer', savedWallet);
+    return;
+  }
 
   // Try Phantom auto-connect
   if (window.solana && window.solana.isPhantom) {
@@ -749,12 +851,13 @@ async function boot() {
       btn.style.background = '#4CAF50';
       console.log('[WALLET] Auto-connected:', state.walletAddress);
 
-      // Auto-join — server loads saved data by wallet
+      // Show captcha for verification
       loadingScreen.style.display = 'none';
-      connectWebSocket('Adventurer', state.walletAddress);
+      loginScreen.style.display = 'flex';
+      await loadCaptcha();
       return;
     } catch (e) {
-      console.log('[WALLET] Phantom connect failed, trying localStorage');
+      console.log('[WALLET] Phantom auto-connect failed');
     }
   }
 
@@ -765,7 +868,8 @@ async function boot() {
     btn.textContent = '✓ ' + savedWallet.slice(0, 6) + '...' + savedWallet.slice(-4);
     btn.style.background = '#4CAF50';
     loadingScreen.style.display = 'none';
-    connectWebSocket('Adventurer', savedWallet);
+    loginScreen.style.display = 'flex';
+    await loadCaptcha();
     return;
   }
 

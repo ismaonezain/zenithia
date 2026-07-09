@@ -3,6 +3,9 @@ const http = require('http');
 const { WebSocketServer } = require('ws');
 const path = require('path');
 const fs = require('fs');
+const crypto = require('crypto');
+const nacl = require('tweetnacl');
+const bs58 = require('bs58');
 
 const PORT = 2567;
 const SAVE_DIR = path.join(__dirname, 'data');
@@ -16,6 +19,78 @@ const server = http.createServer(app);
 const wss = new WebSocketServer({ server });
 
 app.use(express.static(path.join(__dirname, 'public')));
+
+// --- CAPTCHA + SIWS (Sign In with Solana) ---
+const nonces = new Map(); // wallet -> { nonce, captcha, expires }
+const CAPTCHA_EXPIRY = 5 * 60 * 1000; // 5 min
+
+function genCaptcha() {
+  const ops = ['+', '-', '×'];
+  const op = ops[Math.floor(Math.random() * ops.length)];
+  let a, b, answer;
+  if (op === '+') { a = rand(1, 20); b = rand(1, 20); answer = a + b; }
+  else if (op === '-') { a = rand(5, 30); b = rand(1, a); answer = a - b; }
+  else { a = rand(2, 12); b = rand(2, 12); answer = a * b; }
+  return { question: `${a} ${op} ${b} = ?`, answer };
+}
+
+function rand(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+
+// Get captcha challenge
+app.get('/api/captcha', (req, res) => {
+  const wallet = req.query.wallet;
+  if (!wallet) return res.status(400).json({ error: 'wallet required' });
+
+  const cap = genCaptcha();
+  const nonce = crypto.randomBytes(16).toString('hex');
+  const message = `Zenithia Login\n\nWallet: ${wallet}\nNonce: ${nonce}\nCaptcha: ${cap.answer}\n\nSign this message to verify your identity.`;
+
+  nonces.set(wallet.toLowerCase(), {
+    nonce,
+    captchaAnswer: cap.answer,
+    message,
+    expires: Date.now() + CAPTCHA_EXPIRY,
+  });
+
+  res.json({ captcha: cap.question, nonce, message });
+});
+
+// Verify signature + captcha
+app.post('/api/verify', express.json(), (req, res) => {
+  const { wallet, signature, captchaAnswer } = req.body;
+  if (!wallet || !signature || captchaAnswer === undefined) {
+    return res.status(400).json({ error: 'wallet, signature, captchaAnswer required' });
+  }
+
+  const stored = nonces.get(wallet.toLowerCase());
+  if (!stored) return res.status(400).json({ error: 'No challenge found. Request new captcha.' });
+  if (Date.now() > stored.expires) {
+    nonces.delete(wallet.toLowerCase());
+    return res.status(400).json({ error: 'Challenge expired. Request new captcha.' });
+  }
+
+  // Verify captcha
+  if (String(captchaAnswer).trim() !== String(stored.captchaAnswer).trim()) {
+    nonces.delete(wallet.toLowerCase());
+    return res.status(400).json({ error: 'Wrong captcha answer' });
+  }
+
+  // Verify Solana signature
+  try {
+    const pubkey = bs58.decode(wallet);
+    const msgBytes = new TextEncoder().encode(stored.message);
+    const sigBytes = bs58.decode(signature);
+
+    if (!nacl.sign.detached.verify(msgBytes, sigBytes, pubkey)) {
+      return res.status(400).json({ error: 'Invalid signature' });
+    }
+  } catch (e) {
+    return res.status(400).json({ error: 'Signature verification failed: ' + e.message });
+  }
+
+  nonces.delete(wallet.toLowerCase());
+  res.json({ verified: true, wallet });
+});
 
 // --- World State ---
 function createFreshWorld() {

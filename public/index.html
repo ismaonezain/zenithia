@@ -76,6 +76,15 @@
       </div>
     </div>
     <button id="connect-wallet">Connect Phantom Wallet</button>
+    <!-- CAPTCHA + SIGN (shown after wallet connect) -->
+    <div id="captcha-section" style="display:none;">
+      <div class="row">
+        <label id="captcha-question"></label>
+        <input id="captcha-input" type="text" placeholder="Your answer" maxlength="10">
+      </div>
+      <button id="sign-wallet">Sign & Login</button>
+      <p id="captcha-status" style="color:#ccc;font-size:12px;"></p>
+    </div>
     <button id="start-game">Start Game</button>
   </div>
 
