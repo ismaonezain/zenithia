@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Zenithia</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <!-- Loading Screen -->
+  <div id="loading-screen">
+    <h1>ZENITHIA</h1>
+    <p>Loading...</p>
+  </div>
+
+  <!-- Game Canvas -->
+  <canvas id="game-canvas"></canvas>
+
+  <!-- HUD -->
+  <div id="hud" style="display:none;">
+    <!-- HP Bar -->
+    <div id="hp-bar">
+      <div id="hp-fill"></div>
+      <span id="hp-text">100/100</span>
+    </div>
+    <!-- MP Bar -->
+    <div id="mp-bar">
+      <div id="mp-fill"></div>
+      <span id="mp-text">50/50</span>
+    </div>
+    <!-- XP Bar -->
+    <div id="xp-bar">
+      <div id="xp-fill"></div>
+      <span id="xp-text">Lv.1</span>
+    </div>
+    <!-- Mini Map -->
+    <div id="mini-map"></div>
+    <!-- Chat -->
+    <div id="chat-box">
+      <div id="chat-messages"></div>
+      <input id="chat-input" type="text" placeholder="Type a message..." maxlength="200">
+    </div>
+  </div>
+
+  <!-- Login Screen -->
+  <div id="login-screen" style="display:none;">
+    <h2>Welcome to Zenithia</h2>
+    <input id="name-input" type="text" placeholder="Enter your name" maxlength="20">
+    <button id="connect-wallet">Connect Phantom Wallet</button>
+    <button id="start-game">Start Game</button>
+  </div>
+
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+  <script type="module" src="/js/main.js"></script>
+</body>
+</html>
