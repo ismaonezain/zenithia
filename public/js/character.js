@@ -201,6 +201,13 @@ export function createPlayerModel(options = {}) {
   rightWhite.position.set(0.12 * scale, 1.5 * scale, 0.25 * scale);
   group.add(rightWhite);
 
+  // === MOUTH ===
+  const mouthGeo = new THREE.BoxGeometry(0.12 * scale, 0.03 * scale, 0.04 * scale);
+  const mouthMat = new THREE.MeshLambertMaterial({ color: 0xD32F2F });
+  const mouth = new THREE.Mesh(mouthGeo, mouthMat);
+  mouth.position.set(0, 1.32 * scale, 0.26 * scale);
+  group.add(mouth);
+
   // === HAIR ===
   if (HAIR_STYLES[hairStyle]) {
     HAIR_STYLES[hairStyle](group, hairColor, scale);
@@ -227,6 +234,36 @@ export function createPlayerModel(options = {}) {
   const rightFoot = new THREE.Mesh(footGeo, footMat);
   rightFoot.position.set(0.15 * scale, 0.05 * scale, 0.03 * scale);
   group.add(rightFoot);
+
+  // === ARMS ===
+  const armGeo = new THREE.BoxGeometry(0.15 * scale, 0.55 * scale, 0.15 * scale);
+  const armMat = new THREE.MeshLambertMaterial({ color: skinColor });
+
+  const leftArm = new THREE.Mesh(armGeo, armMat);
+  leftArm.name = 'leftArm';
+  leftArm.position.set(-0.42 * scale, 0.9 * scale, 0);
+  leftArm.castShadow = true;
+  group.add(leftArm);
+
+  const rightArm = new THREE.Mesh(armGeo, armMat);
+  rightArm.name = 'rightArm';
+  rightArm.position.set(0.42 * scale, 0.9 * scale, 0);
+  rightArm.castShadow = true;
+  group.add(rightArm);
+
+  // === HANDS ===
+  const handGeo = new THREE.BoxGeometry(0.1 * scale, 0.1 * scale, 0.1 * scale);
+  const handMat = new THREE.MeshLambertMaterial({ color: skinColor });
+
+  const leftHand = new THREE.Mesh(handGeo, handMat);
+  leftHand.name = 'leftHand';
+  leftHand.position.set(-0.42 * scale, 0.58 * scale, 0);
+  group.add(leftHand);
+
+  const rightHand = new THREE.Mesh(handGeo, handMat);
+  rightHand.name = 'rightHand';
+  rightHand.position.set(0.42 * scale, 0.58 * scale, 0);
+  group.add(rightHand);
 
   return group;
 }

@@ -26,6 +26,7 @@ const state = {
     hairColorIdx: 0,
     hairStyle: 'short',
     bodyIdx: 0,
+    eyeColorIdx: 0,
   },
   previewScene: null,
   previewCamera: null,
@@ -115,6 +116,7 @@ function updatePreviewModel() {
     hairColor: PALETTES.hair[c.hairColorIdx],
     hairStyle: c.hairStyle,
     bodyColor: PALETTES.body[c.bodyIdx],
+    eyeColor: PALETTES.eyes[c.eyeColorIdx],
   });
   state.previewScene.add(state.previewModel);
 }
@@ -177,6 +179,20 @@ function initCustomization() {
       updatePreviewModel();
     };
     bodyPicker.appendChild(s);
+  });
+
+  const eyePicker = document.getElementById('eye-picker');
+  PALETTES.eyes.forEach((color, i) => {
+    const s = document.createElement('div');
+    s.className = 'swatch' + (i === 0 ? ' selected' : '');
+    s.style.background = '#' + color.toString(16).padStart(6, '0');
+    s.onclick = () => {
+      eyePicker.querySelectorAll('.swatch').forEach(x => x.classList.remove('selected'));
+      s.classList.add('selected');
+      state.customization.eyeColorIdx = i;
+      updatePreviewModel();
+    };
+    eyePicker.appendChild(s);
   });
 }
 
@@ -430,6 +446,7 @@ function createPlayerModelInWorld(player) {
     hairColor: PALETTES.hair[c.hairColorIdx],
     hairStyle: c.hairStyle,
     bodyColor: PALETTES.body[c.bodyIdx],
+    eyeColor: PALETTES.eyes[c.eyeColorIdx],
   });
   model.position.set(player.x, player.y, player.z);
   model.userData = { id: player.id, name: player.name, type: 'player' };
