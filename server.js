@@ -555,6 +555,71 @@ function handleMessage(ws, playerId, msg) {
       if (player) ws.send(JSON.stringify({ type: 'quest_list', quests: player.quests || {} }));
       break;
     }
+    case 'party_invite': {
+      const inviter = connectedPlayers[ws];
+      const targetWs = Object.keys(connectedPlayers).find(k => connectedPlayers[k]?.name === msg.targetName);
+      if (inviter && targetWs) {
+        const target = connectedPlayers[targetWs];
+        if (!inviter.party) inviter.party = { leader: inviter.id, members: [inviter.id] };
+        JSON.parse(targetWs).send?.(null); // can't send like this
+        // Send via ws
+        wss.clients.forEach(c => {
+          if (connectedPlayers[c] && connectedPlayers[c].name === msg.targetName) {
+            c.send(JSON.stringify({ type: 'party_invite', from: inviter.name, fromId: inviter.id }));
+          }
+        });
+      }
+      break;
+    }
+    case 'party_accept': {
+      const player = connectedPlayers[ws];
+      const inviter = Object.values(connectedPlayers).find(p => p.id === msg.inviterId);
+      if (player && inviter) {
+        if (!inviter.party) inviter.party = { leader: inviter.id, members: [inviter.id] };
+        inviter.party.members.push(player.id);
+        player.party = inviter.party;
+        // Notify all party members
+        inviter.party.members.forEach(mId => {
+          wss.clients.forEach(c => {
+            if (connectedPlayers[c]?.id === mId) {
+              const members = inviter.party.members.map(mid => {
+                const p = connectedPlayers[Object.keys(connectedPlayers).find(k => connectedPlayers[k]?.id === mid)];
+                return p ? { id: p.id, name: p.name } : null;
+              }).filter(Boolean);
+              c.send(JSON.stringify({ type: 'party_update', party: { leader: inviter.party.leader, members } }));
+            }
+          });
+        });
+      }
+      break;
+    }
+    case 'party_leave': {
+      const player = connectedPlayers[ws];
+      if (player && player.party) {
+        const party = player.party;
+        party.members = party.members.filter(id => id !== player.id);
+        // Notify remaining members
+        party.members.forEach(mId => {
+          wss.clients.forEach(c => {
+            if (connectedPlayers[c]?.id === mId) {
+              const members = party.members.map(mid => {
+                const p = connectedPlayers[Object.keys(connectedPlayers).find(k => connectedPlayers[k]?.id === mid)];
+                return p ? { id: p.id, name: p.name } : null;
+              }).filter(Boolean);
+              c.send(JSON.stringify({ type: 'party_update', party: { leader: party.leader, members } }));
+            }
+          });
+        });
+        player.party = null;
+        ws.send(JSON.stringify({ type: 'party_update', party: null }));
+      }
+      break;
+    }
+    case 'get_online': {
+      const online = Object.values(connectedPlayers).map(p => ({ id: p.id, name: p.name, level: p.level, region: p.region }));
+      ws.send(JSON.stringify({ type: 'online_list', players: online }));
+      break;
+    }
     case 'save': saveWorld(); ws.send(JSON.stringify({ type: 'saved' })); break;
     default: console.log(`[WARN] Unknown: ${msg.type}`);
   }
