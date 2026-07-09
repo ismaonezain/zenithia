@@ -516,5 +516,735 @@ Retakan besar di perut bumi Zenithia. Muncul secara tiba-tiba. Di dalamnya ada C
 
 ---
 
+---
+
+## 10. Itemization & Equipment System
+
+### Equipment Tiers
+```
+Tier 1 — Starter (Lv 1-10):    wooden/leather, stat rendah, mudah didapat
+Tier 2 — Adventurer (Lv 10-20): iron/cloth, stat lumayan, crafted atau drop
+Tier 3 — Aether-Touched (Lv 20-35): infused material, stat bagus, rare drop
+Tier 4 — Guardian Relics (Lv 35-50): dari Ancient Shrine, stat sangat tinggi
+Tier 5 — Fractureforged (Lv 50+):  material dari Corruption, stat ekstrem tapi ada curse
+```
+
+### Equipment Slots
+```
+Weapon (1)     — Sword/Axe/Mace (Guardian), Dual Blade (Blade Dancer), Staff (Sage), Scepter (Cleric), Dagger (Shadow)
+Armor (1)      — Full body, menentukan defense + element resist
+Helmet (1)     — Stat bonus kecil, some punya set bonus
+Shield (1)     — Guardian only, Cleric bisa pakai buckler
+Accessory (2)  — Ring/Necklace, stat flexibel (crit, HP, mana regen, dll)
+```
+
+### Item Categories
+**Equipment** — weapon, armor, helmet, shield, accessory
+**Consumables** — potion (HP/MP/antidote/buff), food (temporary stat boost), scroll (teleport/identify)
+**Materials** — monster drops buat crafting (Moss Shell, Thorn, Wind Essence, dll)
+**Quest Items** — tidak bisa dijual/dibuang, special use
+**Currency** — Gold (umum), Aether Shard (premium/rare currency)
+
+### Crafting System
+```
+Workbench Types:
+  Forge    — weapon, armor (di Elder's Hall atau kota)
+  Alchemy  — potion, antidote (di Herbalist Sari)
+  Cooking  — food buff (di Bu Ningsih)
+  Runecraft — accessory enhancement (unlocked Lv 20)
+
+Crafting Formula:
+  Recipe (ditemukan dari quest/loot/buy) + Materials + Gold = Item
+  Higher quality materials = better result
+  Critical craft (10% chance) = item dengan bonus stat acak
+```
+
+### Drop Rate System
+```
+Common drop:     80% chance — materials, gold
+Uncommon drop:   40% chance — equipment tier sesuai level
+Rare drop:       10% chance — equipment bagus atau material langka
+Epic drop:       2% chance  — equipment set atau special item
+Legendary drop:  0.5% chance — Guardian Relics atau Fractureforged
+```
+
+### Economy Design
+**Gold Sinks (uang keluar):**
+  - Repair equipment (10-30% durability loss per death)
+  - Teleport fee (50-500 gold tergantung jarak)
+  - Tax jual beli di Market Square (5%)
+  - Upgrade equipment (tiers tertentu butuh gold)
+  - Premium cosmetic items (later)
+
+**Gold Sources (uang masuk):**
+  - Monster drop (3-50 gold per monster)
+  - Quest reward (10-500 gold per quest)
+  - Sell materials ke NPC (harga lebih rendah dari crafting value)
+  - Trading antar player (zero tax di Wilderness)
+
+**Vendor Pricing Template:**
+```
+HP Potion (small):     50 gold
+HP Potion (medium):    200 gold
+HP Potion (large):     800 gold
+Basic Sword:           150 gold
+Iron Armor:            300 gold
+Ingredient Pack:       100 gold
+Teleport Scroll:       300 gold
+Identification Scroll: 75 gold
+```
+
+### Set Bonus (example)
+```
+Starter Set (2 pieces):  +5% HP regen
+Adventurer Set (3 pieces): +10% attack
+Guardian Relic Set (4 pieces): +15% all stats, unique skill unlock
+```
+
+---
+
+## 11. NPC Dialogue System
+
+### Dialogue Architecture
+```
+NPC Name
+├── Greeting (random 2-3 varian)
+├── Quest Dialogues
+│   ├── Quest Available (condition check)
+│   ├── Quest Active (progress)
+│   ├── Quest Complete
+│   └── Quest Failed
+├── Information Dialogues (lore, tips, gossip)
+├── Reputation Dialogues (ubah berdasarkan reputation level)
+└── Event Dialogues (muncul saat world event aktif)
+```
+
+### Dialogue Variables
+`{player_name}` — nama karakter
+`{player_class}` — class pemain
+`{reputation}` — reputation level dengan NPC
+`{quest_progress}` — status quest
+`{time_of_day}` — waktu dalam game
+`{has_item:X}` — cek apakah player punya item X
+
+### Contoh Dialogue Tree — Elder Maren
+
+**Greeting (Reputation: Neutral)**
+```
+Elder Maren: "Selamat datang, {player_name}. Willowmere adalah rumah yang aman — setidaknya untuk sekarang."
+  → [Tanya tentang desa]
+  → [Tanya tentang adventurer]
+  → [Tanya tentang Aether]
+  → [Selesai]
+```
+
+**Tanya tentang desa:**
+```
+Elder Maren: "Willowmere sudah damai selama 200 tahun. Kami hidup dari pertanian dan ikan dari Mist Creek. Tapi belakangan... ada yang aneh."
+  → "Aneh bagaimana?"
+    → Elder Maren: "Beberapa petani melaporkan tanah mereka menjadi lebih subur dari biasanya. Tapi di sisi lain, ada yang bilang melihat cahaya aneh di hutan malam-malam. Mungkin cuma khayalan."
+      → [Tanya tentang adventurer] 
+      → [Selesai]
+  → [Selesai]
+```
+
+**Tanya tentang adventurer:**
+```
+Elder Maren: "Adventurer adalah kehormatan di sini. Setiap anak bermimpi menjadi Guardian suatu hari nanti. Tapi Guardian sudah menghilang 100 tahun lalu. Sekarang hanya legenda."
+  → "Kamu pernah jadi adventurer?"
+    → Elder Maren: *tersenyum pahit* "Dulu. Tapi itu sudah lama. Sekarang tugasku hanya menjaga desa ini."
+      → [Reputation +1] [ unlock Elder's personal quest]
+  → [Selesai]
+```
+
+**Quest Available — "Bantu Pak Tani":**
+```
+Elder Maren: "{player_name}, Pak Tani butuh bantuan. Panennya musim ini sangat banyak, tapi tenaga kerja kurang. Bisakah kamu membantunya?"
+  → "Tentu, aku bantu!"
+    → Elder Maren: "Bagus. Pergi ke sawah di selatan desa. Pak Tani sudah menunggu."
+    → [Quest Started: "Bantu Pak Tani"]
+  → "Maaf, aku sedang sibuk."
+    → Elder Maren: "Tidak masalah. Kapan pun kamu siap, Pak Tani akan menunggu."
+      → [Quest deferred, bisa diambil lagi nanti]
+```
+
+**Reputation Dialogue (Reputation: Friendly — setelah 10+ interaction):**
+```
+Elder Maren: "Kamu sudah banyak membantu desa ini, {player_name}. Aku mulai percaya padamu. Ada sesuatu yang ingin aku ceritakan... tapi belum sekarang. Kembali lagi setelah kamu lebih kuat."
+  → [Mysterious, sets up Act 2 hook]
+  → [Reputation +1]
+  → [Unlock: Elder's Secret questline]
+```
+
+### Contoh Dialogue Tree — Kak Lira
+
+**Greeting (Early game):**
+```
+Kak Lira: "Hei! Kamu adventurer baru ya? Aku Lira! Aku belum pernah keluar desa, tapi suatu hari aku mau jadi adventurer juga!"
+  → "Keren! Ayo kita latihan bareng!"
+    → Lira: "Serius?! Ayo! Tapi jangan sakitin aku ya, hehe!"
+      → [Quest Started: "Latihan Lira"]
+  → "Dream big, Lira!"
+    → Lira: "Iya! Elder bilang kalau aku rajin latihan, suatu hari aku bisa ikut kamu!"
+      → [Reputation +1]
+```
+
+**Quest Active — "Latihan Lira" (dalam progress):**
+```
+Lira: "Udah siap latihan hari ini? Aku udah hang-up sejak tadi pagi!"
+  → "Ayo mulai!"
+    → [Membuka training minigame]
+  → "Nanti aja ya."
+    → Lira: "Oke! Aku tunggu di sini!"
+```
+
+**Quest Complete — "Latihan Lira":**
+```
+Lira: "Wah, aku bisa nangkisin kamu sekarang! ...eh, gak juga sih. Tapi aku jadi lebih kuat! Makasih ya, {player_name}!"
+  → "Sama-sama, Lira. Kamu hebat."
+    → Lira: "Kamu terlalu baik... *pipi merah*"
+      → [Reputation +2] [Romance flag activated]
+      → [Lira sekarang occasionally muncul sebagai party member di quest tertentu]
+```
+
+**Romance Milestone — "Surat dari Lira" (muncul setelah 20+ reputation):**
+```
+[Lira memberikan surat]
+Lira: "Ini... ini bukan sesuatu yang penting kok! Cuma... aku menulis tentang impianku. Baca ya kalau ada waktu."
+[Surat dibaca:]
+"Kepada {player_name}, Aku tidak tahu kapan kamu akan pergi dari desa ini. Tapi selama kamu di sini, aku merasa... aman. Terima kasih sudah menjadi adventurer pertama yang benar-benar mendengarkanku. — Lira"
+  → [Romance flag upgraded: Lira sekarang akan mencari player saat quest Act 3]
+  → [Unlock: Lira's Pendant — accessory kecil, +3% HP regen, sentimental value]
+```
+
+### Contoh Dialogue Tree — Guard Ren (Unlock setelah Level 5)
+
+**Greeting:**
+```
+Guard Ren: *menguap* "Hari yang tenang. Semoga terus begini."
+  → "Kamu kelihatan capek."
+    → Ren: "Jaga gerbang desa itu melelahkan. Tapi lebih baik jaga daripada menyesal."
+      → [Reputation +1]
+  → "Tanya tentang combat."
+    → Ren: "Kamu mau belajar? ...Oke. Tapi ingat — kekuatan tanpa perlindungan itu bunuh diri."
+      → [Unlock: Guard Ren's Training questline]
+```
+
+**Quest — "Latihan Ren" (Advanced combat training):**
+```
+Ren: "Kamu sudah siap belajar lebih dalam. Aku akan mengajarkan yang aku tahu."
+  → "Ajarin aku!"
+    → Ren: "Bagus. Pertama — tahan posisi. Jangan menyerang dulu. Biarkan musuh lelah."
+      → [Training session: defensive combat mechanics]
+      → [Selesai] Ren: "Kamu lebih cepat belajar dari yang kubayangkan."
+      → [Reputation +2]
+```
+
+**Reputation: Friendly (setelah sering ngobrol):**
+```
+Ren: "Kamu... mengingatkan aku pada seseorang. Dia juga seorang Guardian. Tapi dia pergi dan tidak pernah kembali."
+  → "Siapa dia?"
+    → Ren: "...Aku tidak bisa ceritakan sekarang. Tapi kalau kamu terus menjadi seperti ini, suatu hari aku akan memberitahumu."
+      → [Mysterious, sets up Ren's personal questline]
+      → [Reputation +1]
+```
+
+### Reputation System
+```
+Levels:
+  Stranger    (0-5 rep)   — NPC only gives basic info
+  Friendly    (6-15 rep)  — NPC mulai cerita lebih banyak, unlock side quest
+  Trusted     (16-30 rep) — NPC kasih bonus item, unlock personal questline
+  Respected   (31-50 rep) — NPC kasih akses ke special shop, unlock romance
+  Honored     (51+ rep)   — NPC jadi ally di world event, unlock ultimate questline
+
+Rep gain:
+  Quest completion:     +2-5 per quest
+  Regular interaction:  +1 per 5 talk (anti-spam)
+  Gift (if system exists): +1-3 per gift
+  World event help:     +5 per event
+  Hostile action:       -10 per act
+```
+
+---
+
+## 12. Level Progression & Stats
+
+### XP Table
+```
+Level 1-10:   100 XP per level   (tutorial, cepat)
+Level 11-20:  300 XP per level   (early game, lumayan)
+Level 21-30:  800 XP per level   (mid game, mulai grind)
+Level 31-40:  2000 XP per level  (late game, serious grind)
+Level 41-50:  5000 XP per level  (endgame, hardcore)
+Level 51-60:  12000 XP per level (post-game, marathon)
+```
+
+### XP Sources
+```
+Monster kill:     Level difference penalty: ±20% per level gap
+Quest completion: Flat XP + bonus untuk level sync
+Exploration:      First-time discovery XP (10-50 XP per area)
+Crafting:         10-100 XP per successful craft
+Daily tasks:      50-200 XP per daily quest
+Party bonus:      +20% XP when in party of 3+
+```
+
+### Base Stats (Level 1, semua class)
+```
+HP:        100
+MP:        50
+Attack:    10
+Defense:   5
+Speed:     10
+Crit:      5%
+```
+
+### Stat Growth Per Level (per class)
+```
+Guardian:     HP +15, MP +3, ATK +2, DEF +4, SPD +1
+Blade Dancer: HP +8,  MP +5, ATK +5, DEF +1, SPD +4
+Sage:         HP +7,  MP +8, ATK +4, DEF +2, SPD +3
+Cleric:       HP +12, MP +7, ATK +1, DEF +3, SPD +2
+Shadow:       HP +9,  MP +5, ATK +4, DEF +2, SPD +5
+```
+
+### Damage Formula
+```
+Physical Damage = ATK × Skill Multiplier - (DEF × 0.6)
+Magic Damage    = ATK × Skill Multiplier × (1 + Element Bonus) - (DEF × 0.3)
+Heal Amount     = ATK × Skill Multiplier + (MP × 0.2)
+Crit Damage     = Base Damage × 1.5
+Damage cap:     99,999 (anti-exploit)
+```
+
+### Power Milestones
+```
+Lv 10:  Tutorial complete, pilih class, bisa keluar desa
+Lv 20:  Bisa crafting tier 2, party system unlocked
+Lv 30:  Aether awakening, Conduit ability activated
+Lv 40:  Masuk Deep Fracture, endgame content
+Lv 50:  Full Guardian Relic set, PvP unlocked
+Lv 60:  Post-game, open world exploration
+```
+
+---
+
+## 13. Social & Faction System
+
+### Guild System
+```
+Guild Capacity:    5-30 members
+Guild Level:       1-10 (naik dari guild activity)
+Guild Hall:        Unlock di level tertentu, bisa di-decorate
+Guild Quests:      Party-based quests yang memberikan guild XP
+Guild Wars:        PvP antar guild (unlock Lv 40)
+Guild Bank:        Shared storage untuk materials/equipment
+```
+
+### Guild Perks (berdasarkan guild level)
+```
+Lv 1-3:   Basic guild chat, guild tag di nama
+Lv 4-6:   Guild shop (discount 5%), guild teleport point
+Lv 7-9:   Guild skill (party buff), exclusive guild dungeon
+Lv 10:    Guild master title, special guild mount, guild vs guild tournament access
+```
+
+### Faction Standing
+```
+Willowmere Village:     Tempat tinggal, reputasi lokal
+The Conduit Order:      Organisasi rahasia Conduit holders (Act 3+)
+The Guardians (Legacy): Faksi kuno yang mencoba restore balance
+The Hollow Court:       Antagonis — Corruption-touched adventurers (Act 4+)
+Wilderness Rangers:     Penjaga hutan, suka explorer
+```
+
+### Faction Rewards
+```
+Reputation di setiap faction unlock:
+  - Unique dialogue options
+  - Faction-exclusive equipment
+  - Faction skill tree (1-2 skill khusus faction)
+  - Faction mount/cosmetic
+  - Story questline khusus faction
+```
+
+### Party System
+```
+Party Size:     1-4 players
+Party Roles:    Tank, DPS, Healer, Support
+Party Finder:   Auto-match untuk dungeon/raid
+Party Chat:     Private party chat channel
+Party XP Bonus: +20% XP for full party of 3+
+Revive:         Cleric bisa resurrect, otherwise return to village (penalty)
+```
+
+### Trading
+```
+Player-to-Player: Direct trade, zero tax
+Marketplace:      Auction house (5% tax, auto-listing)
+Vendor sell:      Always 30% below market value
+Bound items:      Quest items and certain equipment cannot be traded
+```
+
+---
+
+## 14. Visual Identity & Art Direction
+
+### Overall Style
+**Keyword:** Colorful, warm, boxy, charming, with selective dark moments
+**Reference:** Seal Online meets Minecraft meets Stardew Valley
+**Resolution:** Low-poly 3D, pixel-textured, 32x32 item icons
+
+### Color Palette Per Region
+```
+Willowmere:    Warm greens (#4CAF50), soft yellows (#FFD54F), sky blue (#81D4FA)
+                — Feel: Safe, nostalgic, homey
+                
+Emerald Plains: Vibrant greens (#66BB6A), golden wheat (#F9A825), white clouds
+                — Feel: Adventure, freedom, vast
+                
+Frostmere:      Icy blue (#42A5F5), white (#E3F2FD), dark navy (#1A237E)
+                — Feel: Harsh, beautiful, isolated
+                
+Ember Peaks:    Deep red (#D32F2F), molten orange (#FF6D00), black (#212121)
+                — Feel: Dangerous, ancient, powerful
+                
+Deepwood:       Dark green (#2E7D32), misty grey (#B0BEC5), purple accents (#7B1FA2)
+                — Feel: Mysterious, forbidden, magical
+```
+
+### Character Design (Boxy Style)
+```
+Head:    Cube 16x16x16 pixels
+Body:    Cube 12x16x8 pixels  
+Arms:    Cubes 4x12x4 pixels (each)
+Legs:    Cubes 4x12x4 pixels (each)
+Total height: ~40 pixels
+
+Hair:    Customizable color + style (5 base styles × 8 colors)
+Skin:    6 skin tone options
+Eyes:    3 eye styles
+Clothes: Class-based (color per class)
+  Guardian:    Steel blue + silver trim
+  Blade Dancer: Crimson + gold trim
+  Sage:        Deep purple + white trim
+  Cleric:      White + gold trim
+  Shadow:      Black + red trim
+```
+
+### Monster Design Style
+```
+All monsters: Boxy/voxel style, exaggerated features
+Size scale:   Mouse = 8px, Beetle = 16px, Lizard = 24px, Boar = 40px
+Color rule:   Each monster has 1 dominant color + 1 accent color
+Animation:    Simple 2-3 frame idle + attack + death
+Fun factor:   Monsters should look cute even when dangerous
+```
+
+### Environment Art
+```
+Trees:    Box trunk + layered leaf cubes (willow = drooping leaf cubes)
+Water:    Animated blue cubes, semi-transparent
+Buildings: Simple box structures + pitched roof (triangles or stepped cubes)
+Path:     Light brown cubes, slightly uneven
+Rocks:    Random-sized grey cubes
+Flowers:  Single colored cubes on sticks
+Lighting: Warm yellow for interiors, soft blue for outdoor
+```
+
+### UI Style
+```
+HP Bar:     Red gradient, rounded corners
+MP Bar:     Blue gradient, rounded corners  
+XP Bar:     Yellow gradient, thin, bottom of screen
+Inventory:  Grid system, 6 slots × 4 rows = 24 slots
+Chat:       Semi-transparent black box, bottom-left
+Mini-map:   Top-right, circular, simple icon-based
+Menu:       Minimal, icon-based (gear, sword, chat, map)
+Font:       Pixel font (like Press Start 2P or similar)
+```
+
+---
+
+## 15. Conduit Mechanics (Gameplay)
+
+### Conduit Activation
+```
+Activation trigger: Reach Level 30 + Complete "Aether Awakening" quest
+Visual: Player's hands glow with blue-white energy
+Sound: A deep hum, like breathing
+```
+
+### Conduit Abilities
+```
+Passive:
+  — Aether Sight: Can see hidden objects, secret paths, NPC auras
+  — Corruption Resistance: -50% damage from Corruption attacks
+  — Aether Regeneration: +10% MP regen in Aether-rich areas
+
+Active (unlock one per 5 levels after 30):
+  Lv 30: Aether Pulse — AOE damage around player, reveals hidden enemies
+  Lv 35: Aether Shield — Absorbs next hit completely, 30s cooldown
+  Lv 40: Aether Link — Temporarily connect with party members, share HP/MP
+  Lv 45: Aether Burst — Massive single-target damage, uses 50% MP
+  Lv 50: Aether Resonance — Buff entire party, +20% all stats for 10s
+  Lv 55: Conduit Transformation — temporary power boost, all skills enhanced
+  Lv 60: World Aether — ultimate ability, massive AOE damage + heal party
+```
+
+### Conduit & NPCs
+```
+Conduit holders can:
+  — Talk to Aether Spirits (invisible to normal players)
+  — Activate Ancient Shrines (puzzle areas)
+  — Sense Corruption before it appears (story mechanic)
+  — Open sealed doors in Deep Fracture
+  
+NPCs react differently:
+  — Elder Maren: Relief ("Finally, another Conduit...")
+  — Guard Ren: Recognition ("You... you have it, don't you?")
+  — Herbalist Sari: Secret acknowledgment (she's also a Conduit)
+  — Normal NPCs: Don't notice anything
+```
+
+### Conduit & Combat
+```
+Against normal monsters: Slight advantage (Corruption Resistance doesn't apply)
+Against Corruption: Major advantage — can deal Corruption damage, resist debuffs
+Against bosses: Can use Conduit abilities for mechanics (e.g., Aether Pulse to break boss shield)
+In PvP: Conduit abilities are disabled (balanced for competitive play)
+```
+
+### Conduit & Exploration
+```
+Aether Nodes:    Conduit can harvest for crafting (rare material)
+Secret Areas:    Only visible with Aether Sight
+Ancient Shrines: Puzzle rooms that require Conduit to activate
+Hidden Lore:     Ghost-like Aether spirits tell stories about The Guardians
+Corruption Zones: Areas where Conduit is essential for survival
+```
+
+---
+
+## 16. Quest Design System
+
+### Quest Categories
+```
+Main Story:      Linear, level-gated, advance the narrative
+Side Quest:      Optional, found by talking to NPCs or exploring
+Daily Quests:    Reset every 24h, repeatable, good for grinding
+Weekly Quests:   Reset every 7 days, harder, better rewards
+Guild Quests:    Party-based, unlock at guild Lv 3
+World Events:    Timed events that appear randomly (boss spawn, Aether storm)
+```
+
+### Quest Structure Template
+```
+Title:          "The Lost Heirloom"
+NPC Source:     Bu Ningsih
+Level Required: 5
+Type:           Side Quest
+Estimated Time: 10 minutes
+Repeatable:     No (one-time)
+Rewards:        200 Gold, Cooking Skill Recipe, +3 Reputation (Bu Ningsih)
+
+Objectives:
+  [1] Talk to Bu Ningsih (auto)
+  [2] Search Mist Creek for the pendant (explore area)
+  [3] Defeat Puddle Frog that swallowed it (combat)
+  [4] Return pendant to Bu Ningsih (auto)
+
+Dialogue:
+  Start: "Oh! Anak muda, bisakah kamu bantu? Jam tangan suamiku jatuh ke Mist Creek!"
+  Mid:   "Tolong cepat! Itu satu-satunya kenangan suamiku!"
+  End:   "Makasih banyak! Ini resep masakan turun-temurun untukmu."
+  
+Failure:        Timer 5 minutes (pendant tenggelam)
+Bonus:          Jika selesai tanpa mati: +5 Reputation
+```
+
+### Repeatable Quests
+```
+Daily:
+  — "Harvest Help" (Pak Tani): Gather 10 crops → 100 Gold + 50 XP
+  — "Bug Patrol" (Guard Ren): Defeat 5 Moss Beetles → 150 Gold + 75 XP  
+  — "Fish for Dinner" (Mist Creek): Catch 3 fish → 80 Gold + 40 XP
+  
+Weekly:
+  — "Caravan Escort" (Pak Gendut): Protect caravan to Emerald Plains → 500 Gold + 300 XP
+  — "Aether Research" (Herbalist Sari): Collect 5 Aether Samples → 800 XP + rare material
+  — "Training Tournament" (Guard Ren): Complete combat challenge → 400 Gold + 200 XP
+```
+
+### Quest Markers
+```
+!  — New quest available
+?  — Quest ready to turn in
+... — Quest in progress
+★  — Important story quest
+↻  — Repeatable quest
+```
+
+---
+
+## 17. PvP & Endgame Systems
+
+### PvP Modes
+```
+Duel:           1v1, anywhere in Wilderness, no penalty
+Arena:          1v1 or 3v3, instanced, ranked
+Guild War:      Guild vs Guild, territory control
+Battleground:   10v10 objective-based (capture the flag, king of the hill)
+```
+
+### PvP Rules
+```
+— Conduit abilities disabled (balanced)
+— Level sync: Higher level players scaled down in lower-level zones
+— Death penalty: Lose 5% gold, equipment durability -10%
+— Flag system: Opt-in PvP in safe zones (Willowmere is always safe)
+— Ganking protection: Players below Lv 20 cannot be attacked
+```
+
+### PvP Rewards
+```
+Rank system:   Iron → Bronze → Silver → Gold → Platinum → Diamond
+Season:        Monthly reset, top 100 get special cosmetics
+PvP currency:  "Glory Tokens" → buy exclusive equipment skins
+Title:         "Iron Champion", "Silver Warden", "Diamond Conduit"
+```
+
+### Endgame Content (Level 50+)
+```
+Ancient Ruins:      4-player dungeon, weekly rotation, Guardian Relic drops
+Deep Fracture:      8-player raid, hardest content, Fractureforged drops
+Corruption Zones:   Open-world PvPvE zones, high risk high reward
+World Boss:         Spawns every 6 hours, server-wide event, unique drops
+Exploration:        Unlock all map regions, find all secrets, 100% completion
+Housing:            Player housing system (unlock via guild or achievement)
+Cosmetic:           Dye system, mount collection, pet collection
+```
+
+### Achievement System
+```
+Categories:   Explorer, Combat, Social, Collection, Secret
+Rewards:      Titles, cosmetics, achievement points
+Examples:
+  "First Steps"        — Complete tutorial
+  "Monster Hunter"     — Defeat 1000 monsters
+  "Social Butterfly"   — Reach Honored with 3 NPCs
+  "Fashion Forward"    — Collect 50 equipment skins
+  "Conduit Master"     — Unlock all Conduit abilities
+  "Lore Keeper"        — Read all Aether spirit stories
+```
+
+---
+
+## 18. Weather & Time System
+
+### Day/Night Cycle
+```
+Real-time ratio:    1 real hour = 1 game day (24 game hours)
+Cycle phases:
+  Dawn (05:00-07:00):   Soft orange light, mist, birdsong
+  Morning (07:00-12:00): Bright, warm, active NPCs
+  Afternoon (12:00-17:00): Peak activity, market busy
+  Evening (17:00-20:00): Golden hour, NPCs start going home
+  Night (20:00-05:00): Dark, fewer NPCs, some monsters more active
+```
+
+### Weather Effects
+```
+Clear:      Normal, no modifiers
+Rain:       -10% fire damage, +10% water damage, puddles form (Puddle Frog spawn +)
+Snow:       -20% speed in Frostmere, Ice Beetle spawn +
+Storm:      Lightning strikes random areas, Aether Node activity +50%
+Mist:       Reduced visibility, Wind Sprite spawn +, Aether Sight range doubled
+Festival:   Willowmere decorations, special NPCs, bonus XP
+```
+
+### Gameplay Impact
+```
+Monster Spawning:    Some monsters only appear in certain weather/time
+  — Wind Sprite:     Night only, Mist weather
+  — Dust Mouse:      Dawn only, Clear weather
+  — Bramble Boar:    Always, but +50% spawn in Rain
+  
+NPC Availability:    Some NPCs only appear at certain times
+  — Herbalist Sari:  Night only (she does "research")
+  — Guard Ren:       Always (24/7 guard duty)
+  — Kak Lira:        Morning-Evening only
+  
+Crafting Bonus:      +10% critical craft chance during Festival
+Travel:              Night travel = higher random encounter chance
+Aether Activity:     Strongest during full moon (every 30 game days)
+```
+
+---
+
+## 19. Sound & Music Direction
+
+### Music Theme Per Region
+```
+Willowmere:     Acoustic guitar + flute, warm and nostalgic
+                — Day: Peaceful, gentle
+                — Night: Soft piano, lullaby-like
+                — Combat: Upbeat acoustic, adventure feel
+
+Emerald Plains: Orchestral strings + wind instruments, soaring and free
+                — Travel: Sweeping, hopeful
+                — Combat: Fast strings, energetic
+                — Discovery: Ethereal choir hint
+
+Frostmere:      Low strings + bell tones, cold and haunting
+                — Exploration: Quiet, mysterious
+                — Combat: Deep drums, urgency
+                — Story: Sad violin, emotional
+
+Ember Peaks:    Deep drums + brass, intense and ancient
+                — Exploration: Low rumble, anticipation
+                — Combat: Aggressive brass, battle hymn
+                — Boss: Epic orchestral, choir
+
+Deepwood:       Synth pads + natural sounds, mysterious and otherworldly
+                — Exploration: Ambient, unsettling
+                — Combat: Dark synth, tension
+                — Secret: Glitchy aether sounds
+
+The Fracture:   Dissonant strings + distorted synth, corrupted and dangerous
+                — Exploration: Eerie, heartbeat-like rhythm
+                — Corruption: Distorted versions of region themes
+                — Boss: Full orchestra + choir + electronic
+```
+
+### Sound Effects Priority
+```
+Must-have (MVP):
+  — Footsteps (grass, wood, stone, water)
+  — Sword slash, shield block, magic cast
+  — Monster hit, monster death, player hit
+  — UI click, inventory open/close
+  — Quest complete jingle
+  — Level up fanfare
+  — Aether pulse sound
+  
+Nice-to-have (later):
+  — Rain, wind, thunder ambient
+  — NPC ambient chatter
+  — Crafting sounds (hammer, brew, cook)
+  — Mount sounds
+  — Guild hall ambience
+```
+
+### Voice Acting
+```
+MVP: Text-only dialogue (no voice acting — save budget)
+Later: NPC voice lines for key moments (Elder Maren, Lira)
+Sound design: Focus on SFX and music first, voice is luxury
+```
+
+---
+
 *Last updated: July 2026*
-*Status: Lore v2 — Extended*
+*Status: Lore v3 — Complete Game Design Document*
