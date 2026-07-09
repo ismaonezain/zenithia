@@ -28,6 +28,7 @@ const state = {
     bodyIdx: 0,
     eyeColorIdx: 0,
   },
+  walletAddress: null,
   previewScene: null,
   previewCamera: null,
   previewRenderer: null,
@@ -226,7 +227,8 @@ function handleServerMessage(msg) {
       state.ws.send(JSON.stringify({
         type: 'join',
         name: document.getElementById('name-input').value || 'Adventurer',
-        wallet: null,
+        wallet: state.walletAddress || null,
+        customization: state.customization,
       }));
       break;
 
@@ -234,6 +236,11 @@ function handleServerMessage(msg) {
       state.player = msg.player;
       state.dialogue.ws = state.ws;
       state.dialogue.playerState = state.player;
+
+      // Restore saved customization
+      if (msg.player.customization && Object.keys(msg.player.customization).length > 0) {
+        Object.assign(state.customization, msg.player.customization);
+      }
 
       if (msg.npcs) Object.values(msg.npcs).forEach(npc => {
         const model = createNPCModel(npc);
@@ -649,11 +656,35 @@ document.getElementById('chat-input').addEventListener('keydown', (e) => {
 });
 
 // ============================
+// PHANTOM WALLET (Solana)
+// ============================
+async function connectPhantom() {
+  const btn = document.getElementById('connect-wallet');
+  if (window.solana && window.solana.isPhantom) {
+    try {
+      const resp = await window.solana.connect();
+      state.walletAddress = resp.publicKey.toString();
+      btn.textContent = '✓ ' + state.walletAddress.slice(0, 6) + '...' + state.walletAddress.slice(-4);
+      btn.style.background = '#4CAF50';
+      console.log('[WALLET] Connected:', state.walletAddress);
+    } catch (err) {
+      console.error('[WALLET] Connection failed:', err);
+      btn.textContent = 'Connect Failed — Retry';
+    }
+  } else {
+    btn.textContent = 'Phantom Not Found — Install It';
+    window.open('https://phantom.app/', '_blank');
+  }
+}
+
+document.getElementById('connect-wallet').addEventListener('click', connectPhantom);
+
+// ============================
 // START GAME
 // ============================
 document.getElementById('start-game').addEventListener('click', () => {
   const name = document.getElementById('name-input').value.trim();
-  if (name) connectWebSocket(name, null);
+  if (name) connectWebSocket(name, state.walletAddress);
 });
 
 // ============================

@@ -54,13 +54,28 @@ let world = loadWorld();
 const connectedPlayers = {};
 
 // --- Player Management ---
-function createPlayer(playerId, name, wallet) {
-  if (world.players[playerId]) return world.players[playerId];
+function getOrCreatePlayer(playerId, name, wallet) {
+  // Try to load existing player by wallet
+  if (wallet) {
+    const existing = Object.values(world.players).find(p => p.wallet === wallet);
+    if (existing) {
+      existing.lastLogin = Date.now();
+      existing.id = playerId; // rebind to current session
+      world.players[playerId] = existing;
+      // Remove old entry if different id
+      Object.keys(world.players).forEach(k => {
+        if (k !== playerId && world.players[k].wallet === wallet) delete world.players[k];
+      });
+      return existing;
+    }
+  }
+  // Create new
   const player = {
     id: playerId, name: name || 'Adventurer', wallet: wallet || null,
     x: 0, y: 0, z: 0, class: null, className: null, level: 1, xp: 0,
     hp: 100, maxHp: 100, mp: 50, maxMp: 50, atk: 10, def: 5, spd: 10, crit: 0.05,
     zen: 50, inventory: [], quests: {}, reputation: {}, region: 'willowmere',
+    customization: {}, equipment: {},
     createdAt: Date.now(), lastLogin: Date.now(),
   };
   world.players[playerId] = player;
@@ -380,7 +395,8 @@ wss.on('connection', (ws) => {
 function handleMessage(ws, playerId, msg) {
   switch (msg.type) {
     case 'join': {
-      const player = createPlayer(playerId, msg.name, msg.wallet);
+      const player = getOrCreatePlayer(playerId, msg.name, msg.wallet);
+      if (msg.customization) player.customization = msg.customization;
       connectedPlayers[ws] = player;
       ws.playerId = playerId;
       ws.send(JSON.stringify({
