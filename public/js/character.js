@@ -229,3 +229,76 @@ export function stopWalk(model) {
     if (c.position.y < 0.4) c.rotation.x = 0;
   });
 }
+
+// --- Equipment Visuals ---
+export function applyEquipment(model, equipment) {
+  if (!model || !equipment) return;
+
+  // Remove old equipment visuals
+  removeEquipment(model);
+
+  const eqGroup = new THREE.Group();
+  eqGroup.name = 'equipment';
+
+  // WEAPON — attached to right hand
+  if (equipment.weapon) {
+    const weaponGeo = new THREE.BoxGeometry(0.08, 0.5, 0.08);
+    const weaponMat = new THREE.MeshLambertMaterial({ color: 0xBDBDBD });
+    const weapon = new THREE.Mesh(weaponGeo, weaponMat);
+    weapon.position.set(0.4, 0.6, 0.1);
+    weapon.rotation.z = -0.3;
+    eqGroup.add(weapon);
+
+    // Handle
+    const handleGeo = new THREE.BoxGeometry(0.05, 0.15, 0.05);
+    const handleMat = new THREE.MeshLambertMaterial({ color: 0x5D4037 });
+    const handle = new THREE.Mesh(handleGeo, handleMat);
+    handle.position.set(0.4, 0.35, 0.1);
+    handle.rotation.z = -0.3;
+    eqGroup.add(handle);
+  }
+
+  // SHIELD — attached to left hand
+  if (equipment.shield) {
+    const shieldGeo = new THREE.BoxGeometry(0.05, 0.35, 0.3);
+    const shieldMat = new THREE.MeshLambertMaterial({ color: 0x795548 });
+    const shield = new THREE.Mesh(shieldGeo, shieldMat);
+    shield.position.set(-0.45, 0.7, 0.15);
+    eqGroup.add(shield);
+  }
+
+  // HELMET — on top of head
+  if (equipment.helmet) {
+    const helmGeo = new THREE.BoxGeometry(0.55, 0.2, 0.55);
+    const helmMat = new THREE.MeshLambertMaterial({ color: 0x78909C });
+    const helm = new THREE.Mesh(helmGeo, helmMat);
+    helm.position.set(0, 1.75, 0);
+    eqGroup.add(helm);
+  }
+
+  // ARMOR — change body color tint
+  if (equipment.armor) {
+    const body = model.children.find(c => c.position.y === 0.8 && c.geometry?.parameters?.width === 0.6);
+    if (body) {
+      body.material = new THREE.MeshLambertMaterial({ color: 0x607D8B });
+    }
+  }
+
+  // ACCESSORY — small glow
+  if (equipment.accessory) {
+    const glowGeo = new THREE.BoxGeometry(0.1, 0.1, 0.1);
+    const glowMat = new THREE.MeshBasicMaterial({ color: 0x7B1FA2, transparent: true, opacity: 0.6 });
+    const glow = new THREE.Mesh(glowGeo, glowMat);
+    glow.position.set(0, 1.2, 0.3);
+    glow.name = 'accessory_glow';
+    eqGroup.add(glow);
+  }
+
+  model.add(eqGroup);
+}
+
+export function removeEquipment(model) {
+  if (!model) return;
+  const eq = model.getObjectByName('equipment');
+  if (eq) model.remove(eq);
+}
