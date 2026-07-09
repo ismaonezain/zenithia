@@ -395,12 +395,14 @@ wss.on('connection', (ws) => {
 function handleMessage(ws, playerId, msg) {
   switch (msg.type) {
     case 'join': {
+      const isNew = !world.players[Object.keys(world.players).find(k => world.players[k].wallet === msg.wallet)] && msg.wallet;
       const player = getOrCreatePlayer(playerId, msg.name, msg.wallet);
-      if (msg.customization) player.customization = msg.customization;
+      if (msg.customization && !player.customization?.skinIdx) player.customization = msg.customization;
       connectedPlayers[ws] = player;
       ws.playerId = playerId;
       ws.send(JSON.stringify({
         type: 'joined', player, npcs: world.npcs,
+        returning: !!msg.wallet && !isNew,
         onlinePlayers: Object.values(connectedPlayers).filter(p => p.id !== playerId),
         monsters: Object.values(world.monsters).filter(m => m.alive).map(sanitizeMonster),
       }));

@@ -250,6 +250,12 @@ function handleServerMessage(msg) {
       if (msg.onlinePlayers) msg.onlinePlayers.forEach(p => createOtherPlayer(p));
       showHUD();
       createPlayerModelInWorld(state.player);
+
+      // Update HUD name for returning players
+      if (msg.returning) {
+        document.getElementById('hud-name').textContent = state.player.name;
+        document.getElementById('hud-level').textContent = 'Lv.' + state.player.level;
+      }
       break;
 
     case 'player_joined':
@@ -722,11 +728,32 @@ function gameLoop() {
 // ============================
 // BOOT
 // ============================
-function boot() {
+async function boot() {
   initScene();
   initPreview();
   initCustomization();
   gameLoop();
+
+  // Auto-connect Phantom if already approved
+  if (window.solana && window.solana.isPhantom && window.solana.isConnected) {
+    try {
+      const resp = await window.solana.connect({ onlyIfTrusted: true });
+      state.walletAddress = resp.publicKey.toString();
+      const btn = document.getElementById('connect-wallet');
+      btn.textContent = '✓ ' + state.walletAddress.slice(0, 6) + '...' + state.walletAddress.slice(-4);
+      btn.style.background = '#4CAF50';
+      console.log('[WALLET] Auto-connected:', state.walletAddress);
+
+      // Auto-join with wallet — server will load saved data if exists
+      setTimeout(() => {
+        connectWebSocket('Adventurer', state.walletAddress);
+      }, 500);
+      return; // skip showing login screen
+    } catch (e) {
+      console.log('[WALLET] Not previously trusted, showing login');
+    }
+  }
+
   setTimeout(() => {
     loadingScreen.style.display = 'none';
     loginScreen.style.display = 'flex';
