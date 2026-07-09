@@ -1,89 +1,88 @@
-1|<!DOCTYPE html>
-2|<html lang="en">
-3|<head>
-4|  <meta charset="UTF-8">
-5|  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-6|  <title>Zenithia</title>
-7|  <link rel="stylesheet" href="/css/style.css">
-8|</head>
-9|<body>
-10|  <!-- Loading Screen -->
-11|  <div id="loading-screen">
-12|    <h1>ZENITHIA</h1>
-13|    <p>Loading...</p>
-14|  </div>
-15|
-16|  <!-- Game Canvas -->
-17|  <canvas id="game-canvas"></canvas>
-18|
-19|  <!-- HUD -->
-20|  <div id="hud" style="display:none;">
-21|    <!-- HP Bar -->
-22|    <div id="hp-bar">
-23|      <div id="hp-fill"></div>
-24|      <span id="hp-text">100/100</span>
-25|    </div>
-26|    <!-- MP Bar -->
-27|    <div id="mp-bar">
-28|      <div id="mp-fill"></div>
-29|      <span id="mp-text">50/50</span>
-30|    </div>
-31|    <!-- XP Bar -->
-32|    <div id="xp-bar">
-33|      <div id="xp-fill"></div>
-34|      <span id="xp-text">Lv.1</span>
-35|    </div>
-36|    <!-- Mini Map -->
-37|    <div id="mini-map"></div>
-38|    <!-- Chat -->
-39|    <div id="chat-box">
-40|      <div id="chat-messages"></div>
-41|      <input id="chat-input" type="text" placeholder="Type a message..." maxlength="200">
-42|    </div>
-43|  </div>
-44|
-45|  <!-- Login Screen -->
-46|  <div id="login-screen" style="display:none;">
-47|    <h2>Welcome to Zenithia</h2>
-48|    <div id="customize-panel">
-49|      <div class="row">
-50|        <label>Name</label>
-51|        <input id="name-input" type="text" placeholder="Enter your name" maxlength="20">
-52|      </div>
-53|      <div class="row">
-54|        <label>Skin</label>
-55|        <div id="skin-picker" class="picker"></div>
-56|      </div>
-57|      <div class="row">
-58|        <label>Hair</label>
-59|        <div id="hair-color-picker" class="picker"></div>
-60|      </div>
-61|      <div class="row">
-62|        <label>Style</label>
-63|        <div id="hair-style-picker" class="picker"></div>
-64|      </div>
-65|      <div class="row">
-66|        <label>Outfit</label>
-67|        <div id="body-picker" class="picker"></div>
-68|      </div>
-69|      <!-- Preview -->
-70|      <div id="char-preview">
-71|        <canvas id="preview-canvas" width="200" height="250"></canvas>
-72|      </div>
-73|    </div>
-74|    <button id="connect-wallet">Connect Phantom Wallet</button>
-75|    <button id="start-game">Start Game</button>
-76|  </div>
-77|
-78|  <script type="importmap">
-79|  {
-80|    "imports": {
-81|      "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
-82|      "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
-83|    }
-84|  }
-85|  </script>
-86|  <script type="module" src="/js/main.js"></script>
-87|</body>
-88|</html>
-89|
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Zenithia</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <!-- Loading Screen -->
+  <div id="loading-screen">
+    <h1>ZENITHIA</h1>
+    <p>Loading...</p>
+  </div>
+
+  <!-- Game Canvas -->
+  <canvas id="game-canvas"></canvas>
+
+  <!-- HUD -->
+  <div id="hud" style="display:none;">
+    <!-- HP Bar -->
+    <div id="hp-bar">
+      <div id="hp-fill"></div>
+      <span id="hp-text">100/100</span>
+    </div>
+    <!-- MP Bar -->
+    <div id="mp-bar">
+      <div id="mp-fill"></div>
+      <span id="mp-text">50/50</span>
+    </div>
+    <!-- XP Bar -->
+    <div id="xp-bar">
+      <div id="xp-fill"></div>
+      <span id="xp-text">Lv.1</span>
+    </div>
+    <!-- Mini Map -->
+    <div id="mini-map"></div>
+    <!-- Chat -->
+    <div id="chat-box">
+      <div id="chat-messages"></div>
+      <input id="chat-input" type="text" placeholder="Type a message..." maxlength="200">
+    </div>
+  </div>
+
+  <!-- Login Screen -->
+  <div id="login-screen" style="display:none;">
+    <h2>Welcome to Zenithia</h2>
+    <div id="customize-panel">
+      <div class="row">
+        <label>Name</label>
+        <input id="name-input" type="text" placeholder="Enter your name" maxlength="20">
+      </div>
+      <div class="row">
+        <label>Skin</label>
+        <div id="skin-picker" class="picker"></div>
+      </div>
+      <div class="row">
+        <label>Hair</label>
+        <div id="hair-color-picker" class="picker"></div>
+      </div>
+      <div class="row">
+        <label>Style</label>
+        <div id="hair-style-picker" class="picker"></div>
+      </div>
+      <div class="row">
+        <label>Outfit</label>
+        <div id="body-picker" class="picker"></div>
+      </div>
+      <!-- Preview -->
+      <div id="char-preview">
+        <canvas id="preview-canvas" width="200" height="250"></canvas>
+      </div>
+    </div>
+    <button id="connect-wallet">Connect Phantom Wallet</button>
+    <button id="start-game">Start Game</button>
+  </div>
+
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+  <script type="module" src="/js/main.js"></script>
+</body>
+</html>
