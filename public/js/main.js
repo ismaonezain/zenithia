@@ -670,6 +670,7 @@ async function connectPhantom() {
     try {
       const resp = await window.solana.connect();
       state.walletAddress = resp.publicKey.toString();
+      localStorage.setItem('zenithia_wallet', state.walletAddress);
       btn.textContent = '✓ ' + state.walletAddress.slice(0, 6) + '...' + state.walletAddress.slice(-4);
       btn.style.background = '#4CAF50';
       console.log('[WALLET] Connected:', state.walletAddress);
@@ -734,26 +735,41 @@ async function boot() {
   initCustomization();
   gameLoop();
 
-  // Auto-connect Phantom if already approved
-  if (window.solana && window.solana.isPhantom && window.solana.isConnected) {
+  // Check localStorage for saved wallet
+  const savedWallet = localStorage.getItem('zenithia_wallet');
+
+  // Try Phantom auto-connect
+  if (window.solana && window.solana.isPhantom) {
     try {
       const resp = await window.solana.connect({ onlyIfTrusted: true });
       state.walletAddress = resp.publicKey.toString();
+      localStorage.setItem('zenithia_wallet', state.walletAddress);
       const btn = document.getElementById('connect-wallet');
       btn.textContent = '✓ ' + state.walletAddress.slice(0, 6) + '...' + state.walletAddress.slice(-4);
       btn.style.background = '#4CAF50';
       console.log('[WALLET] Auto-connected:', state.walletAddress);
 
-      // Auto-join with wallet — server will load saved data if exists
-      setTimeout(() => {
-        connectWebSocket('Adventurer', state.walletAddress);
-      }, 500);
-      return; // skip showing login screen
+      // Auto-join — server loads saved data by wallet
+      loadingScreen.style.display = 'none';
+      connectWebSocket('Adventurer', state.walletAddress);
+      return;
     } catch (e) {
-      console.log('[WALLET] Not previously trusted, showing login');
+      console.log('[WALLET] Phantom connect failed, trying localStorage');
     }
   }
 
+  // Fallback: use saved wallet from localStorage
+  if (savedWallet) {
+    state.walletAddress = savedWallet;
+    const btn = document.getElementById('connect-wallet');
+    btn.textContent = '✓ ' + savedWallet.slice(0, 6) + '...' + savedWallet.slice(-4);
+    btn.style.background = '#4CAF50';
+    loadingScreen.style.display = 'none';
+    connectWebSocket('Adventurer', savedWallet);
+    return;
+  }
+
+  // No wallet — show login screen
   setTimeout(() => {
     loadingScreen.style.display = 'none';
     loginScreen.style.display = 'flex';
