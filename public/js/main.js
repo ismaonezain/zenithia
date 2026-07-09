@@ -13,6 +13,7 @@ const state = {
   players: {},
   npcs: {},
   connected: false,
+  targetPos: null, // smooth movement target
 };
 
 // --- DOM Elements ---
@@ -370,18 +371,43 @@ canvas.addEventListener('click', (e) => {
         return;
       }
 
-      // Move player
-      const model = state.players[state.playerId];
-      if (model) {
-        model.position.set(point.x, 0, point.z);
-        state.ws.send(JSON.stringify({
-          type: 'move',
-          x: point.x,
-          y: 0,
-          z: point.z,
-        }));
-      }
+      // Move player (smooth)
+      state.targetPos = new THREE.Vector3(point.x, 0, point.z);
     }
+  }
+});
+
+// --- Smooth Movement Update ---
+function updateMovement() {
+  if (!state.targetPos) return;
+  const model = state.players[state.playerId];
+  if (!model) return;
+
+  const dir = new THREE.Vector3().subVectors(state.targetPos, model.position);
+  if (dir.length() < 0.1) {
+    model.position.copy(state.targetPos);
+    state.ws.send(JSON.stringify({
+      type: 'move',
+      x: state.targetPos.x,
+      y: 0,
+      z: state.targetPos.z,
+    }));
+    state.targetPos = null;
+    return;
+  }
+
+  dir.normalize().multiplyScalar(0.15); // speed
+  model.position.add(dir);
+  model.lookAt(state.targetPos);
+
+  // Send position update every frame (throttled in real impl)
+  state.ws.send(JSON.stringify({
+    type: 'move',
+    x: model.position.x,
+    y: 0,
+    z: model.position.z,
+  }));
+}
   }
 });
 
@@ -420,10 +446,20 @@ function boot() {
 // --- Game Loop ---
 function gameLoop() {
   requestAnimationFrame(gameLoop);
+  updateMovement();
 
   if (state.scene && state.camera && state.renderer) {
+    const playerModel = state.players[state.playerId];
+    if (playerModel) {
+      const target = playerModel.position;
+      state.camera.position.x += (target.x - state.camera.position.x) * 0.05;
+      state.camera.position.z += (target.z + 20 - state.camera.position.z) * 0.05;
+      state.camera.lookAt(target.x, target.y + 1, target.z);
+    }
+
     state.renderer.render(state.scene, state.camera);
   }
+}
 }
 
 boot();
