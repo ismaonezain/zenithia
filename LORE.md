@@ -123,6 +123,34 @@ Zenithia kembali damai. The Guardians sudah menjadi legenda. Aether masih mengal
 
 ## 3. Classes — Extended
 
+### Class Progression System
+```
+Tier 1 (Village Names):       Tier 2 (Hall of Paths):
+  Laborer      → Guardian
+  Miner        → Blade Dancer
+  Gardener     → Sage
+  Herbalist    → Cleric
+  Watchman     → Shadow
+```
+
+**Lore Context:**
+- Di Willowmere, penduduk desa gak kenal istilah "Guardian" atau "Blade Dancer."
+- Mereka cuma menyebut berdasarkan pekerjaan sehari-hari: "oh si Pekerja", "oh si Tukang Kebun".
+- Saat pemain masuk **Hall of Paths** (Lv 10), Elder Maren memberikan nama class yang sebenarnya.
+- Elder Maren: *"Kamu bukan lagi sekadar [village name]. Mulai sekarang, kamu adalah... [class name]."*
+- Nama class adalah warisan dari **The Guardians** — mereka yang pertama kali membagi jalur petualangan.
+
+### Class Names
+```
+Village Name    True Class Name    Role
+───────────     ───────────────    ────
+Laborer         Guardian           Tank / protector
+Miner           Blade Dancer       Melee DPS / combo
+Gardener        Sage               Ranged DPS / elemental
+Herbalist       Cleric             Healer / support
+Watchman        Shadow             Stealth / assassin
+```
+
 ### Guardian
 > *"Dinding terakhir antara yang lemah dan yang gelap."*
 
@@ -313,10 +341,12 @@ RETREAT: kalau HP < 20% → kabur ke arah berlawanan
 - Quest: "Kumpulkan Wind Essence" — 5 Wind Essence dari Wind Sprite
 - Elder Maren mulai gelisah tapi gak bilang apa-apa
 
+
 **Chapter 4: The Choice**
 - Pemain mencapai Level 10
 - Elder Maren membuka **Hall of Paths**
 - Cutscene: masuk Hall of Paths, pilih class
+- Elder Maren memberikan nama class yang sebenarnya
 - Quest pertama sebagai class baru — solo quest yang menantang
 
 ### Act 2: The Awakening (Level 10-25)
