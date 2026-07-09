@@ -718,6 +718,12 @@ async function signAndLogin() {
   try {
     // Sign message with Phantom
     const encodedMessage = new TextEncoder().encode(captchaMessage);
+
+    if (!window.solana.signMessage) {
+      status.textContent = '❌ Phantom too old. Update Phantom wallet.';
+      return;
+    }
+
     const signed = await window.solana.signMessage(encodedMessage, 'utf8');
 
     // Base58 encode signature
