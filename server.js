@@ -5,7 +5,7 @@ const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
 const nacl = require('tweetnacl');
-const bs58 = require('bs58');
+const bs58 = require('bs58').default || require('bs58');
 
 const PORT = 2567;
 const SAVE_DIR = path.join(__dirname, 'data');
@@ -58,20 +58,27 @@ app.get('/api/captcha', (req, res) => {
 // Verify signature + captcha
 app.post('/api/verify', express.json(), (req, res) => {
   const { wallet, signature, captchaAnswer } = req.body;
+  console.log('[VERIFY]', { wallet: wallet?.slice(0, 8), sigLen: signature?.length, captchaAnswer });
   if (!wallet || !signature || captchaAnswer === undefined) {
+    console.log('[VERIFY] Missing fields');
     return res.status(400).json({ error: 'wallet, signature, captchaAnswer required' });
   }
 
   const stored = nonces.get(wallet.toLowerCase());
-  if (!stored) return res.status(400).json({ error: 'No challenge found. Request new captcha.' });
+  if (!stored) {
+    console.log('[VERIFY] No nonce found for', wallet.slice(0, 8));
+    return res.status(400).json({ error: 'No challenge found. Request new captcha.' });
+  }
   if (Date.now() > stored.expires) {
     nonces.delete(wallet.toLowerCase());
+    console.log('[VERIFY] Nonce expired');
     return res.status(400).json({ error: 'Challenge expired. Request new captcha.' });
   }
 
   // Verify captcha
   if (String(captchaAnswer).trim() !== String(stored.captchaAnswer).trim()) {
     nonces.delete(wallet.toLowerCase());
+    console.log('[VERIFY] Wrong captcha:', captchaAnswer, 'expected:', stored.captchaAnswer);
     return res.status(400).json({ error: 'Wrong captcha answer' });
   }
 
@@ -80,15 +87,19 @@ app.post('/api/verify', express.json(), (req, res) => {
     const pubkey = bs58.decode(wallet);
     const msgBytes = new TextEncoder().encode(stored.message);
     const sigBytes = bs58.decode(signature);
+    console.log('[VERIFY] pubkey len:', pubkey.length, 'sig len:', sigBytes.length);
 
     if (!nacl.sign.detached.verify(msgBytes, sigBytes, pubkey)) {
+      console.log('[VERIFY] Signature invalid');
       return res.status(400).json({ error: 'Invalid signature' });
     }
   } catch (e) {
+    console.log('[VERIFY] Error:', e.message);
     return res.status(400).json({ error: 'Signature verification failed: ' + e.message });
   }
 
   nonces.delete(wallet.toLowerCase());
+  console.log('[VERIFY] SUCCESS:', wallet.slice(0, 8));
   res.json({ verified: true, wallet });
 });
 
