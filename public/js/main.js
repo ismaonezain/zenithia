@@ -1,5 +1,6 @@
 // Zenithia — Client Entry Point
 import * as THREE from 'three';
+import { buildTerrain } from './terrain.js';
 
 // --- State ---
 const state = {
@@ -49,19 +50,8 @@ function initScene() {
   sun.shadow.mapSize.height = 2048;
   state.scene.add(sun);
 
-  // Ground
-  const groundGeo = new THREE.PlaneGeometry(500, 500);
-  const groundMat = new THREE.MeshLambertMaterial({ color: 0x4CAF50 });
-  const ground = new THREE.Mesh(groundGeo, groundMat);
-  ground.rotation.x = -Math.PI / 2;
-  ground.receiveShadow = true;
-  ground.name = 'ground';
-  state.scene.add(ground);
-
-  // Grid helper
-  const grid = new THREE.GridHelper(500, 100, 0x388E3C, 0x2E7D32);
-  grid.position.y = 0.01;
-  state.scene.add(grid);
+  // Build Willowmere terrain
+  buildTerrain(state.scene);
 
   state.clock = new THREE.Clock();
 
