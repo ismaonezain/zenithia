@@ -2,6 +2,7 @@
 import * as THREE from 'three';
 import { buildTerrain } from './terrain.js';
 import { createPlayerModel, createNPCModel, PALETTES, animateWalk, stopWalk } from './character.js';
+import { DialogueSystem } from './dialogue_ui.js';
 
 // --- State ---
 const state = {
@@ -26,6 +27,7 @@ const state = {
   previewCamera: null,
   previewRenderer: null,
   previewModel: null,
+  dialogue: null,
 };
 
 const canvas = document.getElementById('game-canvas');
@@ -50,7 +52,6 @@ function initScene() {
   state.renderer.shadowMap.enabled = true;
   state.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
-  // Lighting
   state.scene.add(new THREE.AmbientLight(0xffffff, 0.6));
   const sun = new THREE.DirectionalLight(0xffffff, 1.0);
   sun.position.set(50, 100, 50);
@@ -58,10 +59,11 @@ function initScene() {
   sun.shadow.mapSize.set(2048, 2048);
   state.scene.add(sun);
 
-  // Build Willowmere terrain
   buildTerrain(state.scene);
-
   state.clock = new THREE.Clock();
+
+  // Init dialogue system
+  state.dialogue = new DialogueSystem(null, { name: 'Adventurer' });
 
   window.addEventListener('resize', () => {
     state.camera.aspect = window.innerWidth / window.innerHeight;
@@ -71,7 +73,7 @@ function initScene() {
 }
 
 // ============================
-// PREVIEW SCENE (character customization)
+// PREVIEW SCENE
 // ============================
 function initPreview() {
   const pCanvas = document.getElementById('preview-canvas');
@@ -109,7 +111,6 @@ function updatePreviewModel() {
 // CUSTOMIZATION UI
 // ============================
 function initCustomization() {
-  // Skin
   const skinPicker = document.getElementById('skin-picker');
   PALETTES.skin.forEach((color, i) => {
     const s = document.createElement('div');
@@ -124,7 +125,6 @@ function initCustomization() {
     skinPicker.appendChild(s);
   });
 
-  // Hair color
   const hairPicker = document.getElementById('hair-color-picker');
   PALETTES.hair.forEach((color, i) => {
     const s = document.createElement('div');
@@ -139,7 +139,6 @@ function initCustomization() {
     hairPicker.appendChild(s);
   });
 
-  // Hair style
   const stylePicker = document.getElementById('hair-style-picker');
   ['short', 'medium', 'long', 'spiky', 'ponytail'].forEach(style => {
     const o = document.createElement('div');
@@ -154,7 +153,6 @@ function initCustomization() {
     stylePicker.appendChild(o);
   });
 
-  // Body color
   const bodyPicker = document.getElementById('body-picker');
   PALETTES.body.forEach((color, i) => {
     const s = document.createElement('div');
@@ -206,6 +204,9 @@ function handleServerMessage(msg) {
 
     case 'joined':
       state.player = msg.player;
+      state.dialogue.ws = state.ws;
+      state.dialogue.playerState = state.player;
+
       if (msg.npcs) Object.values(msg.npcs).forEach(npc => {
         const model = createNPCModel(npc);
         state.scene.add(model);
@@ -238,7 +239,11 @@ function handleServerMessage(msg) {
       break;
 
     case 'npc_dialogue':
-      showNPCDialogue(msg);
+      state.dialogue.open(msg.npcId, msg.name, msg.title);
+      break;
+
+    case 'quest_started':
+      addChatMessage('System', `Quest started: ${msg.questName}`);
       break;
   }
 }
@@ -289,49 +294,12 @@ function addChatMessage(name, message) {
 }
 
 // ============================
-// NPC DIALOGUE
-// ============================
-function showNPCDialogue(data) {
-  let popup = document.getElementById('npc-dialogue');
-  if (!popup) {
-    popup = document.createElement('div');
-    popup.id = 'npc-dialogue';
-    popup.style.cssText = `
-      position:fixed; bottom:200px; left:50%; transform:translateX(-50%);
-      background:rgba(0,0,0,0.9); color:white; padding:20px; border-radius:12px;
-      border:2px solid #4CAF50; max-width:400px; text-align:center; z-index:20;
-    `;
-    document.body.appendChild(popup);
-  }
-
-  const dialogues = {
-    elder_maren: 'Selamat datang, pemuda. Willowmere adalah rumah yang aman — setidaknya untuk sekarang.',
-    sir_gendut: 'Halo! Butuh obat atau alat? Sir Gendut punya semua!',
-    miss_lira: 'Hei! Kamu adventurer baru ya? Aku Lira! Aku mau jadi adventurer juga!',
-    mr_tani: 'Hari yang panas untuk panen. Kamu mau bantu?',
-    mrs_ningsih: 'Mau makan? Mrs. Ningsih masak nasi goreng spesial hari ini!',
-    kris: 'Hehe, kamu kelihatan baru di sini. Hati-hati ya...',
-    guard_ren: 'Hari yang tenang. Semoga terus begini.',
-    herbalist_sari: 'Kamu... berbeda. Aku bisa merasakan sesuatu darimu.',
-  };
-
-  popup.innerHTML = `
-    <div style="color:#4CAF50; font-weight:bold; margin-bottom:8px;">${data.name}</div>
-    <div style="color:#aaa; font-size:0.8rem; margin-bottom:12px;">${data.title}</div>
-    <div style="margin-bottom:16px;">${dialogues[data.npcId] || '...'}</div>
-    <button onclick="this.parentElement.style.display='none'"
-      style="padding:8px 24px; background:#4CAF50; border:none; color:white; border-radius:6px; cursor:pointer;">
-      Close
-    </button>
-  `;
-  popup.style.display = 'block';
-}
-
-// ============================
 // CLICK TO MOVE
 // ============================
 canvas.addEventListener('click', (e) => {
   if (!state.connected || !state.player) return;
+  // Don't move if dialogue is open
+  if (state.dialogue.container.style.display === 'block') return;
 
   const mouse = new THREE.Vector2(
     (e.clientX / window.innerWidth) * 2 - 1,
@@ -417,18 +385,15 @@ function gameLoop() {
   requestAnimationFrame(gameLoop);
   updateMovement();
 
-  // Walk animation
   const playerModel = state.players[state.playerId];
   if (state.targetPos) animateWalk(playerModel, 1);
   else stopWalk(playerModel);
 
-  // Preview rotation
   if (state.previewModel) {
     state.previewModel.rotation.y += 0.01;
     state.previewRenderer.render(state.previewScene, state.previewCamera);
   }
 
-  // Camera follow
   if (playerModel) {
     const t = playerModel.position;
     state.camera.position.x += (t.x - state.camera.position.x) * 0.05;
