@@ -1,6 +1,6 @@
 # Zenithia
 
-A colorful MMORPG inspired by Seal Online, built on Solana blockchain.
+A colorful MMORPG built on Solana blockchain.
 
 ## Features
 - 3D world with boxy/Minecraft-style characters
