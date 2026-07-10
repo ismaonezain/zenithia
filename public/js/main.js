@@ -37,6 +37,7 @@ const state = {
   inventoryUI: null,
   questUI: null,
   partyUI: null,
+  cameraDistance: 20,
   monsters: {},
   damageNumbers: [],
 };
@@ -56,6 +57,7 @@ function initScene() {
 
   state.camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 500);
   state.camera.position.set(0, 15, 20);
+  state.cameraDistance = 20;
 
   state.renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
   state.renderer.setSize(window.innerWidth, window.innerHeight);
@@ -84,6 +86,13 @@ function initScene() {
     state.camera.updateProjectionMatrix();
     state.renderer.setSize(window.innerWidth, window.innerHeight);
   });
+
+  // Zoom in/out with mouse wheel
+  canvas.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    state.cameraDistance += e.deltaY * 0.02;
+    state.cameraDistance = Math.max(5, Math.min(50, state.cameraDistance));
+  }, { passive: false });
 }
 
 // ============================
@@ -812,7 +821,8 @@ function gameLoop() {
   if (playerModel) {
     const t = playerModel.position;
     state.camera.position.x += (t.x - state.camera.position.x) * 0.05;
-    state.camera.position.z += (t.z + 20 - state.camera.position.z) * 0.05;
+    state.camera.position.z += (t.z + state.cameraDistance - state.camera.position.z) * 0.05;
+    state.camera.position.y += (t.y + state.cameraDistance * 0.75 - state.camera.position.y) * 0.05;
     state.camera.lookAt(t.x, t.y + 1, t.z);
   }
 
