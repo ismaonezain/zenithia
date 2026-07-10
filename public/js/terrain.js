@@ -82,68 +82,97 @@ function addWater(group) {
 }
 
 // --- Paths ---
+function addPathLabel(group, text, x, z, rot = 0) {
+  const c = document.createElement('canvas');
+  c.width = 256; c.height = 64;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = 'rgba(0,0,0,0.6)';
+  ctx.roundRect(0, 0, 256, 64, 8);
+  ctx.fill();
+  ctx.font = 'bold 24px Arial';
+  ctx.fillStyle = '#ffff00';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(text, 128, 32);
+  const tex = new THREE.CanvasTexture(c);
+  const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true }));
+  sprite.scale.set(4, 1, 1);
+  sprite.position.set(x, 0.5, z);
+  sprite.rotation.y = rot;
+  group.add(sprite);
+}
+
 function addPaths(group) {
   const pathMat = new THREE.MeshLambertMaterial({ color: 0xBCAAA4 });
 
-  // Main vertical path (Elder's Hall → Gate, full village length)
+  // [A] Main vertical path (Elder's Hall → Gate)
   const mainPath = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 40), pathMat);
   mainPath.rotation.x = -Math.PI / 2;
   mainPath.position.set(0, 0.02, 4);
   mainPath.receiveShadow = true;
   group.add(mainPath);
+  addPathLabel(group, 'JALAN UTAMA', 0, 4);
 
-  // Main path → Herbalist (horizontal straight, then vertical down)
+  // [B] Herbalist horizontal (bridge → east)
   const herbalPathH = new THREE.Mesh(new THREE.PlaneGeometry(18, 1.2), pathMat);
   herbalPathH.rotation.x = -Math.PI / 2;
   herbalPathH.position.set(9, 0.02, 0);
   herbalPathH.receiveShadow = true;
   group.add(herbalPathH);
+  addPathLabel(group, 'JALAN HERBALIST H', 9, 0);
 
-  // Vertical path down to herbalist
+  // [C] Herbalist vertical (turun ke herbalist)
   const herbalPathV = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 8), pathMat);
   herbalPathV.rotation.x = -Math.PI / 2;
   herbalPathV.position.set(18, 0.02, -4);
   herbalPathV.receiveShadow = true;
   group.add(herbalPathV);
+  addPathLabel(group, 'JALAN HERBALIST V', 18, -4);
 
-  // Stalls → Bridge (horizontal, to cross river properly)
+  // [D] Stalls → Bridge (horizontal ke kiri)
   const stallToBridge = new THREE.Mesh(new THREE.PlaneGeometry(2.5, 1.2), pathMat);
   stallToBridge.rotation.x = -Math.PI / 2;
   stallToBridge.position.set(1, 0.02, 4);
   stallToBridge.receiveShadow = true;
   group.add(stallToBridge);
+  addPathLabel(group, 'JALAN STALL', 1, 4);
 
-  // Bridge crossing (vertical, south through bridge)
+  // [E] Bridge crossing (vertikal lewat sungai)
   const bridgePath = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 4), pathMat);
   bridgePath.rotation.x = -Math.PI / 2;
   bridgePath.position.set(0, 0.02, 2);
   bridgePath.receiveShadow = true;
   group.add(bridgePath);
+  addPathLabel(group, 'JALAN BRIDGE', 0, 2);
 
-  // Main path → Barn (diagonal, ends at barn door z=14)
+  // [F] Main → Barn (diagonal ke barat)
   const farmPath = createDiagonalPath(0, 8, -18, 14, 1.5, pathMat);
   group.add(farmPath);
+  addPathLabel(group, 'JALAN BARN', -9, 11);
 
-  // Main path → House cluster (horizontal at z=8)
+  // [G] Main → Houses (horizontal ke kiri, z=8)
   const housePath1 = new THREE.Mesh(new THREE.PlaneGeometry(5, 1.2), pathMat);
   housePath1.rotation.x = -Math.PI / 2;
   housePath1.position.set(-3, 0.02, 8);
   housePath1.receiveShadow = true;
   group.add(housePath1);
+  addPathLabel(group, 'JALAN RUMAH 1', -3, 8);
 
-  // Main path → House cluster (horizontal at z=14)
+  // [H] Main → Houses (horizontal ke kiri, z=14)
   const housePath2 = new THREE.Mesh(new THREE.PlaneGeometry(5, 1.2), pathMat);
   housePath2.rotation.x = -Math.PI / 2;
   housePath2.position.set(-3, 0.02, 14);
   housePath2.receiveShadow = true;
   group.add(housePath2);
+  addPathLabel(group, 'JALAN RUMAH 2', -3, 14);
 
-  // Main path → House at (2,12) (short horizontal)
+  // [I] Main → House (2,12) (horizontal ke kanan)
   const housePath3 = new THREE.Mesh(new THREE.PlaneGeometry(2, 1.2), pathMat);
   housePath3.rotation.x = -Math.PI / 2;
   housePath3.position.set(1, 0.02, 12);
   housePath3.receiveShadow = true;
   group.add(housePath3);
+  addPathLabel(group, 'JALAN RUMAH 3', 1, 12);
 }
 
 function createDiagonalPath(x1, z1, x2, z2, width, material) {
