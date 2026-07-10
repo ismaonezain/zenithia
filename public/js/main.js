@@ -26,7 +26,7 @@ const state = {
     classType: 'laborer',
     skinIdx: 0,
     hairColorIdx: 0,
-    hairStyle: 'storm',
+    hairStyle: 'undercut',
     topColorIdx: 0,
     bottomColorIdx: 0,
     eyeColorIdx: 0,
@@ -316,9 +316,9 @@ function initCustomization() {
 
   // Hair style picker
   const stylePicker = document.getElementById('hair-style-picker');
-  ['storm', 'rogue', 'vanguard', 'rebel', 'phantom', 'cascade', 'valkyrie', 'blossom', 'silk', 'crown'].forEach(style => {
+  ['undercut', 'pompadour', 'curtains', 'quiff', 'messy', 'hime', 'updo', 'layered', 'sidesweep', 'drills'].forEach(style => {
     const o = document.createElement('div');
-    o.className = 'option' + (style === 'storm' ? ' selected' : '');
+    o.className = 'option' + (style === 'undercut' ? ' selected' : '');
     o.textContent = style;
     o.onclick = () => {
       stylePicker.querySelectorAll('.option').forEach(x => x.classList.remove('selected'));
@@ -734,7 +734,7 @@ function createOtherPlayer(player) {
   const model = createPlayerModel({
     skinColor: PALETTES.skin[c.skinIdx || 0],
     hairColor: PALETTES.hair[c.hairColorIdx || 0],
-    hairStyle: c.hairStyle || 'short',
+    hairStyle: look.hairStyle || 'undercut',
     bodyColor: PALETTES.body[c.topColorIdx || 0],
     pantsColor: PANTS_COLORS[c.bottomColorIdx || 0],
     eyeColor: PALETTES.eyes[c.eyeColorIdx || 0],
