@@ -770,6 +770,12 @@ canvas.addEventListener('click', (e) => {
   // Check NPC proximity
   for (const npc of Object.values(state.npcs)) {
     if (npc.position.distanceTo(point) < 2) {
+      const model = state.players[state.playerId];
+      if (model) {
+        const faceDir = npc.position.clone().sub(model.position).normalize();
+        state.lastFacing = model.position.clone().add(faceDir);
+        model.lookAt(state.lastFacing);
+      }
       state.ws.send(JSON.stringify({ type: 'interact_npc', npcId: npc.userData.id }));
       return;
     }
@@ -778,9 +784,13 @@ canvas.addEventListener('click', (e) => {
   // Check Monster proximity — attack
   for (const mob of Object.values(state.monsters)) {
     if (mob.position.distanceTo(point) < 2) {
-      state.ws.send(JSON.stringify({ type: 'attack', monsterId: mob.userData.id }));
       const model = state.players[state.playerId];
-      if (model) model.lookAt(mob.position);
+      if (model) {
+        const faceDir = mob.position.clone().sub(model.position).normalize();
+        state.lastFacing = model.position.clone().add(faceDir);
+        model.lookAt(state.lastFacing);
+      }
+      state.ws.send(JSON.stringify({ type: 'attack', monsterId: mob.userData.id }));
       return;
     }
   }
@@ -844,7 +854,11 @@ function updateMovement() {
   }
 
   model.position.add(step);
-  model.lookAt(state.targetPos);
+
+  // Face direction of movement (store last direction)
+  const lookTarget = model.position.clone().add(dir.normalize());
+  state.lastFacing = lookTarget;
+  model.lookAt(lookTarget);
 
   state.ws.send(JSON.stringify({
     type: 'move',
