@@ -93,7 +93,7 @@ function addPaths(group) {
   group.add(mainPath);
 
   // Market → Herbalist (diagonal) — connects stalls to herbalist
-  const herbalPath = createDiagonalPath(8, 2, 18, -8, 1.5, pathMat);
+  const herbalPath = createDiagonalPath(6, 2, 18, -8, 1.5, pathMat);
   group.add(herbalPath);
 
   // Market → Farm (diagonal) — connects main path to barn
@@ -101,14 +101,14 @@ function addPaths(group) {
   group.add(farmPath);
 
   // Side path to houses (main path → house cluster)
-  const housePath = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 10), pathMat);
+  const housePath = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 10), pathMat);
   housePath.rotation.x = -Math.PI / 2;
   housePath.position.set(-3, 0.02, 10);
   housePath.receiveShadow = true;
   group.add(housePath);
 
   // Short path to house at (2, 12)
-  const house2Path = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 4), pathMat);
+  const house2Path = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 4), pathMat);
   house2Path.rotation.x = -Math.PI / 2;
   house2Path.position.set(1, 0.02, 12);
   house2Path.receiveShadow = true;
@@ -136,15 +136,15 @@ function addBuildings(group) {
     // Elder's Hall — face south toward main path
     { x: 0, z: -15, w: 6, h: 4, d: 5, color: 0x8D6E63, roof: 0x5D4037, label: 'Elder\'s Hall', rot: 0 },
 
-    // Market stalls — face west toward path
-    { x: 8, z: 0, w: 2, h: 2, d: 2, color: 0xFFCC80, roof: 0xE65100, label: 'Stall', rot: Math.PI / 2 },
-    { x: 8, z: 4, w: 2, h: 2, d: 2, color: 0xFFCC80, roof: 0xE65100, label: 'Stall', rot: Math.PI / 2 },
-    { x: 8, z: 8, w: 2, h: 2, d: 2, color: 0xFFCC80, roof: 0xE65100, label: 'Stall', rot: Math.PI / 2 },
+    // Market stalls — neat row facing main path (west)
+    { x: 6, z: 0, w: 2, h: 2, d: 2, color: 0xFFCC80, roof: 0xE65100, label: 'Stall', rot: Math.PI / 2 },
+    { x: 6, z: 4, w: 2, h: 2, d: 2, color: 0xFFCC80, roof: 0xE65100, label: 'Stall', rot: Math.PI / 2 },
+    { x: 6, z: 8, w: 2, h: 2, d: 2, color: 0xFFCC80, roof: 0xE65100, label: 'Stall', rot: Math.PI / 2 },
 
-    // Houses — face toward nearest road
-    { x: -6, z: 8, w: 3, h: 2.5, d: 3, color: 0xBCAAA4, roof: 0x795548, rot: -Math.PI / 2 },   // face east → side path
-    { x: -6, z: 14, w: 3, h: 2.5, d: 3, color: 0xBCAAA4, roof: 0x795548, rot: -Math.PI / 2 },   // face east → side path
-    { x: 2, z: 12, w: 3, h: 2.5, d: 3, color: 0xBCAAA4, roof: 0x795548, rot: Math.PI / 2 },     // face west → house path
+    // Houses — varied colors, face nearest road
+    { x: -6, z: 8, w: 3, h: 2.5, d: 3, color: 0xD7CCC8, roof: 0x5D4037, rot: -Math.PI / 2 },   // light brown, face east
+    { x: -6, z: 14, w: 3, h: 2.5, d: 3, color: 0xBCAAA4, roof: 0x795548, rot: -Math.PI / 2 },   // tan, face east
+    { x: 2, z: 12, w: 3, h: 2.5, d: 3, color: 0xC5E1A5, roof: 0x33691E, rot: Math.PI / 2 },     // light green, face west
 
     // Herbalist's hut — face west toward path
     { x: 18, z: -8, w: 2.5, h: 2, d: 2.5, color: 0x6D4C41, roof: 0x33691E, label: 'Herbalist', rot: Math.PI / 2 },
@@ -173,7 +173,7 @@ function addBuildings(group) {
     const roofMat = new THREE.MeshLambertMaterial({ color: b.roof });
     const roof = new THREE.Mesh(roofGeo, roofMat);
     roof.position.y = b.h + 0.75;
-    roof.rotation.y = Math.PI / 4;
+    roof.rotation.y = (b.rot || 0) + Math.PI / 4;
     roof.castShadow = true;
     g.add(roof);
 
