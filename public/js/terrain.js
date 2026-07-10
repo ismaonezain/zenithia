@@ -122,12 +122,12 @@ function addPaths(group) {
   addPathLabel(group, 'JALAN HERBALIST H', 9, -2);
 
   // [C] Herbalist vertical (from H path down to herbalist only)
-  const herbalPathV = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 6), pathMat);
+  const herbalPathV = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 6.5), pathMat);
   herbalPathV.rotation.x = -Math.PI / 2;
-  herbalPathV.position.set(18, 0.02, -5);
+  herbalPathV.position.set(18, 0.02, -4.75);
   herbalPathV.receiveShadow = true;
   group.add(herbalPathV);
-  addPathLabel(group, 'JALAN HERBALIST V', 18, -5);
+  addPathLabel(group, 'JALAN HERBALIST V', 18, -4.75);
 
   // [D] Main → Herbalist H (vertical pendek)
   const mainToHerbal = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 4), pathMat);
