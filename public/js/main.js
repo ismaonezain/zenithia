@@ -617,6 +617,106 @@ function updatePlayerMP(mp, maxMp) {
 }
 
 // ============================
+// A* PATHFINDING
+// ============================
+function findPath(startX, startZ, endX, endZ) {
+  const gridMin = -30, gridMax = 30;
+  const size = gridMax - gridMin + 1;
+  const key = (x, z) => `${x},${z}`;
+
+  // Build walkable set
+  const walkable = new Set();
+  for (let x = gridMin; x <= gridMax; x++) {
+    for (let z = gridMin; z <= gridMax; z++) {
+      if (isWalkable(x, z)) walkable.add(key(x, z));
+    }
+  }
+
+  const startKey = key(startX, startZ);
+  const endKey = key(endX, endZ);
+
+  // If target not walkable, find nearest walkable tile
+  if (!walkable.has(endKey)) {
+    let bestDist = Infinity, bestKey = null;
+    for (const k of walkable) {
+      const [bx, bz] = k.split(',').map(Number);
+      const d = Math.abs(bx - endX) + Math.abs(bz - endZ);
+      if (d < bestDist) { bestDist = d; bestKey = k; }
+    }
+    if (!bestKey) return null;
+    var finalEndX = parseInt(bestKey.split(',')[0]);
+    var finalEndZ = parseInt(bestKey.split(',')[1]);
+  } else {
+    var finalEndX = endX;
+    var finalEndZ = endZ;
+  }
+
+  // A* with 8-directional movement
+  const open = new Map();
+  const closed = new Set();
+  const gScore = new Map();
+  const fScore = new Map();
+  const cameFrom = new Map();
+
+  gScore.set(startKey, 0);
+  fScore.set(startKey, Math.abs(startX - finalEndX) + Math.abs(startZ - finalEndZ));
+  open.set(startKey, fScore.get(startKey));
+
+  const dirs = [
+    [1,0],[-1,0],[0,1],[0,-1],
+    [1,1],[1,-1],[-1,1],[-1,-1]
+  ];
+
+  let iterations = 0;
+  while (open.size > 0 && iterations < 2000) {
+    iterations++;
+    // Find lowest fScore in open
+    let currentKey = null, lowestF = Infinity;
+    for (const [k, f] of open) {
+      if (f < lowestF) { lowestF = f; currentKey = k; }
+    }
+
+    const [cx, cz] = currentKey.split(',').map(Number);
+    if (cx === finalEndX && cz === finalEndZ) {
+      // Reconstruct path
+      const path = [];
+      let cur = currentKey;
+      while (cur) {
+        const [px, pz] = cur.split(',').map(Number);
+        path.unshift({ x: px, z: pz });
+        cur = cameFrom.get(cur);
+      }
+      return path;
+    }
+
+    open.delete(currentKey);
+    closed.add(currentKey);
+
+    for (const [dx, dz] of dirs) {
+      const nx = cx + dx, nz = cz + dz;
+      const nk = key(nx, nz);
+      if (closed.has(nk) || !walkable.has(nk)) continue;
+
+      // Diagonal movement: check both adjacent tiles are walkable
+      if (dx !== 0 && dz !== 0) {
+        if (!walkable.has(key(cx + dx, cz)) || !walkable.has(key(cx, cz + dz))) continue;
+      }
+
+      const moveCost = (dx !== 0 && dz !== 0) ? 1.414 : 1;
+      const tentG = gScore.get(currentKey) + moveCost;
+
+      if (!gScore.has(nk) || tentG < gScore.get(nk)) {
+        cameFrom.set(nk, currentKey);
+        gScore.set(nk, tentG);
+        fScore.set(nk, tentG + Math.abs(nx - finalEndX) + Math.abs(nz - finalEndZ));
+        open.set(nk, fScore.get(nk));
+      }
+    }
+  }
+  return null; // no path
+}
+
+// ============================
 // CLICK INDICATOR
 // ============================
 let clickIndicator = null;
@@ -695,7 +795,19 @@ canvas.addEventListener('click', (e) => {
   // Show click indicator
   showClickIndicator(snapX, snapZ);
 
-  state.targetPos = new THREE.Vector3(snapX, 0, snapZ);
+  // A* pathfinding — route around obstacles
+  const model = state.players[state.playerId];
+  if (!model) return;
+  const startX = Math.round(model.position.x);
+  const startZ = Math.round(model.position.z);
+  const path = findPath(startX, startZ, snapX, snapZ);
+
+  if (path && path.length > 1) {
+    state.pathWaypoints = path.slice(1); // skip current position
+    state.targetPos = new THREE.Vector3(state.pathWaypoints[0].x, 0, state.pathWaypoints[0].z);
+  } else if (path && path.length === 1) {
+    state.targetPos = new THREE.Vector3(path[0].x, 0, path[0].z);
+  }
 });
 
 // ============================
@@ -710,7 +822,14 @@ function updateMovement() {
   if (dir.length() < 0.1) {
     model.position.copy(state.targetPos);
     state.ws.send(JSON.stringify({ type: 'move', x: state.targetPos.x, y: 0, z: state.targetPos.z }));
-    state.targetPos = null;
+
+    // Next waypoint
+    if (state.pathWaypoints && state.pathWaypoints.length > 0) {
+      const next = state.pathWaypoints.shift();
+      state.targetPos = new THREE.Vector3(next.x, 0, next.z);
+    } else {
+      state.targetPos = null;
+    }
     return;
   }
 
@@ -720,6 +839,7 @@ function updateMovement() {
   const nextZ = model.position.z + step.z;
   if (!isWalkable(nextX, nextZ)) {
     state.targetPos = null;
+    state.pathWaypoints = null;
     return;
   }
 
