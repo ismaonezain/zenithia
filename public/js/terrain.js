@@ -121,13 +121,13 @@ function addPaths(group) {
   group.add(herbalPathH);
   addPathLabel(group, 'JALAN HERBALIST H', 9, -2);
 
-  // [C] Herbalist vertical (dekat herbalist)
-  const herbalPathV = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 8), pathMat);
+  // [C] Herbalist vertical (from H path down to herbalist only)
+  const herbalPathV = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 6), pathMat);
   herbalPathV.rotation.x = -Math.PI / 2;
-  herbalPathV.position.set(18, 0.02, -3.5);
+  herbalPathV.position.set(18, 0.02, -5);
   herbalPathV.receiveShadow = true;
   group.add(herbalPathV);
-  addPathLabel(group, 'JALAN HERBALIST V', 18, -3.5);
+  addPathLabel(group, 'JALAN HERBALIST V', 18, -5);
 
   // [D] Main → Herbalist H (vertical pendek)
   const mainToHerbal = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 4), pathMat);
@@ -206,7 +206,7 @@ function addBuildings(group) {
     // Houses — face road
     { x: -6, z: 8, w: 3, h: 2.5, d: 3, color: 0xD7CCC8, roof: 0x5D4037, rot: Math.PI / 2, label: 'Willow Cottage' },
     { x: -6, z: 14, w: 3, h: 2.5, d: 3, color: 0xBCAAA4, roof: 0x795548, rot: Math.PI / 2, label: 'River House' },
-    { x: 5, z: 12, w: 3, h: 2.5, d: 3, color: 0xC5E1A5, roof: 0x33691E, rot: -Math.PI / 2, label: 'Green House' },
+    { x: 3, z: 12, w: 3, h: 2.5, d: 3, color: 0xC5E1A5, roof: 0x33691E, rot: -Math.PI / 2, label: 'Green House' },
 
     // Herbalist's hut — face south
     { x: 18, z: -8, w: 2.5, h: 2, d: 2.5, color: 0x6D4C41, roof: 0x33691E, label: 'Herbalist', rot: 0 },
