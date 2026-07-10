@@ -92,9 +92,19 @@ function addPaths(group) {
   mainPath.receiveShadow = true;
   group.add(mainPath);
 
-  // Main path → Herbalist (south of river, from bridge to herbalist)
-  const herbalPath = createDiagonalPath(0, 0, 18, -8, 1.5, pathMat);
-  group.add(herbalPath);
+  // Main path → Herbalist (horizontal straight, then vertical down)
+  const herbalPathH = new THREE.Mesh(new THREE.PlaneGeometry(18, 1.2), pathMat);
+  herbalPathH.rotation.x = -Math.PI / 2;
+  herbalPathH.position.set(9, 0.02, 0);
+  herbalPathH.receiveShadow = true;
+  group.add(herbalPathH);
+
+  // Vertical path down to herbalist
+  const herbalPathV = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 8), pathMat);
+  herbalPathV.rotation.x = -Math.PI / 2;
+  herbalPathV.position.set(18, 0.02, -4);
+  herbalPathV.receiveShadow = true;
+  group.add(herbalPathV);
 
   // Stalls → Bridge (horizontal, to cross river properly)
   const stallToBridge = new THREE.Mesh(new THREE.PlaneGeometry(2.5, 1.2), pathMat);
