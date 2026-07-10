@@ -734,12 +734,35 @@ export function createNPCModel(npc) {
   model.position.set(npc.x, npc.y, npc.z);
   model.userData = { id: npc.id, name: npc.name, type: 'npc' };
 
-  // Name tag
-  const tagGeo = new THREE.BoxGeometry(1.2, 0.2, 0.05);
-  const tagMat = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.6 });
-  const tag = new THREE.Mesh(tagGeo, tagMat);
-  tag.position.y = 2.0;
+  // Name tag — always visible text sprite
+  const canvas = document.createElement('canvas');
+  canvas.width = 256;
+  canvas.height = 64;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = 'rgba(0,0,0,0.7)';
+  ctx.roundRect(0, 0, 256, 64, 8);
+  ctx.fill();
+  ctx.fillStyle = '#FFD700';
+  ctx.font = 'bold 28px Georgia';
+  ctx.textAlign = 'center';
+  ctx.fillText(npc.name, 128, 28);
+  ctx.fillStyle = '#AAAAAA';
+  ctx.font = '18px Georgia';
+  ctx.fillText(npc.title || '', 128, 52);
+  const tex = new THREE.CanvasTexture(canvas);
+  const tagMat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false });
+  const tag = new THREE.Sprite(tagMat);
+  tag.scale.set(2.5, 0.6, 1);
+  tag.position.y = 2.2;
   model.add(tag);
+
+  // Glowing indicator ring on ground
+  const ringGeo = new THREE.RingGeometry(0.6, 0.8, 16);
+  const ringMat = new THREE.MeshBasicMaterial({ color: 0xFFD700, transparent: true, opacity: 0.4, side: THREE.DoubleSide });
+  const ring = new THREE.Mesh(ringGeo, ringMat);
+  ring.rotation.x = -Math.PI / 2;
+  ring.position.y = 0.02;
+  model.add(ring);
 
   return model;
 }

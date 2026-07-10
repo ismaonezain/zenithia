@@ -775,6 +775,28 @@ function showHUD() {
   loadingScreen.style.display = 'none';
   loginScreen.style.display = 'none';
   hud.style.display = 'block';
+  // Show map name overlay
+  showMapName('Willowmere Village', 'A peaceful village in the heart of Zenithia');
+}
+
+// Map name overlay
+function showMapName(name, subtitle) {
+  const overlay = document.getElementById('map-name-overlay');
+  const textEl = document.getElementById('map-name-text');
+  const subEl = document.getElementById('map-name-sub');
+  if (!overlay || !textEl) return;
+  textEl.textContent = name;
+  if (subEl) subEl.textContent = subtitle || '';
+  overlay.style.display = 'block';
+  // Trigger fade in
+  requestAnimationFrame(() => {
+    overlay.classList.add('show');
+  });
+  // Fade out after 3 seconds
+  setTimeout(() => {
+    overlay.classList.remove('show');
+    setTimeout(() => { overlay.style.display = 'none'; }, 1500);
+  }, 3000);
 }
 
 // ============================

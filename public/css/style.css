@@ -453,3 +453,40 @@ body {
   0%, 70% { opacity: 1; }
   100% { opacity: 0; }
 }
+
+/* === MAP NAME OVERLAY === */
+#map-name-overlay {
+  position: fixed;
+  top: 30%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  z-index: 20;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 1.5s ease;
+}
+#map-name-overlay.show {
+  opacity: 1;
+}
+#map-name-text {
+  font-family: 'Georgia', serif;
+  font-size: 3rem;
+  font-weight: bold;
+  color: #FFD700;
+  text-shadow: 0 0 20px rgba(255,215,0,0.6), 2px 2px 4px rgba(0,0,0,0.8);
+  letter-spacing: 4px;
+  animation: mapNameSlide 0.8s ease-out;
+}
+#map-name-sub {
+  font-family: 'Georgia', serif;
+  font-size: 1.1rem;
+  color: #C0C0C0;
+  text-shadow: 1px 1px 3px rgba(0,0,0,0.7);
+  margin-top: 8px;
+  letter-spacing: 2px;
+}
+@keyframes mapNameSlide {
+  0% { transform: translateY(20px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
