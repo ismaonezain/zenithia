@@ -85,34 +85,48 @@ function addWater(group) {
 function addPaths(group) {
   const pathMat = new THREE.MeshLambertMaterial({ color: 0xBCAAA4 });
 
-  // Main vertical path (Elder's Hall → Market → South)
-  const mainPath = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 34), pathMat);
+  // Main vertical path (Elder's Hall → Gate, full village length)
+  const mainPath = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 40), pathMat);
   mainPath.rotation.x = -Math.PI / 2;
-  mainPath.position.set(0, 0.02, 5);
+  mainPath.position.set(0, 0.02, 4);
   mainPath.receiveShadow = true;
   group.add(mainPath);
 
-  // Market → Herbalist (diagonal) — connects stalls to herbalist
-  const herbalPath = createDiagonalPath(6, 2, 18, -8, 1.5, pathMat);
+  // Main path → Market stalls (short horizontal)
+  const stallPath = new THREE.Mesh(new THREE.PlaneGeometry(5, 1.2), pathMat);
+  stallPath.rotation.x = -Math.PI / 2;
+  stallPath.position.set(3, 0.02, 4);
+  stallPath.receiveShadow = true;
+  group.add(stallPath);
+
+  // Main path → Herbalist (diagonal, ends at herbalist door x=16.75)
+  const herbalPath = createDiagonalPath(0, 2, 16.75, -8, 1.5, pathMat);
   group.add(herbalPath);
 
-  // Market → Farm (diagonal) — connects main path to barn
-  const farmPath = createDiagonalPath(0, 8, -18, 12, 1.5, pathMat);
+  // Main path → Barn (diagonal, ends at barn door z=14)
+  const farmPath = createDiagonalPath(0, 8, -18, 14, 1.5, pathMat);
   group.add(farmPath);
 
-  // Side path to houses (main path → house cluster)
-  const housePath = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 10), pathMat);
-  housePath.rotation.x = -Math.PI / 2;
-  housePath.position.set(-3, 0.02, 10);
-  housePath.receiveShadow = true;
-  group.add(housePath);
+  // Main path → House cluster (horizontal at z=8)
+  const housePath1 = new THREE.Mesh(new THREE.PlaneGeometry(5, 1.2), pathMat);
+  housePath1.rotation.x = -Math.PI / 2;
+  housePath1.position.set(-3, 0.02, 8);
+  housePath1.receiveShadow = true;
+  group.add(housePath1);
 
-  // Short path to house at (2, 12)
-  const house2Path = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 4), pathMat);
-  house2Path.rotation.x = -Math.PI / 2;
-  house2Path.position.set(1, 0.02, 12);
-  house2Path.receiveShadow = true;
-  group.add(house2Path);
+  // Main path → House cluster (horizontal at z=14)
+  const housePath2 = new THREE.Mesh(new THREE.PlaneGeometry(5, 1.2), pathMat);
+  housePath2.rotation.x = -Math.PI / 2;
+  housePath2.position.set(-3, 0.02, 14);
+  housePath2.receiveShadow = true;
+  group.add(housePath2);
+
+  // Main path → House at (2,12) (short horizontal)
+  const housePath3 = new THREE.Mesh(new THREE.PlaneGeometry(2, 1.2), pathMat);
+  housePath3.rotation.x = -Math.PI / 2;
+  housePath3.position.set(1, 0.02, 12);
+  housePath3.receiveShadow = true;
+  group.add(housePath3);
 }
 
 function createDiagonalPath(x1, z1, x2, z2, width, material) {
@@ -152,8 +166,8 @@ function addBuildings(group) {
     // Guard post — face south toward gate
     { x: 0, z: 22, w: 2, h: 3, d: 2, color: 0x607D8B, roof: 0x455A64, label: 'Gate', rot: 0 },
 
-    // Mr. Tani's barn — face toward farm path
-    { x: -18, z: 12, w: 5, h: 3, d: 4, color: 0xD32F2F, roof: 0xB71C1C, label: 'Barn', rot: Math.PI / 6 },
+    // Mr. Tani's barn — face south
+    { x: -18, z: 12, w: 5, h: 3, d: 4, color: 0xD32F2F, roof: 0xB71C1C, label: 'Barn', rot: 0 },
   ];
 
   buildings.forEach(b => {
@@ -168,12 +182,12 @@ function addBuildings(group) {
     wall.receiveShadow = true;
     g.add(wall);
 
-    // Roof (triangular prism)
+    // Roof (triangular prism) — local rotation only, group handles building rot
     const roofGeo = new THREE.ConeGeometry(Math.max(b.w, b.d) * 0.7, 1.5, 4);
     const roofMat = new THREE.MeshLambertMaterial({ color: b.roof });
     const roof = new THREE.Mesh(roofGeo, roofMat);
     roof.position.y = b.h + 0.75;
-    roof.rotation.y = (b.rot || 0) + Math.PI / 4;
+    roof.rotation.y = Math.PI / 4;
     roof.castShadow = true;
     g.add(roof);
 
