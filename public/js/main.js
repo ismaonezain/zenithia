@@ -70,11 +70,18 @@ function initScene() {
   state.renderer.shadowMap.enabled = true;
   state.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
-  state.scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+  state.scene.add(new THREE.AmbientLight(0xffffff, 0.4));
   const sun = new THREE.DirectionalLight(0xffffff, 1.0);
-  sun.position.set(50, 100, 50);
+  sun.position.set(30, 50, 30);
   sun.castShadow = true;
   sun.shadow.mapSize.set(2048, 2048);
+  sun.shadow.camera.left = -50;
+  sun.shadow.camera.right = 50;
+  sun.shadow.camera.top = 50;
+  sun.shadow.camera.bottom = -50;
+  sun.shadow.camera.near = 0.5;
+  sun.shadow.camera.far = 200;
+  sun.shadow.bias = -0.0005;
   state.scene.add(sun);
 
   buildTerrain(state.scene);

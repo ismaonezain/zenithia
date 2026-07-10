@@ -59,22 +59,25 @@ function addWater(group) {
   pond.position.set(-10, 0.05, 2);
   group.add(pond);
 
-  // Bridge (wooden planks)
-  const bridgeGeo = new THREE.BoxGeometry(4, 0.15, 2);
+  // Bridge (wooden planks) — rotated 90° to cross creek
+  const bridgeGeo = new THREE.BoxGeometry(2, 0.15, 4);
   const bridgeMat = new THREE.MeshLambertMaterial({ color: 0x8D6E63 });
   const bridge = new THREE.Mesh(bridgeGeo, bridgeMat);
   bridge.position.set(0, 0.15, 2);
+  bridge.castShadow = true;
   bridge.receiveShadow = true;
   group.add(bridge);
 
   // Bridge railings
-  const railGeo = new THREE.BoxGeometry(4, 0.5, 0.1);
+  const railGeo = new THREE.BoxGeometry(0.1, 0.5, 4);
   const railMat = new THREE.MeshLambertMaterial({ color: 0x6D4C41 });
   const rail1 = new THREE.Mesh(railGeo, railMat);
-  rail1.position.set(0, 0.4, 1);
+  rail1.position.set(-1, 0.4, 2);
+  rail1.castShadow = true;
   group.add(rail1);
   const rail2 = new THREE.Mesh(railGeo, railMat);
-  rail2.position.set(0, 0.4, 3);
+  rail2.position.set(1, 0.4, 2);
+  rail2.castShadow = true;
   group.add(rail2);
 }
 
@@ -86,6 +89,7 @@ function addPaths(group) {
   const mainPath = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 34), pathMat);
   mainPath.rotation.x = -Math.PI / 2;
   mainPath.position.set(0, 0.02, 5);
+  mainPath.receiveShadow = true;
   group.add(mainPath);
 
   // Market → Herbalist (diagonal)
@@ -108,6 +112,7 @@ function createDiagonalPath(x1, z1, x2, z2, width, material) {
   mesh.rotation.x = -Math.PI / 2;
   mesh.rotation.z = -angle;
   mesh.position.set((x1 + x2) / 2, 0.02, (z1 + z2) / 2);
+  mesh.receiveShadow = true;
   return mesh;
 }
 
