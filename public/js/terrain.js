@@ -92,15 +92,8 @@ function addPaths(group) {
   mainPath.receiveShadow = true;
   group.add(mainPath);
 
-  // Main path → Market stalls (short horizontal)
-  const stallPath = new THREE.Mesh(new THREE.PlaneGeometry(5, 1.2), pathMat);
-  stallPath.rotation.x = -Math.PI / 2;
-  stallPath.position.set(3, 0.02, 4);
-  stallPath.receiveShadow = true;
-  group.add(stallPath);
-
-  // Main path → Herbalist (diagonal, ends at herbalist door x=16.75)
-  const herbalPath = createDiagonalPath(0, 2, 16.75, -8, 1.5, pathMat);
+  // Main path → Herbalist (diagonal)
+  const herbalPath = createDiagonalPath(0, 2, 18, -8, 1.5, pathMat);
   group.add(herbalPath);
 
   // Main path → Barn (diagonal, ends at barn door z=14)
@@ -150,24 +143,24 @@ function addBuildings(group) {
     // Elder's Hall — face south toward main path
     { x: 0, z: -15, w: 6, h: 4, d: 5, color: 0x8D6E63, roof: 0x5D4037, label: 'Elder\'s Hall', rot: 0 },
 
-    // Market stalls — neat row facing main path (west)
-    { x: 6, z: 0, w: 2, h: 2, d: 2, color: 0xFFCC80, roof: 0xE65100, label: 'Stall', rot: Math.PI / 2 },
-    { x: 6, z: 4, w: 2, h: 2, d: 2, color: 0xFFCC80, roof: 0xE65100, label: 'Stall', rot: Math.PI / 2 },
-    { x: 6, z: 8, w: 2, h: 2, d: 2, color: 0xFFCC80, roof: 0xE65100, label: 'Stall', rot: Math.PI / 2 },
+    // Market stalls — straight line along main path
+    { x: 2, z: 0, w: 2, h: 2, d: 2, color: 0xFFCC80, roof: 0xE65100, label: 'Stall', rot: Math.PI / 2 },
+    { x: 2, z: 4, w: 2, h: 2, d: 2, color: 0xFFCC80, roof: 0xE65100, label: 'Stall', rot: Math.PI / 2 },
+    { x: 2, z: 8, w: 2, h: 2, d: 2, color: 0xFFCC80, roof: 0xE65100, label: 'Stall', rot: Math.PI / 2 },
 
-    // Houses — varied colors, face nearest road
-    { x: -6, z: 8, w: 3, h: 2.5, d: 3, color: 0xD7CCC8, roof: 0x5D4037, rot: -Math.PI / 2, label: 'Willow Cottage' },
-    { x: -6, z: 14, w: 3, h: 2.5, d: 3, color: 0xBCAAA4, roof: 0x795548, rot: -Math.PI / 2, label: 'River House' },
-    { x: 2, z: 12, w: 3, h: 2.5, d: 3, color: 0xC5E1A5, roof: 0x33691E, rot: Math.PI / 2, label: 'Green House' },
+    // Houses — face road
+    { x: -6, z: 8, w: 3, h: 2.5, d: 3, color: 0xD7CCC8, roof: 0x5D4037, rot: Math.PI / 2, label: 'Willow Cottage' },
+    { x: -6, z: 14, w: 3, h: 2.5, d: 3, color: 0xBCAAA4, roof: 0x795548, rot: Math.PI / 2, label: 'River House' },
+    { x: 2, z: 12, w: 3, h: 2.5, d: 3, color: 0xC5E1A5, roof: 0x33691E, rot: -Math.PI / 2, label: 'Green House' },
 
-    // Herbalist's hut — face west toward path
-    { x: 18, z: -8, w: 2.5, h: 2, d: 2.5, color: 0x6D4C41, roof: 0x33691E, label: 'Herbalist', rot: Math.PI / 2 },
+    // Herbalist's hut — face east toward herbalist path
+    { x: 18, z: -8, w: 2.5, h: 2, d: 2.5, color: 0x6D4C41, roof: 0x33691E, label: 'Herbalist', rot: -Math.PI / 2 },
 
-    // Guard post — face south toward gate
-    { x: 0, z: 22, w: 2, h: 3, d: 2, color: 0x607D8B, roof: 0x455A64, label: 'Gate', rot: 0 },
+    // Guard post — face left (west)
+    { x: -2, z: 22, w: 2, h: 3, d: 2, color: 0x607D8B, roof: 0x455A64, label: 'Gate', rot: Math.PI / 2 },
 
-    // Mr. Tani's barn — face south
-    { x: -18, z: 12, w: 5, h: 3, d: 4, color: 0xD32F2F, roof: 0xB71C1C, label: 'Barn', rot: 0 },
+    // Mr. Tani's barn — face north
+    { x: -18, z: 12, w: 5, h: 3, d: 4, color: 0xD32F2F, roof: 0xB71C1C, label: 'Barn', rot: Math.PI },
   ];
 
   buildings.forEach(b => {
