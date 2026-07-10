@@ -7,7 +7,7 @@ const crypto = require('crypto');
 const nacl = require('tweetnacl');
 const bs58 = require('bs58').default || require('bs58');
 
-const PORT = 2567;
+const PORT = process.env.PORT || 2567;
 const SAVE_DIR = path.join(__dirname, 'data');
 const SAVE_FILE = path.join(SAVE_DIR, 'world.json');
 const MONSTERS = require('./shared/monsters');
