@@ -68,25 +68,39 @@ const HAIR_STYLES = {
   },
   long: (group, color, scale) => {
     const mat = new THREE.MeshLambertMaterial({ color });
-    const cap = new THREE.Mesh(new THREE.BoxGeometry(0.56 * scale, 0.2 * scale, 0.58 * scale), mat);
-    cap.position.y = 1.73 * scale;
+    // Top cap
+    const cap = new THREE.Mesh(new THREE.BoxGeometry(0.58 * scale, 0.2 * scale, 0.6 * scale), mat);
+    cap.position.y = 1.75 * scale;
     group.add(cap);
-    const vol = new THREE.Mesh(new THREE.BoxGeometry(0.5 * scale, 0.1 * scale, 0.52 * scale), mat);
-    vol.position.y = 1.85 * scale;
+    // Volume
+    const vol = new THREE.Mesh(new THREE.BoxGeometry(0.52 * scale, 0.12 * scale, 0.54 * scale), mat);
+    vol.position.y = 1.87 * scale;
     group.add(vol);
-    // Cascading back layers
-    for (let i = 0; i < 4; i++) {
-      const layer = new THREE.Mesh(new THREE.BoxGeometry(0.38 * scale - i * 0.02, 0.2 * scale, 0.1 * scale), mat);
-      layer.position.set(0, 1.4 * scale - i * 0.2 * scale, -0.22 * scale);
+    // Back — wide curtain of hair draping down
+    const backW = 0.44 * scale;
+    for (let i = 0; i < 6; i++) {
+      const w = backW - i * 0.01;
+      const layer = new THREE.Mesh(new THREE.BoxGeometry(w, 0.18 * scale, 0.12 * scale), mat);
+      layer.position.set(0, 1.25 * scale - i * 0.17 * scale, -0.26 * scale);
       group.add(layer);
     }
-    // Side strands
+    // Side hair — thick strands framing face, draping down
     for (const s of [-1, 1]) {
-      for (let i = 0; i < 3; i++) {
-        const strand = new THREE.Mesh(new THREE.BoxGeometry(0.06 * scale, 0.15 * scale, 0.06 * scale), mat);
-        strand.position.set(s * 0.25 * scale, 1.5 * scale - i * 0.15 * scale, 0.08 * scale);
+      for (let i = 0; i < 5; i++) {
+        const strand = new THREE.Mesh(new THREE.BoxGeometry(0.1 * scale, 0.16 * scale, 0.1 * scale), mat);
+        strand.position.set(s * 0.28 * scale, 1.45 * scale - i * 0.16 * scale, 0.06 * scale);
         group.add(strand);
       }
+    }
+    // Bangs / fringe across forehead
+    const fringe = new THREE.Mesh(new THREE.BoxGeometry(0.46 * scale, 0.08 * scale, 0.08 * scale), mat);
+    fringe.position.set(0, 1.7 * scale, 0.26 * scale);
+    group.add(fringe);
+    // Extra fringe wisps
+    for (const s of [-1, 1]) {
+      const wisp = new THREE.Mesh(new THREE.BoxGeometry(0.08 * scale, 0.12 * scale, 0.06 * scale), mat);
+      wisp.position.set(s * 0.18 * scale, 1.65 * scale, 0.27 * scale);
+      group.add(wisp);
     }
   },
   spiky: (group, color, scale) => {
@@ -303,8 +317,9 @@ export function createPlayerModel(options = {}) {
   rightShoulder.position.set(shoulderW * scale, 1.15 * scale, 0);
   group.add(rightShoulder);
 
-  // Belt (thicker)
-  const belt = new THREE.Mesh(new THREE.BoxGeometry(0.62 * scale, 0.1 * scale, 0.42 * scale), trimMat);
+  // Belt (thicker — uses hipW for female hip width)
+  const beltW = isFemale ? 0.65 : 0.62;
+  const belt = new THREE.Mesh(new THREE.BoxGeometry(beltW * scale, 0.1 * scale, 0.42 * scale), trimMat);
   belt.position.y = 0.52 * scale;
   group.add(belt);
 
@@ -329,9 +344,12 @@ export function createPlayerModel(options = {}) {
   rightEar.position.set(0.28 * scale, 1.45 * scale, 0);
   group.add(rightEar);
 
-  // === EYES ===
-  // Eye whites (slightly bigger)
-  const whiteGeo = new THREE.BoxGeometry(0.12 * scale, 0.1 * scale, 0.04 * scale);
+  // === EYES === (gender-aware)
+  const isFemale = gender === 'female';
+  const eyeScaleW = isFemale ? 1.25 : 1.0;
+  const eyeScaleH = isFemale ? 1.2 : 1.0;
+  // Eye whites
+  const whiteGeo = new THREE.BoxGeometry(0.12 * eyeScaleW * scale, 0.1 * eyeScaleH * scale, 0.04 * scale);
   const whiteMat = new THREE.MeshBasicMaterial({ color: 0xFFFFFF });
   const leftWhite = new THREE.Mesh(whiteGeo, whiteMat);
   leftWhite.name = 'leftWhite';
@@ -342,49 +360,125 @@ export function createPlayerModel(options = {}) {
   rightWhite.position.set(0.12 * scale, 1.5 * scale, 0.255 * scale);
   group.add(rightWhite);
 
-  // Pupils
-  const eyeGeo = new THREE.BoxGeometry(0.07 * scale, 0.07 * scale, 0.05 * scale);
-  const eyeMat = new THREE.MeshBasicMaterial({ color: eyeColor });
-  const leftEye = new THREE.Mesh(eyeGeo, eyeMat);
-  leftEye.name = 'leftEye';
-  leftEye.position.set(-0.12 * scale, 1.5 * scale, 0.27 * scale);
-  group.add(leftEye);
-  const rightEye = new THREE.Mesh(eyeGeo, eyeMat);
-  rightEye.name = 'rightEye';
-  rightEye.position.set(0.12 * scale, 1.5 * scale, 0.27 * scale);
-  group.add(rightEye);
+  // Iris (colored ring around pupil — makes eyes pop)
+  const irisGeo = new THREE.BoxGeometry(0.08 * eyeScaleW * scale, 0.08 * eyeScaleH * scale, 0.03 * scale);
+  const irisMat = new THREE.MeshBasicMaterial({ color: eyeColor });
+  const leftIris = new THREE.Mesh(irisGeo, irisMat);
+  leftIris.name = 'leftEye';
+  leftIris.position.set(-0.12 * scale, 1.5 * scale, 0.27 * scale);
+  group.add(leftIris);
+  const rightIris = new THREE.Mesh(irisGeo, irisMat);
+  rightIris.name = 'rightEye';
+  rightIris.position.set(0.12 * scale, 1.5 * scale, 0.27 * scale);
+  group.add(rightIris);
 
-  // Eye shine (tiny white dot)
+  // Pupil (dark center — makes eyes look alive)
+  const pupilGeo = new THREE.BoxGeometry(0.04 * scale, 0.04 * scale, 0.04 * scale);
+  const pupilMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
+  const leftPupil = new THREE.Mesh(pupilGeo, pupilMat);
+  leftPupil.name = 'leftPupil';
+  leftPupil.position.set(-0.12 * scale, 1.5 * scale, 0.28 * scale);
+  group.add(leftPupil);
+  const rightPupil = new THREE.Mesh(pupilGeo, pupilMat);
+  rightPupil.name = 'rightPupil';
+  rightPupil.position.set(0.12 * scale, 1.5 * scale, 0.28 * scale);
+  group.add(rightPupil);
+
+  // Eye shine (anime sparkle)
   const shineGeo = new THREE.BoxGeometry(0.025 * scale, 0.025 * scale, 0.02 * scale);
   const shineMat = new THREE.MeshBasicMaterial({ color: 0xFFFFFF });
   const leftShine = new THREE.Mesh(shineGeo, shineMat);
-  leftShine.position.set(-0.1 * scale, 1.52 * scale, 0.28 * scale);
+  leftShine.position.set(-0.1 * scale, 1.52 * scale, 0.29 * scale);
   group.add(leftShine);
   const rightShine = new THREE.Mesh(shineGeo, shineMat);
-  rightShine.position.set(0.14 * scale, 1.52 * scale, 0.28 * scale);
+  rightShine.position.set(0.14 * scale, 1.52 * scale, 0.29 * scale);
   group.add(rightShine);
 
-  // === EYEBROWS ===
-  const browGeo = new THREE.BoxGeometry(0.12 * scale, 0.035 * scale, 0.04 * scale);
-  const browMat = new THREE.MeshLambertMaterial({ color: hairColor });
-  const leftBrow = new THREE.Mesh(browGeo, browMat);
-  leftBrow.position.set(-0.12 * scale, 1.57 * scale, 0.26 * scale);
-  group.add(leftBrow);
-  const rightBrow = new THREE.Mesh(browGeo, browMat);
-  rightBrow.position.set(0.12 * scale, 1.57 * scale, 0.26 * scale);
-  group.add(rightBrow);
+  // === EYELASHES (female only — top line above eyes) ===
+  if (isFemale) {
+    const lashGeo = new THREE.BoxGeometry(0.14 * scale, 0.02 * scale, 0.04 * scale);
+    const lashMat = new THREE.MeshBasicMaterial({ color: 0x1A1A1A });
+    const leftLash = new THREE.Mesh(lashGeo, lashMat);
+    leftLash.position.set(-0.12 * scale, 1.56 * scale, 0.26 * scale);
+    group.add(leftLash);
+    const rightLash = new THREE.Mesh(lashGeo, lashMat);
+    rightLash.position.set(0.12 * scale, 1.56 * scale, 0.26 * scale);
+    group.add(rightLash);
+    // Outer corner flick (cat-eye)
+    for (const s of [-1, 1]) {
+      const flick = new THREE.Mesh(new THREE.BoxGeometry(0.04 * scale, 0.02 * scale, 0.03 * scale), lashMat);
+      flick.position.set(s * 0.2 * scale, 1.57 * scale, 0.26 * scale);
+      flick.rotation.z = s * -0.4;
+      group.add(flick);
+    }
+  }
 
-  // === NOSE ===
-  const nose = new THREE.Mesh(new THREE.BoxGeometry(0.06 * scale, 0.06 * scale, 0.06 * scale),
+  // === EYEBROWS === (gender-aware)
+  if (isFemale) {
+    // Female: thinner, slightly arched
+    const browGeo = new THREE.BoxGeometry(0.1 * scale, 0.025 * scale, 0.04 * scale);
+    const browMat = new THREE.MeshLambertMaterial({ color: hairColor });
+    const leftBrow = new THREE.Mesh(browGeo, browMat);
+    leftBrow.position.set(-0.12 * scale, 1.59 * scale, 0.26 * scale);
+    leftBrow.rotation.z = 0.1; // slight arch
+    group.add(leftBrow);
+    const rightBrow = new THREE.Mesh(browGeo, browMat);
+    rightBrow.position.set(0.12 * scale, 1.59 * scale, 0.26 * scale);
+    rightBrow.rotation.z = -0.1;
+    group.add(rightBrow);
+  } else {
+    // Male: thicker, straight
+    const browGeo = new THREE.BoxGeometry(0.12 * scale, 0.035 * scale, 0.04 * scale);
+    const browMat = new THREE.MeshLambertMaterial({ color: hairColor });
+    const leftBrow = new THREE.Mesh(browGeo, browMat);
+    leftBrow.name = 'leftBrow';
+    leftBrow.position.set(-0.12 * scale, 1.57 * scale, 0.26 * scale);
+    group.add(leftBrow);
+    const rightBrow = new THREE.Mesh(browGeo, browMat);
+    rightBrow.name = 'rightBrow';
+    rightBrow.position.set(0.12 * scale, 1.57 * scale, 0.26 * scale);
+    group.add(rightBrow);
+  }
+
+  // === NOSE === (smaller for female)
+  const noseW = isFemale ? 0.04 : 0.06;
+  const noseH = isFemale ? 0.04 : 0.06;
+  const nose = new THREE.Mesh(new THREE.BoxGeometry(noseW * scale, noseH * scale, 0.05 * scale),
     new THREE.MeshLambertMaterial({ color: skinColor }));
   nose.position.set(0, 1.42 * scale, 0.28 * scale);
   group.add(nose);
 
-  // === MOUTH ===
-  const mouth = new THREE.Mesh(new THREE.BoxGeometry(0.1 * scale, 0.03 * scale, 0.04 * scale),
-    new THREE.MeshLambertMaterial({ color: 0xD32F2F }));
-  mouth.position.set(0, 1.34 * scale, 0.26 * scale);
-  group.add(mouth);
+  // === MOUTH === (gender-aware)
+  if (isFemale) {
+    // Female: slightly wider, pinker lips
+    const lip = new THREE.Mesh(new THREE.BoxGeometry(0.12 * scale, 0.025 * scale, 0.04 * scale),
+      new THREE.MeshLambertMaterial({ color: 0xE91E63 }));
+    lip.position.set(0, 1.34 * scale, 0.26 * scale);
+    group.add(lip);
+    // Upper lip (lighter)
+    const upperLip = new THREE.Mesh(new THREE.BoxGeometry(0.08 * scale, 0.015 * scale, 0.03 * scale),
+      new THREE.MeshLambertMaterial({ color: 0xF06292 }));
+    upperLip.position.set(0, 1.35 * scale, 0.265 * scale);
+    group.add(upperLip);
+  } else {
+    // Male: default mouth
+    const mouth = new THREE.Mesh(new THREE.BoxGeometry(0.1 * scale, 0.03 * scale, 0.04 * scale),
+      new THREE.MeshLambertMaterial({ color: 0xD32F2F }));
+    mouth.position.set(0, 1.34 * scale, 0.26 * scale);
+    group.add(mouth);
+  }
+
+  // === BLUSH (female only — pink cheeks) ===
+  if (isFemale) {
+    const blushMat = new THREE.MeshBasicMaterial({ color: 0xFF8A80, transparent: true, opacity: 0.4 });
+    const blushGeo = new THREE.BoxGeometry(0.08 * scale, 0.04 * scale, 0.02 * scale);
+    const leftBlush = new THREE.Mesh(blushGeo, blushMat);
+    leftBlush.position.set(-0.18 * scale, 1.42 * scale, 0.26 * scale);
+    group.add(leftBlush);
+    const rightBlush = new THREE.Mesh(blushGeo, blushMat);
+    rightBlush.position.set(0.18 * scale, 1.42 * scale, 0.26 * scale);
+    group.add(rightBlush);
+  }
 
   // === HAIR ===
   if (HAIR_STYLES[hairStyle]) {
@@ -545,19 +639,20 @@ export function animateWalk(model, dt) {
 // --- Blink Animation ---
 export function blinkEyes(model) {
   if (!model) return;
-  const leftEye = model.getObjectByName('leftEye');
-  const rightEye = model.getObjectByName('rightEye');
-  const leftWhite = model.getObjectByName('leftWhite');
-  const rightWhite = model.getObjectByName('rightWhite');
-  if (leftEye) leftEye.scale.y = 0.1;
-  if (rightEye) rightEye.scale.y = 0.1;
-  if (leftWhite) leftWhite.scale.y = 0.1;
-  if (rightWhite) rightWhite.scale.y = 0.1;
+  const parts = ['leftEye', 'rightEye', 'leftWhite', 'rightWhite', 'leftPupil', 'rightPupil'];
+  const origScales = {};
+  parts.forEach(name => {
+    const obj = model.getObjectByName(name);
+    if (obj) {
+      origScales[name] = obj.scale.y;
+      obj.scale.y = 0.1;
+    }
+  });
   setTimeout(() => {
-    if (leftEye) leftEye.scale.y = 1;
-    if (rightEye) rightEye.scale.y = 1;
-    if (leftWhite) leftWhite.scale.y = 1;
-    if (rightWhite) rightWhite.scale.y = 1;
+    parts.forEach(name => {
+      const obj = model.getObjectByName(name);
+      if (obj) obj.scale.y = origScales[name] || 1;
+    });
   }, 150);
 }
 
