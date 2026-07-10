@@ -127,6 +127,78 @@ function initScene() {
     if (e.button === 2) state.isOrbiting = false;
   });
   canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+
+  // === TOUCH CONTROLS ===
+  let touchStartDist = 0;
+  let touchStartAngle = 0;
+  let touchStartTime = 0;
+  let touchStartPos = { x: 0, y: 0 };
+  let isTouchOrbit = false;
+
+  canvas.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    if (e.touches.length === 2) {
+      // Two-finger: orbit + zoom
+      isTouchOrbit = true;
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      touchStartDist = Math.sqrt(dx * dx + dy * dy);
+      state.lastMouseX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+      state.lastMouseY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+    } else if (e.touches.length === 1) {
+      // Single tap: record start for move
+      isTouchOrbit = false;
+      touchStartTime = Date.now();
+      touchStartPos = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    }
+  }, { passive: false });
+
+  canvas.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+    if (e.touches.length === 2 && isTouchOrbit) {
+      // Pinch to zoom
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      const delta = touchStartDist - dist;
+      state.cameraDistance = Math.max(5, Math.min(50, state.cameraDistance + delta * 0.05));
+      touchStartDist = dist;
+
+      // Orbit drag
+      const mx = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+      const my = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+      const odx = mx - state.lastMouseX;
+      const ody = my - state.lastMouseY;
+      state.cameraAngleX -= odx * 0.005;
+      state.cameraAngleY = Math.max(-0.2, Math.min(1.2, state.cameraAngleY + ody * 0.005));
+      state.lastMouseX = mx;
+      state.lastMouseY = my;
+    }
+  }, { passive: false });
+
+  canvas.addEventListener('touchend', (e) => {
+    e.preventDefault();
+    if (e.touches.length < 2) isTouchOrbit = false;
+
+    // Single tap → move (if quick tap, not drag)
+    if (e.changedTouches.length === 1 && !isTouchOrbit) {
+      const touch = e.changedTouches[0];
+      const elapsed = Date.now() - touchStartTime;
+      const dist = Math.sqrt(
+        Math.pow(touch.clientX - touchStartPos.x, 2) +
+        Math.pow(touch.clientY - touchStartPos.y, 2)
+      );
+      // Quick tap (< 300ms, < 20px movement)
+      if (elapsed < 300 && dist < 20) {
+        // Simulate click event
+        const clickEvent = new MouseEvent('click', {
+          clientX: touch.clientX,
+          clientY: touch.clientY,
+        });
+        canvas.dispatchEvent(clickEvent);
+      }
+    }
+  }, { passive: false });
 }
 
 // ============================

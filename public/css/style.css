@@ -324,3 +324,73 @@ body {
   font-size: 0.8rem;
   outline: none;
 }
+
+/* === MOBILE === */
+@media (max-width: 768px) {
+  #hud {
+    flex-direction: column;
+    padding: 8px;
+    gap: 4px;
+  }
+  #hud-bars { width: 100%; }
+  .bar-container { height: 14px; }
+  .bar-text { font-size: 0.6rem; }
+  #online-list { font-size: 0.6rem; }
+  #minimap { width: 80px; height: 80px; }
+
+  #chat-box {
+    width: calc(100% - 16px);
+    left: 8px;
+    bottom: 8px;
+  }
+  #chat-input { font-size: 16px; /* prevent iOS zoom */ }
+
+  #inventory-panel, #quest-panel, #party-panel {
+    width: 90vw;
+    max-width: 90vw;
+    max-height: 60vh;
+  }
+
+  .stat-row { font-size: 0.7rem; padding: 4px; }
+  .item-slot { width: 36px; height: 36px; }
+
+  #dialogue-box {
+    width: calc(100% - 32px);
+    bottom: 80px;
+    padding: 12px;
+  }
+  #dialogue-choices button {
+    padding: 10px;
+    font-size: 0.9rem;
+  }
+
+  /* Bigger touch targets */
+  button, .btn, [onclick] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+/* === MOBILE HINT === */
+.mobile-hint {
+  display: none;
+  position: fixed;
+  bottom: 70px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0,0,0,0.6);
+  color: #fff;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 0.7rem;
+  z-index: 50;
+  pointer-events: none;
+  animation: fadeHint 4s forwards;
+}
+@media (max-width: 768px) {
+  .mobile-hint { display: block; }
+}
+@keyframes fadeHint {
+  0%, 70% { opacity: 1; }
+  100% { opacity: 0; }
+}
