@@ -46,6 +46,8 @@ export const COLLISIONS = [
   { x: -15, z: -8, hw: 0.7, hd: 0.7 },
   { x: 14, z: 10, hw: 0.5, hd: 0.5 },
   { x: -8, z: 18, hw: 0.6, hd: 0.6 },
+  // Creek (z=0.5 to z=3.5, x=-25 to x=25) — block in segments
+  ...Array.from({ length: 13 }, (_, i) => ({ x: -24 + i * 4, z: 2, hw: 2.5, hd: 1.8 })),
 ];
 
 export function isWalkable(x, z) {
@@ -267,7 +269,7 @@ function addBuildings(group) {
     { x: -2, z: 22, w: 2, h: 3, d: 2, color: 0x607D8B, roof: 0x455A64, label: 'Gate', rot: Math.PI / 2 },
 
     // Mr. Tani's barn — face east toward main path
-    { x: -18, z: 12, w: 5, h: 3, d: 4, color: 0xD32F2F, roof: 0xB71C1C, label: 'Barn', rot: -Math.PI / 2 },
+    { x: -18, z: 12, w: 5, h: 3, d: 4, color: 0xD32F2F, roof: 0xB71C1C, label: 'Barn', rot: 0 },
   ];
 
   buildings.forEach(b => {
