@@ -22,6 +22,7 @@ const state = {
   npcs: {},
   connected: false,
   targetPos: null,
+  interactTarget: null,
   customization: {
     gender: 'male',
     classType: 'laborer',
@@ -582,10 +583,7 @@ function handleServerMessage(msg) {
 
     case 'npc_dialogue':
       state.dialogue.open(msg.npcId, msg.name, msg.title);
-      const MERCHANTS = ['sir_gendut', 'mrs_ningsih', 'herbalist_sari'];
-      if (MERCHANTS.includes(msg.npcId)) {
-        wsSend(JSON.stringify({ type: 'shop_open', npcId: msg.npcId }));
-      }
+      // Don't auto-open shop — let dialogue add Buy/Sell button for merchants
       break;
 
     case 'monster_killed': {
@@ -1079,17 +1077,43 @@ canvas.addEventListener('click', (e) => {
 
   const point = intersects[0].point;
 
-  // Check NPC proximity
+  // Check NPC proximity — walk to NPC then interact
   for (const npc of Object.values(state.npcs)) {
-    if (npc.position.distanceTo(point) < 2) {
+    const dist = npc.position.distanceTo(point);
+    if (dist < 3) {
       const model = state.players[state.playerId];
       if (model) {
-        const faceDir = npc.position.clone().sub(model.position).normalize();
-        state.lastFacing = model.position.clone().add(faceDir);
-        model.lookAt(state.lastFacing);
+        const playerDist = model.position.distanceTo(npc.position);
+        if (playerDist < 2.5) {
+          // Close enough — interact directly
+          const faceDir = npc.position.clone().sub(model.position).normalize();
+          state.lastFacing = model.position.clone().add(faceDir);
+          model.lookAt(state.lastFacing);
+          wsSend(JSON.stringify({ type: 'interact_npc', npcId: npc.userData.id }));
+          return;
+        } else {
+          // Walk toward NPC, then interact when close
+          state.interactTarget = { type: 'npc', id: npc.userData.id, position: npc.position.clone() };
+          const dx = npc.position.x - model.position.x;
+          const dz = npc.position.z - model.position.z;
+          const len = Math.sqrt(dx * dx + dz * dz);
+          // Target: 1.5 units away from NPC (face it)
+          const targetX = npc.position.x - (dx / len) * 1.5;
+          const targetZ = npc.position.z - (dz / len) * 1.5;
+          const snapX = Math.round(targetX);
+          const snapZ = Math.round(targetZ);
+          const startX = Math.round(model.position.x);
+          const startZ = Math.round(model.position.z);
+          const path = findPath(startX, startZ, snapX, snapZ);
+          if (path && path.length > 1) {
+            state.pathWaypoints = path.slice(1);
+            state.targetPos = new THREE.Vector3(state.pathWaypoints[0].x, 0, state.pathWaypoints[0].z);
+          } else if (path && path.length === 1) {
+            state.targetPos = new THREE.Vector3(path[0].x, 0, path[0].z);
+          }
+          return;
+        }
       }
-      wsSend(JSON.stringify({ type: 'interact_npc', npcId: npc.userData.id }));
-      return;
     }
   }
 
@@ -1151,6 +1175,18 @@ function updateMovement() {
       state.targetPos = new THREE.Vector3(next.x, 0, next.z);
     } else {
       state.targetPos = null;
+      // Auto-interact with NPC if we walked to one
+      if (state.interactTarget && state.interactTarget.type === 'npc') {
+        const target = state.interactTarget;
+        state.interactTarget = null;
+        // Face the NPC and interact
+        const npc = state.npcs[target.id];
+        if (npc) {
+          const faceDir = npc.position.clone().sub(model.position).normalize();
+          model.lookAt(model.position.clone().add(faceDir));
+        }
+        wsSend(JSON.stringify({ type: 'interact_npc', npcId: target.id }));
+      }
     }
     return;
   }

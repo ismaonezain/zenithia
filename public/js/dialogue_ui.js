@@ -58,17 +58,44 @@ export class DialogueSystem {
   // Get available topics based on reputation
   getAvailableTopics(npcId, repLevel) {
     const dialogueData = DIALOGUES[npcId];
-    if (!dialogueData || !dialogueData.topics) return [];
+    const topics = [];
 
-    return dialogueData.topics
-      .filter(t => {
-        const rep = this.reputation[npcId] || 0;
-        return rep >= t.requiredRep;
-      })
-      .map(t => ({
-        label: t.label,
-        action: () => this.handleTopic(npcId, t, repLevel),
-      }));
+    // Add Buy/Sell for merchant NPCs
+    const MERCHANTS = ['sir_gendut', 'mrs_ningsih', 'herbalist_sari'];
+    if (MERCHANTS.includes(npcId)) {
+      topics.push(
+        { label: '🛒 Buy Items', action: () => this.openShop(npcId, 'buy') },
+        { label: '💰 Sell Items', action: () => this.openShop(npcId, 'sell') }
+      );
+    }
+
+    if (dialogueData && dialogueData.topics) {
+      dialogueData.topics
+        .filter(t => {
+          const rep = this.reputation[npcId] || 0;
+          return rep >= t.requiredRep;
+        })
+        .forEach(t => {
+          topics.push({
+            label: t.label,
+            action: () => this.handleTopic(npcId, t, repLevel),
+          });
+        });
+    }
+
+    // Always add Close option
+    topics.push({ label: '👋 Close', action: () => this.close() });
+
+    return topics;
+  }
+
+  // Open shop from dialogue
+  openShop(npcId, mode) {
+    this.close();
+    // Send shop_open to server, shop_ui will handle the rest
+    if (this.ws) {
+      this.ws.send(JSON.stringify({ type: 'shop_open', npcId }));
+    }
   }
 
   // Handle topic selection
