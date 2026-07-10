@@ -92,13 +92,27 @@ function addPaths(group) {
   mainPath.receiveShadow = true;
   group.add(mainPath);
 
-  // Market → Herbalist (diagonal) — wider, connects stalls to herbalist
+  // Market → Herbalist (diagonal) — connects stalls to herbalist
   const herbalPath = createDiagonalPath(8, 2, 18, -8, 1.5, pathMat);
   group.add(herbalPath);
 
-  // Market → Farm (diagonal) — wider, connects main path to barn
+  // Market → Farm (diagonal) — connects main path to barn
   const farmPath = createDiagonalPath(0, 8, -18, 12, 1.5, pathMat);
   group.add(farmPath);
+
+  // Side path to houses (main path → house cluster)
+  const housePath = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 10), pathMat);
+  housePath.rotation.x = -Math.PI / 2;
+  housePath.position.set(-3, 0.02, 10);
+  housePath.receiveShadow = true;
+  group.add(housePath);
+
+  // Short path to house at (2, 12)
+  const house2Path = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 4), pathMat);
+  house2Path.rotation.x = -Math.PI / 2;
+  house2Path.position.set(1, 0.02, 12);
+  house2Path.receiveShadow = true;
+  group.add(house2Path);
 }
 
 function createDiagonalPath(x1, z1, x2, z2, width, material) {
@@ -127,13 +141,13 @@ function addBuildings(group) {
     { x: 8, z: 4, w: 2, h: 2, d: 2, color: 0xFFCC80, roof: 0xE65100, label: 'Stall', rot: Math.PI / 2 },
     { x: 8, z: 8, w: 2, h: 2, d: 2, color: 0xFFCC80, roof: 0xE65100, label: 'Stall', rot: Math.PI / 2 },
 
-    // Houses — varied rotations for realism
-    { x: -6, z: 8, w: 3, h: 2.5, d: 3, color: 0xBCAAA4, roof: 0x795548, rot: Math.PI / 4 },      // 45°
-    { x: -6, z: 14, w: 3, h: 2.5, d: 3, color: 0xBCAAA4, roof: 0x795548, rot: -Math.PI / 6 },     // -30°
-    { x: 2, z: 12, w: 3, h: 2.5, d: 3, color: 0xBCAAA4, roof: 0x795548, rot: Math.PI / 3 },       // 60°
+    // Houses — face toward nearest road
+    { x: -6, z: 8, w: 3, h: 2.5, d: 3, color: 0xBCAAA4, roof: 0x795548, rot: -Math.PI / 2 },   // face east → side path
+    { x: -6, z: 14, w: 3, h: 2.5, d: 3, color: 0xBCAAA4, roof: 0x795548, rot: -Math.PI / 2 },   // face east → side path
+    { x: 2, z: 12, w: 3, h: 2.5, d: 3, color: 0xBCAAA4, roof: 0x795548, rot: Math.PI / 2 },     // face west → house path
 
-    // Herbalist's hut — face east toward path
-    { x: 18, z: -8, w: 2.5, h: 2, d: 2.5, color: 0x6D4C41, roof: 0x33691E, label: 'Herbalist', rot: -Math.PI / 2 },
+    // Herbalist's hut — face west toward path
+    { x: 18, z: -8, w: 2.5, h: 2, d: 2.5, color: 0x6D4C41, roof: 0x33691E, label: 'Herbalist', rot: Math.PI / 2 },
 
     // Guard post — face south toward gate
     { x: 0, z: 22, w: 2, h: 3, d: 2, color: 0x607D8B, roof: 0x455A64, label: 'Gate', rot: 0 },
