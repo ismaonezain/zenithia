@@ -121,13 +121,13 @@ function addPaths(group) {
   group.add(herbalPathH);
   addPathLabel(group, 'JALAN HERBALIST H', 9, -2);
 
-  // [C] Herbalist vertical (crossroads, extend both directions)
-  const herbalPathV = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 6.5), pathMat);
+  // [C] Herbalist vertical (dekat herbalist)
+  const herbalPathV = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 8), pathMat);
   herbalPathV.rotation.x = -Math.PI / 2;
-  herbalPathV.position.set(18, 0.02, -2);
+  herbalPathV.position.set(18, 0.02, -3.5);
   herbalPathV.receiveShadow = true;
   group.add(herbalPathV);
-  addPathLabel(group, 'JALAN HERBALIST V', 18, -2);
+  addPathLabel(group, 'JALAN HERBALIST V', 18, -3.5);
 
   // [D] Main → Herbalist H (vertical pendek)
   const mainToHerbal = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 4), pathMat);
@@ -206,7 +206,7 @@ function addBuildings(group) {
     // Houses — face road
     { x: -6, z: 8, w: 3, h: 2.5, d: 3, color: 0xD7CCC8, roof: 0x5D4037, rot: Math.PI / 2, label: 'Willow Cottage' },
     { x: -6, z: 14, w: 3, h: 2.5, d: 3, color: 0xBCAAA4, roof: 0x795548, rot: Math.PI / 2, label: 'River House' },
-    { x: 2, z: 12, w: 3, h: 2.5, d: 3, color: 0xC5E1A5, roof: 0x33691E, rot: -Math.PI / 2, label: 'Green House' },
+    { x: 5, z: 12, w: 3, h: 2.5, d: 3, color: 0xC5E1A5, roof: 0x33691E, rot: -Math.PI / 2, label: 'Green House' },
 
     // Herbalist's hut — face south
     { x: 18, z: -8, w: 2.5, h: 2, d: 2.5, color: 0x6D4C41, roof: 0x33691E, label: 'Herbalist', rot: 0 },
@@ -214,8 +214,8 @@ function addBuildings(group) {
     // Guard post — face left (west)
     { x: -2, z: 22, w: 2, h: 3, d: 2, color: 0x607D8B, roof: 0x455A64, label: 'Gate', rot: Math.PI / 2 },
 
-    // Mr. Tani's barn — face north
-    { x: -18, z: 12, w: 5, h: 3, d: 4, color: 0xD32F2F, roof: 0xB71C1C, label: 'Barn', rot: Math.PI },
+    // Mr. Tani's barn — face east toward main path
+    { x: -18, z: 12, w: 5, h: 3, d: 4, color: 0xD32F2F, roof: 0xB71C1C, label: 'Barn', rot: -Math.PI / 2 },
   ];
 
   buildings.forEach(b => {
