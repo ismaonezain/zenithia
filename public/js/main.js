@@ -26,7 +26,7 @@ const state = {
     classType: 'laborer',
     skinIdx: 0,
     hairColorIdx: 0,
-    hairStyle: 'short',
+    hairStyle: 'storm',
     topColorIdx: 0,
     bottomColorIdx: 0,
     eyeColorIdx: 0,
@@ -316,9 +316,9 @@ function initCustomization() {
 
   // Hair style picker
   const stylePicker = document.getElementById('hair-style-picker');
-  ['short', 'spiky', 'mohawk', 'buzz', 'sidepart', 'long', 'twin_tails', 'ponytail', 'braids', 'bob', 'bun'].forEach(style => {
+  ['storm', 'rogue', 'vanguard', 'rebel', 'phantom', 'cascade', 'valkyrie', 'blossom', 'silk', 'crown'].forEach(style => {
     const o = document.createElement('div');
-    o.className = 'option' + (style === 'short' ? ' selected' : '');
+    o.className = 'option' + (style === 'storm' ? ' selected' : '');
     o.textContent = style;
     o.onclick = () => {
       stylePicker.querySelectorAll('.option').forEach(x => x.classList.remove('selected'));
