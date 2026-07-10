@@ -38,6 +38,11 @@ const state = {
   questUI: null,
   partyUI: null,
   cameraDistance: 20,
+  cameraAngleX: 0,
+  cameraAngleY: 0.3,
+  isOrbiting: false,
+  lastMouseX: 0,
+  lastMouseY: 0,
   monsters: {},
   damageNumbers: [],
 };
@@ -93,6 +98,28 @@ function initScene() {
     state.cameraDistance += e.deltaY * 0.02;
     state.cameraDistance = Math.max(5, Math.min(50, state.cameraDistance));
   }, { passive: false });
+
+  // Orbit camera — hold right-click + drag to rotate
+  canvas.addEventListener('mousedown', (e) => {
+    if (e.button === 2) {
+      state.isOrbiting = true;
+      state.lastMouseX = e.clientX;
+      state.lastMouseY = e.clientY;
+    }
+  });
+  canvas.addEventListener('mousemove', (e) => {
+    if (!state.isOrbiting) return;
+    const dx = e.clientX - state.lastMouseX;
+    const dy = e.clientY - state.lastMouseY;
+    state.cameraAngleX -= dx * 0.005;
+    state.cameraAngleY = Math.max(-0.2, Math.min(1.2, state.cameraAngleY + dy * 0.005));
+    state.lastMouseX = e.clientX;
+    state.lastMouseY = e.clientY;
+  });
+  canvas.addEventListener('mouseup', (e) => {
+    if (e.button === 2) state.isOrbiting = false;
+  });
+  canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 }
 
 // ============================
@@ -820,9 +847,15 @@ function gameLoop() {
 
   if (playerModel) {
     const t = playerModel.position;
-    state.camera.position.x += (t.x - state.camera.position.x) * 0.05;
-    state.camera.position.z += (t.z + state.cameraDistance - state.camera.position.z) * 0.05;
-    state.camera.position.y += (t.y + state.cameraDistance * 0.75 - state.camera.position.y) * 0.05;
+    const dist = state.cameraDistance;
+    const ax = state.cameraAngleX;
+    const ay = state.cameraAngleY;
+    const targetX = t.x + Math.sin(ax) * dist * Math.cos(ay);
+    const targetY = t.y + dist * Math.sin(ay) + 3;
+    const targetZ = t.z + Math.cos(ax) * dist * Math.cos(ay);
+    state.camera.position.x += (targetX - state.camera.position.x) * 0.08;
+    state.camera.position.y += (targetY - state.camera.position.y) * 0.08;
+    state.camera.position.z += (targetZ - state.camera.position.z) * 0.08;
     state.camera.lookAt(t.x, t.y + 1, t.z);
   }
 
