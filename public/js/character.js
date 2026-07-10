@@ -731,7 +731,7 @@ export function createNPCModel(npc) {
     isNPC: true,
   });
 
-  model.position.set(npc.x, npc.y, npc.z);
+  model.position.set(npc.x, npc.y || 0, npc.z);
   model.userData = { id: npc.id, name: npc.name, type: 'npc' };
 
   // Name tag — always visible text sprite
