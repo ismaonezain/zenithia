@@ -1,7 +1,7 @@
 // Zenithia — Client Entry Point
 import * as THREE from 'three';
 import { buildTerrain, isWalkable } from './terrain.js';
-import { createPlayerModel, createNPCModel, PALETTES, animateWalk, stopWalk, applyEquipment, blinkEyes, waveHand, idleArms } from './character.js';
+import { createPlayerModel, createNPCModel, PALETTES, animateWalk, stopWalk, applyEquipment, blinkEyes, waveHand, idleArms, animateIdle } from './character.js';
 import { DialogueSystem } from './dialogue_ui.js';
 import { InventoryUI } from './inventory.js';
 import { QuestUI } from './quest_ui.js';
@@ -22,10 +22,13 @@ const state = {
   connected: false,
   targetPos: null,
   customization: {
+    gender: 'male',
+    classType: 'laborer',
     skinIdx: 0,
     hairColorIdx: 0,
     hairStyle: 'short',
-    bodyIdx: 0,
+    topColorIdx: 0,
+    bottomColorIdx: 0,
     eyeColorIdx: 0,
   },
   walletAddress: null,
@@ -227,6 +230,9 @@ function initPreview() {
   updatePreviewModel();
 }
 
+const PANTS_COLORS = [0x5D4037, 0x37474F, 0x1B5E20, 0x4E342E, 0x212121, 0x0D47A1, 0xBF360C, 0x880E4F];
+const CLASS_TRIM = { laborer: 0x8D6E63, miner: 0x78909C, gardener: 0x66BB6A, herbalist: 0xAB47BC, watchman: 0x455A64 };
+
 function updatePreviewModel() {
   if (state.previewModel) state.previewScene.remove(state.previewModel);
   const c = state.customization;
@@ -234,8 +240,12 @@ function updatePreviewModel() {
     skinColor: PALETTES.skin[c.skinIdx],
     hairColor: PALETTES.hair[c.hairColorIdx],
     hairStyle: c.hairStyle,
-    bodyColor: PALETTES.body[c.bodyIdx],
+    bodyColor: PALETTES.body[c.topColorIdx],
+    pantsColor: PANTS_COLORS[c.bottomColorIdx],
     eyeColor: PALETTES.eyes[c.eyeColorIdx],
+    trimColor: CLASS_TRIM[c.classType] || 0xFFFFFF,
+    gender: c.gender,
+    classType: c.classType,
   });
   state.previewScene.add(state.previewModel);
 }
@@ -244,6 +254,37 @@ function updatePreviewModel() {
 // CUSTOMIZATION UI
 // ============================
 function initCustomization() {
+  // Gender picker
+  const genderPicker = document.getElementById('gender-picker');
+  ['male', 'female'].forEach((g, i) => {
+    const o = document.createElement('div');
+    o.className = 'option' + (i === 0 ? ' selected' : '');
+    o.textContent = g === 'male' ? '♂ Male' : '♀ Female';
+    o.onclick = () => {
+      genderPicker.querySelectorAll('.option').forEach(x => x.classList.remove('selected'));
+      o.classList.add('selected');
+      state.customization.gender = g;
+      updatePreviewModel();
+    };
+    genderPicker.appendChild(o);
+  });
+
+  // Class picker
+  const classPicker = document.getElementById('class-picker');
+  ['laborer', 'miner', 'gardener', 'herbalist', 'watchman'].forEach((cls, i) => {
+    const o = document.createElement('div');
+    o.className = 'option' + (i === 0 ? ' selected' : '');
+    o.textContent = cls;
+    o.onclick = () => {
+      classPicker.querySelectorAll('.option').forEach(x => x.classList.remove('selected'));
+      o.classList.add('selected');
+      state.customization.classType = cls;
+      updatePreviewModel();
+    };
+    classPicker.appendChild(o);
+  });
+
+  // Skin picker
   const skinPicker = document.getElementById('skin-picker');
   PALETTES.skin.forEach((color, i) => {
     const s = document.createElement('div');
@@ -258,6 +299,7 @@ function initCustomization() {
     skinPicker.appendChild(s);
   });
 
+  // Hair color picker
   const hairPicker = document.getElementById('hair-color-picker');
   PALETTES.hair.forEach((color, i) => {
     const s = document.createElement('div');
@@ -272,6 +314,7 @@ function initCustomization() {
     hairPicker.appendChild(s);
   });
 
+  // Hair style picker
   const stylePicker = document.getElementById('hair-style-picker');
   ['short', 'medium', 'long', 'spiky', 'ponytail', 'mohawk', 'braids', 'bun', 'buzz', 'twin_tails', 'bowl'].forEach(style => {
     const o = document.createElement('div');
@@ -286,20 +329,37 @@ function initCustomization() {
     stylePicker.appendChild(o);
   });
 
-  const bodyPicker = document.getElementById('body-picker');
+  // Top color picker
+  const topPicker = document.getElementById('top-picker');
   PALETTES.body.forEach((color, i) => {
     const s = document.createElement('div');
     s.className = 'swatch' + (i === 0 ? ' selected' : '');
     s.style.background = '#' + color.toString(16).padStart(6, '0');
     s.onclick = () => {
-      bodyPicker.querySelectorAll('.swatch').forEach(x => x.classList.remove('selected'));
+      topPicker.querySelectorAll('.swatch').forEach(x => x.classList.remove('selected'));
       s.classList.add('selected');
-      state.customization.bodyIdx = i;
+      state.customization.topColorIdx = i;
       updatePreviewModel();
     };
-    bodyPicker.appendChild(s);
+    topPicker.appendChild(s);
   });
 
+  // Bottom color picker
+  const bottomPicker = document.getElementById('bottom-picker');
+  PANTS_COLORS.forEach((color, i) => {
+    const s = document.createElement('div');
+    s.className = 'swatch' + (i === 0 ? ' selected' : '');
+    s.style.background = '#' + color.toString(16).padStart(6, '0');
+    s.onclick = () => {
+      bottomPicker.querySelectorAll('.swatch').forEach(x => x.classList.remove('selected'));
+      s.classList.add('selected');
+      state.customization.bottomColorIdx = i;
+      updatePreviewModel();
+    };
+    bottomPicker.appendChild(s);
+  });
+
+  // Eye color picker
   const eyePicker = document.getElementById('eye-picker');
   PALETTES.eyes.forEach((color, i) => {
     const s = document.createElement('div');
@@ -656,8 +716,12 @@ function createPlayerModelInWorld(player) {
     skinColor: PALETTES.skin[c.skinIdx],
     hairColor: PALETTES.hair[c.hairColorIdx],
     hairStyle: c.hairStyle,
-    bodyColor: PALETTES.body[c.bodyIdx],
+    bodyColor: PALETTES.body[c.topColorIdx],
+    pantsColor: PANTS_COLORS[c.bottomColorIdx],
     eyeColor: PALETTES.eyes[c.eyeColorIdx],
+    trimColor: CLASS_TRIM[c.classType] || 0xFFFFFF,
+    gender: c.gender,
+    classType: c.classType,
   });
   model.position.set(player.x, player.y, player.z);
   model.userData = { id: player.id, name: player.name, type: 'player' };
@@ -666,7 +730,18 @@ function createPlayerModelInWorld(player) {
 }
 
 function createOtherPlayer(player) {
-  const model = createPlayerModel({});
+  const c = player.customization || {};
+  const model = createPlayerModel({
+    skinColor: PALETTES.skin[c.skinIdx || 0],
+    hairColor: PALETTES.hair[c.hairColorIdx || 0],
+    hairStyle: c.hairStyle || 'short',
+    bodyColor: PALETTES.body[c.topColorIdx || 0],
+    pantsColor: PANTS_COLORS[c.bottomColorIdx || 0],
+    eyeColor: PALETTES.eyes[c.eyeColorIdx || 0],
+    trimColor: CLASS_TRIM[c.classType] || 0xFFFFFF,
+    gender: c.gender || 'male',
+    classType: c.classType || 'laborer',
+  });
   model.position.set(player.x, player.y, player.z);
   model.userData = { id: player.id, name: player.name, type: 'player' };
   state.scene.add(model);
@@ -1172,13 +1247,33 @@ document.getElementById('start-game').addEventListener('click', () => {
 // ============================
 // GAME LOOP
 // ============================
+// Blink timer state
+let lastBlinkTime = 0;
+let nextBlinkDelay = 3000 + Math.random() * 3000;
+
 function gameLoop() {
   requestAnimationFrame(gameLoop);
   updateMovement();
 
   const playerModel = state.players[state.playerId];
-  if (state.targetPos) animateWalk(playerModel, 1);
-  else stopWalk(playerModel);
+  const time = Date.now() * 0.001;
+
+  if (state.targetPos) {
+    animateWalk(playerModel, 1);
+  } else {
+    stopWalk(playerModel);
+    // Idle animation when not walking
+    if (playerModel) animateIdle(playerModel, time);
+  }
+
+  // Auto blink (every 3-6 seconds)
+  if (Date.now() - lastBlinkTime > nextBlinkDelay) {
+    blinkEyes(playerModel);
+    // Also blink NPCs
+    Object.values(state.npcs).forEach(npc => blinkEyes(npc));
+    lastBlinkTime = Date.now();
+    nextBlinkDelay = 3000 + Math.random() * 3000;
+  }
 
   if (state.previewModel) {
     state.previewModel.rotation.y += 0.01;

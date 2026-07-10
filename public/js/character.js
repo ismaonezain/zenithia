@@ -20,126 +20,234 @@ export const CLASS_COLORS = {
   shadow:       { body: 0x212121, trim: 0xD32F2F },
 };
 
-// --- Hair Styles ---
+// --- Hair Styles (enhanced detail) ---
 const HAIR_STYLES = {
   short: (group, color, scale) => {
-    const geo = new THREE.BoxGeometry(0.52 * scale, 0.15 * scale, 0.52 * scale);
     const mat = new THREE.MeshLambertMaterial({ color });
-    const hair = new THREE.Mesh(geo, mat);
-    hair.position.y = 1.72 * scale;
-    group.add(hair);
+    // Main cap
+    const cap = new THREE.Mesh(new THREE.BoxGeometry(0.54 * scale, 0.18 * scale, 0.54 * scale), mat);
+    cap.position.y = 1.73 * scale;
+    group.add(cap);
+    // Volume layer
+    const vol = new THREE.Mesh(new THREE.BoxGeometry(0.48 * scale, 0.08 * scale, 0.48 * scale), mat);
+    vol.position.y = 1.8 * scale;
+    group.add(vol);
+    // Sideburns
+    for (const s of [-1, 1]) {
+      const sb = new THREE.Mesh(new THREE.BoxGeometry(0.06 * scale, 0.12 * scale, 0.08 * scale), mat);
+      sb.position.set(s * 0.26 * scale, 1.55 * scale, 0.05 * scale);
+      group.add(sb);
+    }
+    // Back coverage
+    const back = new THREE.Mesh(new THREE.BoxGeometry(0.46 * scale, 0.15 * scale, 0.1 * scale), mat);
+    back.position.set(0, 1.65 * scale, -0.25 * scale);
+    group.add(back);
   },
   medium: (group, color, scale) => {
-    const geo = new THREE.BoxGeometry(0.54 * scale, 0.25 * scale, 0.54 * scale);
     const mat = new THREE.MeshLambertMaterial({ color });
-    const hair = new THREE.Mesh(geo, mat);
-    hair.position.y = 1.7 * scale;
-    group.add(hair);
-    const sideGeo = new THREE.BoxGeometry(0.1 * scale, 0.3 * scale, 0.1 * scale);
-    const side1 = new THREE.Mesh(sideGeo, mat);
-    side1.position.set(-0.3 * scale, 1.5 * scale, 0);
-    group.add(side1);
-    const side2 = new THREE.Mesh(sideGeo, mat);
-    side2.position.set(0.3 * scale, 1.5 * scale, 0);
-    group.add(side2);
+    const cap = new THREE.Mesh(new THREE.BoxGeometry(0.56 * scale, 0.25 * scale, 0.56 * scale), mat);
+    cap.position.y = 1.72 * scale;
+    group.add(cap);
+    const vol = new THREE.Mesh(new THREE.BoxGeometry(0.5 * scale, 0.1 * scale, 0.5 * scale), mat);
+    vol.position.y = 1.85 * scale;
+    group.add(vol);
+    // Side hair
+    for (const s of [-1, 1]) {
+      const side = new THREE.Mesh(new THREE.BoxGeometry(0.1 * scale, 0.35 * scale, 0.12 * scale), mat);
+      side.position.set(s * 0.28 * scale, 1.5 * scale, 0);
+      group.add(side);
+    }
+    // Back volume
+    const back = new THREE.Mesh(new THREE.BoxGeometry(0.44 * scale, 0.3 * scale, 0.12 * scale), mat);
+    back.position.set(0, 1.55 * scale, -0.26 * scale);
+    group.add(back);
+    // Fringe
+    const fringe = new THREE.Mesh(new THREE.BoxGeometry(0.4 * scale, 0.08 * scale, 0.08 * scale), mat);
+    fringe.position.set(0, 1.68 * scale, 0.27 * scale);
+    group.add(fringe);
   },
   long: (group, color, scale) => {
-    const geo = new THREE.BoxGeometry(0.54 * scale, 0.2 * scale, 0.6 * scale);
     const mat = new THREE.MeshLambertMaterial({ color });
-    const hair = new THREE.Mesh(geo, mat);
-    hair.position.y = 1.72 * scale;
-    group.add(hair);
-    const backGeo = new THREE.BoxGeometry(0.4 * scale, 0.8 * scale, 0.15 * scale);
-    const back = new THREE.Mesh(backGeo, mat);
-    back.position.set(0, 1.3 * scale, -0.3 * scale);
-    group.add(back);
+    const cap = new THREE.Mesh(new THREE.BoxGeometry(0.56 * scale, 0.2 * scale, 0.58 * scale), mat);
+    cap.position.y = 1.73 * scale;
+    group.add(cap);
+    const vol = new THREE.Mesh(new THREE.BoxGeometry(0.5 * scale, 0.1 * scale, 0.52 * scale), mat);
+    vol.position.y = 1.85 * scale;
+    group.add(vol);
+    // Cascading back layers
+    for (let i = 0; i < 4; i++) {
+      const layer = new THREE.Mesh(new THREE.BoxGeometry(0.38 * scale - i * 0.02, 0.2 * scale, 0.1 * scale), mat);
+      layer.position.set(0, 1.4 * scale - i * 0.2 * scale, -0.22 * scale);
+      group.add(layer);
+    }
+    // Side strands
+    for (const s of [-1, 1]) {
+      for (let i = 0; i < 3; i++) {
+        const strand = new THREE.Mesh(new THREE.BoxGeometry(0.06 * scale, 0.15 * scale, 0.06 * scale), mat);
+        strand.position.set(s * 0.25 * scale, 1.5 * scale - i * 0.15 * scale, 0.08 * scale);
+        group.add(strand);
+      }
+    }
   },
   spiky: (group, color, scale) => {
     const mat = new THREE.MeshLambertMaterial({ color });
-    for (let i = 0; i < 5; i++) {
-      const geo = new THREE.BoxGeometry(0.1 * scale, 0.3 * scale, 0.1 * scale);
-      const spike = new THREE.Mesh(geo, mat);
-      const angle = (i / 5) * Math.PI - Math.PI / 2;
+    const base = new THREE.Mesh(new THREE.BoxGeometry(0.5 * scale, 0.1 * scale, 0.5 * scale), mat);
+    base.position.y = 1.72 * scale;
+    group.add(base);
+    // Multiple spike rows
+    for (let i = 0; i < 7; i++) {
+      const angle = (i / 7) * Math.PI * 2;
+      const h = 0.2 + (i % 3) * 0.1;
+      const spike = new THREE.Mesh(new THREE.BoxGeometry(0.08 * scale, h * scale, 0.08 * scale), mat);
       spike.position.set(
-        Math.sin(angle) * 0.2 * scale,
-        1.85 * scale + (i % 2) * 0.1 * scale,
-        Math.cos(angle) * 0.1 * scale
+        Math.sin(angle) * 0.18 * scale,
+        (1.78 + h * 0.3) * scale,
+        Math.cos(angle) * 0.18 * scale
       );
-      spike.rotation.z = Math.sin(angle) * 0.3;
+      spike.rotation.z = Math.sin(angle) * 0.4;
+      spike.rotation.x = Math.cos(angle) * 0.3;
       group.add(spike);
     }
+    // Center spike
+    const center = new THREE.Mesh(new THREE.BoxGeometry(0.1 * scale, 0.3 * scale, 0.1 * scale), mat);
+    center.position.y = 1.9 * scale;
+    group.add(center);
   },
   ponytail: (group, color, scale) => {
-    const geo = new THREE.BoxGeometry(0.52 * scale, 0.18 * scale, 0.52 * scale);
     const mat = new THREE.MeshLambertMaterial({ color });
-    const hair = new THREE.Mesh(geo, mat);
-    hair.position.y = 1.72 * scale;
-    group.add(hair);
-    const tailGeo = new THREE.BoxGeometry(0.12 * scale, 0.6 * scale, 0.12 * scale);
-    const tail = new THREE.Mesh(tailGeo, mat);
-    tail.position.set(0, 1.4 * scale, -0.35 * scale);
-    tail.rotation.x = 0.3;
-    group.add(tail);
+    const cap = new THREE.Mesh(new THREE.BoxGeometry(0.54 * scale, 0.2 * scale, 0.54 * scale), mat);
+    cap.position.y = 1.72 * scale;
+    group.add(cap);
+    // Tail base
+    const tailBase = new THREE.Mesh(new THREE.BoxGeometry(0.15 * scale, 0.12 * scale, 0.15 * scale), mat);
+    tailBase.position.set(0, 1.72 * scale, -0.25 * scale);
+    group.add(tailBase);
+    // Tail segments
+    for (let i = 0; i < 4; i++) {
+      const seg = new THREE.Mesh(new THREE.BoxGeometry(0.12 * scale, 0.15 * scale, 0.12 * scale), mat);
+      seg.position.set(0, 1.55 * scale - i * 0.15 * scale, -0.28 * scale - i * 0.03 * scale);
+      seg.rotation.x = 0.2 + i * 0.05;
+      group.add(seg);
+    }
+    // Tie band
+    const band = new THREE.Mesh(new THREE.BoxGeometry(0.14 * scale, 0.04 * scale, 0.14 * scale),
+      new THREE.MeshLambertMaterial({ color: 0xFFD600 }));
+    band.position.set(0, 1.72 * scale, -0.25 * scale);
+    group.add(band);
   },
   mohawk: (group, color, scale) => {
     const mat = new THREE.MeshLambertMaterial({ color });
     const base = new THREE.Mesh(new THREE.BoxGeometry(0.15 * scale, 0.12 * scale, 0.4 * scale), mat);
     base.position.y = 1.75 * scale;
     group.add(base);
-    for (let i = 0; i < 4; i++) {
-      const spike = new THREE.Mesh(new THREE.BoxGeometry(0.08 * scale, 0.2 * scale, 0.08 * scale), mat);
-      spike.position.set(0, 1.88 * scale + i * 0.05 * scale, -0.12 * scale + i * 0.08 * scale);
+    for (let i = 0; i < 5; i++) {
+      const h = 0.2 + Math.sin(i * 0.8) * 0.08;
+      const spike = new THREE.Mesh(new THREE.BoxGeometry(0.1 * scale, h * scale, 0.1 * scale), mat);
+      spike.position.set(0, (1.85 + h * 0.3) * scale, -0.15 * scale + i * 0.075 * scale);
       group.add(spike);
+    }
+    // Shaved sides
+    const shaveMat = new THREE.MeshLambertMaterial({ color: 0x8D6E63 });
+    for (const s of [-1, 1]) {
+      const shave = new THREE.Mesh(new THREE.BoxGeometry(0.04 * scale, 0.15 * scale, 0.4 * scale), shaveMat);
+      shave.position.set(s * 0.26 * scale, 1.7 * scale, 0);
+      group.add(shave);
     }
   },
   braids: (group, color, scale) => {
     const mat = new THREE.MeshLambertMaterial({ color });
-    const top = new THREE.Mesh(new THREE.BoxGeometry(0.5 * scale, 0.15 * scale, 0.5 * scale), mat);
+    const top = new THREE.Mesh(new THREE.BoxGeometry(0.52 * scale, 0.18 * scale, 0.52 * scale), mat);
     top.position.y = 1.72 * scale;
     group.add(top);
-    for (let side = -1; side <= 1; side += 2) {
-      for (let i = 0; i < 3; i++) {
-        const braid = new THREE.Mesh(new THREE.BoxGeometry(0.08 * scale, 0.15 * scale, 0.08 * scale), mat);
-        braid.position.set(side * 0.25 * scale, 1.5 * scale - i * 0.15 * scale, -0.1 * scale);
+    // Braids — 2 per side, interlocking boxes
+    for (const s of [-1, 1]) {
+      for (let i = 0; i < 5; i++) {
+        const braid = new THREE.Mesh(new THREE.BoxGeometry(0.07 * scale, 0.1 * scale, 0.07 * scale), mat);
+        const offset = (i % 2 === 0) ? 0.02 : -0.02;
+        braid.position.set(s * 0.24 * scale + offset, 1.55 * scale - i * 0.12 * scale, -0.08 * scale);
         group.add(braid);
       }
     }
+    // Fringe
+    const fringe = new THREE.Mesh(new THREE.BoxGeometry(0.35 * scale, 0.06 * scale, 0.06 * scale), mat);
+    fringe.position.set(0, 1.65 * scale, 0.27 * scale);
+    group.add(fringe);
   },
   bun: (group, color, scale) => {
     const mat = new THREE.MeshLambertMaterial({ color });
-    const top = new THREE.Mesh(new THREE.BoxGeometry(0.5 * scale, 0.15 * scale, 0.5 * scale), mat);
+    const top = new THREE.Mesh(new THREE.BoxGeometry(0.52 * scale, 0.18 * scale, 0.52 * scale), mat);
     top.position.y = 1.72 * scale;
     group.add(top);
-    const bun = new THREE.Mesh(new THREE.BoxGeometry(0.25 * scale, 0.25 * scale, 0.25 * scale), mat);
-    bun.position.set(0, 1.85 * scale, -0.15 * scale);
-    group.add(bun);
+    // Bun layers
+    const bun1 = new THREE.Mesh(new THREE.BoxGeometry(0.25 * scale, 0.2 * scale, 0.25 * scale), mat);
+    bun1.position.set(0, 1.88 * scale, -0.12 * scale);
+    group.add(bun1);
+    const bun2 = new THREE.Mesh(new THREE.BoxGeometry(0.2 * scale, 0.15 * scale, 0.2 * scale), mat);
+    bun2.position.set(0, 1.98 * scale, -0.12 * scale);
+    group.add(bun2);
+    // Stick
+    const stick = new THREE.Mesh(new THREE.BoxGeometry(0.03 * scale, 0.3 * scale, 0.03 * scale),
+      new THREE.MeshLambertMaterial({ color: 0x5D4037 }));
+    stick.position.set(0, 1.92 * scale, -0.12 * scale);
+    stick.rotation.z = 0.3;
+    group.add(stick);
   },
   buzz: (group, color, scale) => {
     const mat = new THREE.MeshLambertMaterial({ color });
-    const hair = new THREE.Mesh(new THREE.BoxGeometry(0.52 * scale, 0.08 * scale, 0.52 * scale), mat);
+    const hair = new THREE.Mesh(new THREE.BoxGeometry(0.54 * scale, 0.06 * scale, 0.54 * scale), mat);
     hair.position.y = 1.74 * scale;
     group.add(hair);
+    // Slight texture dots
+    for (let i = 0; i < 6; i++) {
+      const dot = new THREE.Mesh(new THREE.BoxGeometry(0.04 * scale, 0.03 * scale, 0.04 * scale), mat);
+      const angle = (i / 6) * Math.PI * 2;
+      dot.position.set(Math.cos(angle) * 0.2 * scale, 1.76 * scale, Math.sin(angle) * 0.2 * scale);
+      group.add(dot);
+    }
   },
   twin_tails: (group, color, scale) => {
     const mat = new THREE.MeshLambertMaterial({ color });
-    const top = new THREE.Mesh(new THREE.BoxGeometry(0.5 * scale, 0.15 * scale, 0.5 * scale), mat);
+    const top = new THREE.Mesh(new THREE.BoxGeometry(0.52 * scale, 0.18 * scale, 0.52 * scale), mat);
     top.position.y = 1.72 * scale;
     group.add(top);
-    for (let side = -1; side <= 1; side += 2) {
-      const tail = new THREE.Mesh(new THREE.BoxGeometry(0.1 * scale, 0.5 * scale, 0.1 * scale), mat);
-      tail.position.set(side * 0.3 * scale, 1.4 * scale, -0.2 * scale);
-      tail.rotation.x = 0.2;
-      group.add(tail);
+    for (const s of [-1, 1]) {
+      // Tail base
+      const base = new THREE.Mesh(new THREE.BoxGeometry(0.1 * scale, 0.1 * scale, 0.1 * scale), mat);
+      base.position.set(s * 0.28 * scale, 1.72 * scale, -0.2 * scale);
+      group.add(base);
+      // Tail segments
+      for (let i = 0; i < 3; i++) {
+        const seg = new THREE.Mesh(new THREE.BoxGeometry(0.08 * scale, 0.15 * scale, 0.08 * scale), mat);
+        seg.position.set(s * 0.3 * scale, 1.55 * scale - i * 0.15 * scale, -0.22 * scale);
+        seg.rotation.x = 0.15;
+        group.add(seg);
+      }
+      // Ribbon
+      const ribbon = new THREE.Mesh(new THREE.BoxGeometry(0.08 * scale, 0.06 * scale, 0.04 * scale),
+        new THREE.MeshLambertMaterial({ color: 0xFF69B4 }));
+      ribbon.position.set(s * 0.28 * scale, 1.72 * scale, -0.2 * scale);
+      group.add(ribbon);
     }
   },
   bowl: (group, color, scale) => {
     const mat = new THREE.MeshLambertMaterial({ color });
-    const hair = new THREE.Mesh(new THREE.BoxGeometry(0.56 * scale, 0.2 * scale, 0.56 * scale), mat);
-    hair.position.y = 1.72 * scale;
-    group.add(hair);
-    const fringe = new THREE.Mesh(new THREE.BoxGeometry(0.48 * scale, 0.12 * scale, 0.08 * scale), mat);
-    fringe.position.set(0, 1.65 * scale, 0.28 * scale);
+    // Bowl shape — top + sides
+    const top = new THREE.Mesh(new THREE.BoxGeometry(0.58 * scale, 0.22 * scale, 0.58 * scale), mat);
+    top.position.y = 1.72 * scale;
+    group.add(top);
+    const vol = new THREE.Mesh(new THREE.BoxGeometry(0.54 * scale, 0.08 * scale, 0.54 * scale), mat);
+    vol.position.y = 1.85 * scale;
+    group.add(vol);
+    // Heavy fringe (bowl cut signature)
+    const fringe = new THREE.Mesh(new THREE.BoxGeometry(0.5 * scale, 0.15 * scale, 0.1 * scale), mat);
+    fringe.position.set(0, 1.6 * scale, 0.27 * scale);
     group.add(fringe);
+    // Side coverage
+    for (const s of [-1, 1]) {
+      const side = new THREE.Mesh(new THREE.BoxGeometry(0.08 * scale, 0.25 * scale, 0.5 * scale), mat);
+      side.position.set(s * 0.27 * scale, 1.6 * scale, 0);
+      group.add(side);
+    }
   },
 };
 
@@ -151,7 +259,10 @@ export function createPlayerModel(options = {}) {
     hairStyle = 'short',
     eyeColor = PALETTES.eyes[0],
     bodyColor = PALETTES.body[0],
+    pantsColor = 0x5D4037,
     trimColor = 0xFFFFFF,
+    gender = 'male',
+    classType = 'laborer',
     scale = 1,
     isNPC = false,
   } = options;
@@ -160,6 +271,12 @@ export function createPlayerModel(options = {}) {
   const skinMat = new THREE.MeshLambertMaterial({ color: skinColor });
   const bodyMat = new THREE.MeshLambertMaterial({ color: bodyColor });
   const trimMat = new THREE.MeshLambertMaterial({ color: trimColor });
+  const pantsMat = new THREE.MeshLambertMaterial({ color: pantsColor });
+
+  // Gender proportions
+  const bodyW = gender === 'female' ? 0.55 : 0.6;
+  const shoulderW = gender === 'female' ? 0.35 : 0.38;
+  const hipW = gender === 'female' ? 0.35 : 0.15;
 
   // === NECK ===
   const neck = new THREE.Mesh(new THREE.BoxGeometry(0.2 * scale, 0.15 * scale, 0.2 * scale), skinMat);
@@ -167,7 +284,7 @@ export function createPlayerModel(options = {}) {
   group.add(neck);
 
   // === BODY ===
-  const body = new THREE.Mesh(new THREE.BoxGeometry(0.6 * scale, 0.8 * scale, 0.4 * scale), bodyMat);
+  const body = new THREE.Mesh(new THREE.BoxGeometry(bodyW * scale, 0.8 * scale, 0.4 * scale), bodyMat);
   body.position.y = 0.8 * scale;
   body.castShadow = true;
   group.add(body);
@@ -180,10 +297,10 @@ export function createPlayerModel(options = {}) {
   // Shoulder pads
   const shoulderGeo = new THREE.BoxGeometry(0.2 * scale, 0.1 * scale, 0.25 * scale);
   const leftShoulder = new THREE.Mesh(shoulderGeo, trimMat);
-  leftShoulder.position.set(-0.38 * scale, 1.15 * scale, 0);
+  leftShoulder.position.set(-shoulderW * scale, 1.15 * scale, 0);
   group.add(leftShoulder);
   const rightShoulder = new THREE.Mesh(shoulderGeo, trimMat);
-  rightShoulder.position.set(0.38 * scale, 1.15 * scale, 0);
+  rightShoulder.position.set(shoulderW * scale, 1.15 * scale, 0);
   group.add(rightShoulder);
 
   // Belt (thicker)
@@ -275,13 +392,12 @@ export function createPlayerModel(options = {}) {
   }
 
   // === LEGS ===
-  const legMat = new THREE.MeshLambertMaterial({ color: 0x5D4037 });
-  const leftLeg = new THREE.Mesh(new THREE.BoxGeometry(0.2 * scale, 0.45 * scale, 0.3 * scale), legMat);
+  const leftLeg = new THREE.Mesh(new THREE.BoxGeometry(0.2 * scale, 0.45 * scale, 0.3 * scale), pantsMat);
   leftLeg.name = 'leftLeg';
   leftLeg.position.set(-0.15 * scale, 0.28 * scale, 0);
   leftLeg.castShadow = true;
   group.add(leftLeg);
-  const rightLeg = new THREE.Mesh(new THREE.BoxGeometry(0.2 * scale, 0.45 * scale, 0.3 * scale), legMat);
+  const rightLeg = new THREE.Mesh(new THREE.BoxGeometry(0.2 * scale, 0.45 * scale, 0.3 * scale), pantsMat);
   rightLeg.name = 'rightLeg';
   rightLeg.position.set(0.15 * scale, 0.28 * scale, 0);
   rightLeg.castShadow = true;
@@ -317,62 +433,76 @@ export function createPlayerModel(options = {}) {
 
   // === ARMS ===
   const armMat = new THREE.MeshLambertMaterial({ color: bodyColor });
+  const armX = (shoulderW + 0.04) * scale;
   const leftArm = new THREE.Mesh(new THREE.BoxGeometry(0.15 * scale, 0.5 * scale, 0.15 * scale), armMat);
   leftArm.name = 'leftArm';
-  leftArm.position.set(-0.42 * scale, 0.88 * scale, 0);
+  leftArm.position.set(-armX, 0.88 * scale, 0);
   leftArm.castShadow = true;
   group.add(leftArm);
   const rightArm = new THREE.Mesh(new THREE.BoxGeometry(0.15 * scale, 0.5 * scale, 0.15 * scale), armMat);
   rightArm.name = 'rightArm';
-  rightArm.position.set(0.42 * scale, 0.88 * scale, 0);
+  rightArm.position.set(armX, 0.88 * scale, 0);
   rightArm.castShadow = true;
   group.add(rightArm);
 
   // Arm cuffs (trim color)
   const cuffGeo = new THREE.BoxGeometry(0.17 * scale, 0.06 * scale, 0.17 * scale);
   const leftCuff = new THREE.Mesh(cuffGeo, trimMat);
-  leftCuff.position.set(-0.42 * scale, 0.65 * scale, 0);
+  leftCuff.position.set(-armX, 0.65 * scale, 0);
   group.add(leftCuff);
   const rightCuff = new THREE.Mesh(cuffGeo, trimMat);
-  rightCuff.position.set(0.42 * scale, 0.65 * scale, 0);
+  rightCuff.position.set(armX, 0.65 * scale, 0);
   group.add(rightCuff);
 
   // === HANDS ===
   const handGeo = new THREE.BoxGeometry(0.1 * scale, 0.1 * scale, 0.1 * scale);
   const leftHand = new THREE.Mesh(handGeo, skinMat);
   leftHand.name = 'leftHand';
-  leftHand.position.set(-0.42 * scale, 0.58 * scale, 0);
+  leftHand.position.set(-armX, 0.58 * scale, 0);
   group.add(leftHand);
   const rightHand = new THREE.Mesh(handGeo, skinMat);
   rightHand.name = 'rightHand';
-  rightHand.position.set(0.42 * scale, 0.58 * scale, 0);
+  rightHand.position.set(armX, 0.58 * scale, 0);
   group.add(rightHand);
 
   // Fingers (3 tiny boxes per hand)
   const fingerGeo = new THREE.BoxGeometry(0.025 * scale, 0.06 * scale, 0.025 * scale);
   for (let i = -1; i <= 1; i++) {
     const lf = new THREE.Mesh(fingerGeo, skinMat);
-    lf.position.set(-0.42 * scale + i * 0.03 * scale, 0.52 * scale, 0);
+    lf.position.set(-armX + i * 0.03 * scale, 0.52 * scale, 0);
     group.add(lf);
     const rf = new THREE.Mesh(fingerGeo, skinMat);
-    rf.position.set(0.42 * scale + i * 0.03 * scale, 0.52 * scale, 0);
+    rf.position.set(armX + i * 0.03 * scale, 0.52 * scale, 0);
     group.add(rf);
   }
 
   return group;
 }
 
+// --- Idle Animation (breathing + subtle sway) ---
+export function animateIdle(model, time) {
+  if (!model) return;
+  // Subtle breathing — body scale Y
+  const body = model.children.find(c => c.position.y === 0.8 && c.geometry?.parameters?.height === 0.8);
+  if (body) body.scale.y = 1.0 + Math.sin(time * 2) * 0.02;
+  // Subtle arm sway
+  const leftArm = model.getObjectByName('leftArm');
+  const rightArm = model.getObjectByName('rightArm');
+  if (leftArm) leftArm.rotation.x = Math.sin(time * 1.5) * 0.05;
+  if (rightArm) rightArm.rotation.x = -Math.sin(time * 1.5) * 0.05;
+}
+
 // --- Create NPC with specific look ---
 export function createNPCModel(npc) {
   const NPC_LOOKS = {
-    elder_maren:     { skin: 5, hair: 1, hairStyle: 'medium', body: 0x8D6E63, trim: 0xFFD600 },
-    sir_gendut:      { skin: 1, hair: 2, hairStyle: 'short', body: 0xFF8F00, trim: 0xFFFFFF },
-    miss_lira:       { skin: 0, hair: 3, hairStyle: 'ponytail', body: 0xE91E63, trim: 0xFFFFFF },
-    mr_tani:         { skin: 2, hair: 1, hairStyle: 'short', body: 0x689F38, trim: 0x8D6E63 },
-    mrs_ningsih:     { skin: 1, hair: 0, hairStyle: 'medium', body: 0xAD1457, trim: 0xFFD600 },
-    kris:            { skin: 0, hair: 4, hairStyle: 'spiky', body: 0x42A5F5, trim: 0xFFFFFF },
-    guard_ren:       { skin: 3, hair: 0, hairStyle: 'short', body: 0x607D8B, trim: 0xB0BEC5 },
-    herbalist_sari:  { skin: 2, hair: 6, hairStyle: 'long', body: 0x7B1FA2, trim: 0xFFFFFF },
+    elder_maren:     { skin: 5, hair: 1, hairStyle: 'medium', body: 0x8D6E63, trim: 0xFFD600, gender: 'male' },
+    sir_gendut:      { skin: 1, hair: 2, hairStyle: 'short', body: 0xFF8F00, trim: 0xFFFFFF, gender: 'male' },
+    miss_lira:       { skin: 0, hair: 3, hairStyle: 'ponytail', body: 0xE91E63, trim: 0xFFFFFF, gender: 'female' },
+    mr_tani:         { skin: 2, hair: 1, hairStyle: 'short', body: 0x689F38, trim: 0x8D6E63, gender: 'male' },
+    mrs_ningsih:     { skin: 1, hair: 0, hairStyle: 'medium', body: 0xAD1457, trim: 0xFFD600, gender: 'female' },
+    kris:            { skin: 0, hair: 4, hairStyle: 'spiky', body: 0x42A5F5, trim: 0xFFFFFF, gender: 'male' },
+    guard_ren:       { skin: 3, hair: 0, hairStyle: 'short', body: 0x607D8B, trim: 0xB0BEC5, gender: 'male' },
+    herbalist_sari:  { skin: 2, hair: 6, hairStyle: 'long', body: 0x7B1FA2, trim: 0xFFFFFF, gender: 'female' },
   };
 
   const look = NPC_LOOKS[npc.id] || {};
@@ -382,6 +512,7 @@ export function createNPCModel(npc) {
     hairStyle: look.hairStyle || 'short',
     bodyColor: look.body || 0x9E9E9E,
     trimColor: look.trim || 0xFFFFFF,
+    gender: look.gender || 'male',
     isNPC: true,
   });
 
