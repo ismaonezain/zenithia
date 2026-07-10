@@ -113,29 +113,28 @@ function addPaths(group) {
   group.add(mainPath);
   addPathLabel(group, 'JALAN UTAMA', 0, 4);
 
-  // [B] Herbalist horizontal (bridge → east)
+  // [B] Herbalist horizontal (lurus ke timur, jauh dari sungai)
   const herbalPathH = new THREE.Mesh(new THREE.PlaneGeometry(18, 1.2), pathMat);
   herbalPathH.rotation.x = -Math.PI / 2;
-  herbalPathH.position.set(9, 0.02, 0);
+  herbalPathH.position.set(9, 0.02, -2);
   herbalPathH.receiveShadow = true;
   group.add(herbalPathH);
-  addPathLabel(group, 'JALAN HERBALIST H', 9, 0);
+  addPathLabel(group, 'JALAN HERBALIST H', 9, -2);
 
   // [C] Herbalist vertical (turun ke herbalist)
-  const herbalPathV = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 8), pathMat);
+  const herbalPathV = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 6), pathMat);
   herbalPathV.rotation.x = -Math.PI / 2;
-  herbalPathV.position.set(18, 0.02, -4);
+  herbalPathV.position.set(18, 0.02, -5);
   herbalPathV.receiveShadow = true;
   group.add(herbalPathV);
-  addPathLabel(group, 'JALAN HERBALIST V', 18, -4);
+  addPathLabel(group, 'JALAN HERBALIST V', 18, -5);
 
-  // [D] Stalls → Bridge (horizontal ke kiri)
-  const stallToBridge = new THREE.Mesh(new THREE.PlaneGeometry(2.5, 1.2), pathMat);
-  stallToBridge.rotation.x = -Math.PI / 2;
-  stallToBridge.position.set(1, 0.02, 4);
-  stallToBridge.receiveShadow = true;
-  group.add(stallToBridge);
-  addPathLabel(group, 'JALAN STALL', 1, 4);
+  // [D] Main → Herbalist H (vertical pendek)
+  const mainToHerbal = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 4), pathMat);
+  mainToHerbal.rotation.x = -Math.PI / 2;
+  mainToHerbal.position.set(0, 0.02, -1);
+  mainToHerbal.receiveShadow = true;
+  group.add(mainToHerbal);
 
   // [E] Bridge crossing (vertikal lewat sungai)
   const bridgePath = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 4), pathMat);
@@ -145,10 +144,13 @@ function addPaths(group) {
   group.add(bridgePath);
   addPathLabel(group, 'JALAN BRIDGE', 0, 2);
 
-  // [F] Main → Barn (diagonal ke barat)
-  const farmPath = createDiagonalPath(0, 8, -18, 14, 1.5, pathMat);
+  // [F] Main → Barn (lurus horizontal ke barat)
+  const farmPath = new THREE.Mesh(new THREE.PlaneGeometry(18, 1.2), pathMat);
+  farmPath.rotation.x = -Math.PI / 2;
+  farmPath.position.set(-9, 0.02, 12);
+  farmPath.receiveShadow = true;
   group.add(farmPath);
-  addPathLabel(group, 'JALAN BARN', -9, 11);
+  addPathLabel(group, 'JALAN BARN', -9, 12);
 
   // [G] Main → Houses (horizontal ke kiri, z=8)
   const housePath1 = new THREE.Mesh(new THREE.PlaneGeometry(5, 1.2), pathMat);
@@ -196,10 +198,10 @@ function addBuildings(group) {
     // Elder's Hall — face south toward main path
     { x: 0, z: -15, w: 6, h: 4, d: 5, color: 0x8D6E63, roof: 0x5D4037, label: 'Elder\'s Hall', rot: 0 },
 
-    // Market stalls — straight line along main path, face east
-    { x: 2, z: 0, w: 2, h: 2, d: 2, color: 0xFFCC80, roof: 0xE65100, label: 'Stall', rot: -Math.PI / 2 },
-    { x: 2, z: 4, w: 2, h: 2, d: 2, color: 0xFFCC80, roof: 0xE65100, label: 'Stall', rot: -Math.PI / 2 },
-    { x: 2, z: 8, w: 2, h: 2, d: 2, color: 0xFFCC80, roof: 0xE65100, label: 'Stall', rot: -Math.PI / 2 },
+    // Market stalls — on JALAN HERBALIST H
+    { x: 4, z: -2, w: 2, h: 2, d: 2, color: 0xFFCC80, roof: 0xE65100, label: 'Stall', rot: -Math.PI / 2 },
+    { x: 8, z: -2, w: 2, h: 2, d: 2, color: 0xFFCC80, roof: 0xE65100, label: 'Stall', rot: -Math.PI / 2 },
+    { x: 12, z: -2, w: 2, h: 2, d: 2, color: 0xFFCC80, roof: 0xE65100, label: 'Stall', rot: -Math.PI / 2 },
 
     // Houses — face road
     { x: -6, z: 8, w: 3, h: 2.5, d: 3, color: 0xD7CCC8, roof: 0x5D4037, rot: Math.PI / 2, label: 'Willow Cottage' },
