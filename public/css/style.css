@@ -327,6 +327,65 @@ body {
 
 /* === MOBILE === */
 @media (max-width: 768px) {
+  /* Login screen — scrollable, compact */
+  #login-screen {
+    justify-content: flex-start;
+    padding: 12px;
+    gap: 8px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  #login-screen h2 {
+    font-size: 1.4rem;
+    margin-bottom: 0.5rem;
+  }
+  #login-screen input {
+    width: 100%;
+    max-width: 280px;
+    padding: 0.6rem 1rem;
+    font-size: 1rem;
+  }
+  #login-screen button {
+    width: 100%;
+    max-width: 280px;
+    padding: 0.6rem 1.5rem;
+    font-size: 0.85rem;
+  }
+
+  /* Customize panel — compact */
+  #customize-panel {
+    width: 100%;
+    max-width: 320px;
+    gap: 6px;
+    margin-bottom: 0.5rem;
+  }
+  #customize-panel .row {
+    gap: 6px;
+  }
+  #customize-panel label {
+    width: 45px;
+    font-size: 0.75rem;
+  }
+  .picker .swatch {
+    width: 22px;
+    height: 22px;
+    border-radius: 4px;
+  }
+  .picker .option {
+    padding: 3px 7px;
+    font-size: 0.65rem;
+  }
+
+  /* Preview canvas — smaller */
+  #preview-canvas {
+    width: 140px !important;
+    height: 180px !important;
+  }
+  #char-preview {
+    margin: 4px 0;
+  }
+
+  /* HUD */
   #hud {
     flex-direction: column;
     padding: 8px;
