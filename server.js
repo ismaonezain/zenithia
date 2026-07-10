@@ -13,6 +13,7 @@ const SAVE_FILE = path.join(SAVE_DIR, 'world.json');
 const MONSTERS = require('./shared/monsters');
 const { ITEMS, LOOT_TABLES } = require('./shared/items');
 const { QUESTS, NPC_QUESTS } = require('./shared/quests');
+const { SHOPS } = require('./shared/shop');
 
 const app = express();
 const server = http.createServer(app);
@@ -725,6 +726,63 @@ function handleMessage(ws, playerId, msg) {
       break;
     }
     case 'save': saveWorld(); ws.send(JSON.stringify({ type: 'saved' })); break;
+    case 'shop_open': {
+      const player = connectedPlayers[ws];
+      const shop = SHOPS[msg.npcId];
+      if (player && shop) {
+        const catalog = shop.inventory.map(s => {
+          const itemDef = ITEMS[s.itemId];
+          return itemDef ? {
+            itemId: s.itemId, name: itemDef.name, type: itemDef.type,
+            description: itemDef.description, icon: itemDef.icon,
+            price: Math.ceil((itemDef.price || 10) * shop.buyMultiplier),
+            stats: itemDef.stats, slot: itemDef.slot,
+            healAmount: itemDef.healAmount, manaAmount: itemDef.manaAmount,
+          } : null;
+        }).filter(Boolean);
+        ws.send(JSON.stringify({ type: 'shop_catalog', shopId: msg.npcId, shopName: shop.name, catalog }));
+      }
+      break;
+    }
+    case 'buy_item': {
+      const player = connectedPlayers[ws];
+      const shop = SHOPS[msg.shopId];
+      if (player && shop && msg.itemId) {
+        const itemDef = ITEMS[msg.itemId];
+        if (!itemDef) return ws.send(JSON.stringify({ type: 'shop_error', error: 'Item not found' }));
+        const price = Math.ceil((itemDef.price || 10) * shop.buyMultiplier);
+        const qty = Math.max(1, msg.quantity || 1);
+        const totalCost = price * qty;
+        if (player.zen < totalCost) {
+          return ws.send(JSON.stringify({ type: 'shop_error', error: `Not enough Zen. Need ${totalCost}, have ${player.zen}` }));
+        }
+        player.zen -= totalCost;
+        if (!player.inventory) player.inventory = [];
+        const existing = player.inventory.find(i => i.id === msg.itemId);
+        if (existing) existing.quantity = (existing.quantity || 1) + qty;
+        else player.inventory.push({ id: msg.itemId, name: itemDef.name, type: itemDef.type, quantity: qty, icon: itemDef.icon });
+        ws.send(JSON.stringify({ type: 'shop_result', action: 'buy', itemId: msg.itemId, quantity: qty, cost: totalCost, zen: player.zen, inventory: player.inventory }));
+      }
+      break;
+    }
+    case 'sell_item': {
+      const player = connectedPlayers[ws];
+      const shop = SHOPS[msg.shopId];
+      if (player && shop && msg.itemId) {
+        const itemIdx = player.inventory.findIndex(i => i.id === msg.itemId);
+        if (itemIdx < 0) return ws.send(JSON.stringify({ type: 'shop_error', error: 'Item not in inventory' }));
+        const item = player.inventory[itemIdx];
+        const qty = Math.min(msg.quantity || 1, item.quantity || 1);
+        const itemDef = ITEMS[item.id];
+        const price = Math.ceil((itemDef?.price || 10) * shop.sellMultiplier);
+        const totalGold = price * qty;
+        item.quantity = (item.quantity || 1) - qty;
+        if (item.quantity <= 0) player.inventory.splice(itemIdx, 1);
+        player.zen = (player.zen || 0) + totalGold;
+        ws.send(JSON.stringify({ type: 'shop_result', action: 'sell', itemId: item.id, quantity: qty, earned: totalGold, zen: player.zen, inventory: player.inventory }));
+      }
+      break;
+    }
     default: console.log(`[WARN] Unknown: ${msg.type}`);
   }
 }

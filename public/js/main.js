@@ -6,6 +6,7 @@ import { DialogueSystem } from './dialogue_ui.js';
 import { InventoryUI } from './inventory.js';
 import { QuestUI } from './quest_ui.js';
 import { PartyUI } from './party_ui.js';
+import { ShopUI } from './shop_ui.js';
 import { createMonsterModel, updateMonsterHPBar, animateMonster } from './monsters.js';
 
 // --- State ---
@@ -40,6 +41,7 @@ const state = {
   inventoryUI: null,
   questUI: null,
   partyUI: null,
+  shopUI: null,
   cameraDistance: window.innerWidth < 768 ? 30 : 20,
   cameraAngleX: 0,
   cameraAngleY: window.innerWidth < 768 ? 0.5 : 0.3,
@@ -98,6 +100,7 @@ function initScene() {
   state.inventoryUI = new InventoryUI(null, { name: 'Adventurer', inventory: [], equipment: {}, zen: 50, atk: 10, def: 5, spd: 10, crit: 0.05 });
   state.questUI = new QuestUI(null, { name: 'Adventurer' });
   state.partyUI = new PartyUI(null, { name: 'Adventurer' });
+  state.shopUI = new ShopUI(null, { name: 'Adventurer', zen: 50, inventory: [] });
 
   window.addEventListener('resize', () => {
     state.camera.aspect = window.innerWidth / window.innerHeight;
@@ -539,6 +542,10 @@ function handleServerMessage(msg) {
 
     case 'npc_dialogue':
       state.dialogue.open(msg.npcId, msg.name, msg.title);
+      const MERCHANTS = ['sir_gendut', 'mrs_ningsih', 'herbalist_sari'];
+      if (MERCHANTS.includes(msg.npcId)) {
+        wsSend(JSON.stringify({ type: 'shop_open', npcId: msg.npcId }));
+      }
       break;
 
     case 'monster_killed': {
@@ -702,6 +709,15 @@ function handleServerMessage(msg) {
     }
     case 'combat_message': {
       addChatMessage('Combat', msg.text);
+      break;
+    }
+    case 'shop_catalog':
+    case 'shop_result':
+    case 'shop_error': {
+      if (state.shopUI) {
+        state.shopUI.player = state.player;
+        state.shopUI.handleMsg(msg);
+      }
       break;
     }
   }
