@@ -326,11 +326,22 @@ function wsSend(data) {
 // WEBSOCKET
 // ============================
 function connectWebSocket(playerName, wallet) {
+  // Determine WS server URL
+  let wsHost;
+  const host = location.host;
+  if (host.includes('vercel.app')) {
+    // On Vercel → connect to Railway WS server
+    wsHost = 'zenithia-production.up.railway.app';
+  } else {
+    // On localhost or Railway → same host
+    wsHost = host;
+  }
   const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
 
+  console.log(`[WS] Connecting to ${protocol}//${wsHost}`);
   // Try WebSocket — if fails, run in single-player mode
   try {
-    state.ws = new WebSocket(`${protocol}//${location.host}`);
+    state.ws = new WebSocket(`${protocol}//${wsHost}`);
   } catch (e) {
     console.log('[WS] Connection failed, single-player mode');
     enterSinglePlayer(playerName, wallet);
