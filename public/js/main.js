@@ -312,12 +312,27 @@ function initCustomization() {
   });
 }
 
+// Safe WS send — no-op if no connection
+function wsSend(data) {
+  if (state.ws && state.ws.readyState === 1) {
+    state.ws.send(typeof data === 'string' ? data : JSON.stringify(data));
+  }
+}
+
 // ============================
 // WEBSOCKET
 // ============================
 function connectWebSocket(playerName, wallet) {
   const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-  state.ws = new WebSocket(`${protocol}//${location.host}`);
+
+  // Try WebSocket — if fails, run in single-player mode
+  try {
+    state.ws = new WebSocket(`${protocol}//${location.host}`);
+  } catch (e) {
+    console.log('[WS] Connection failed, single-player mode');
+    enterSinglePlayer(playerName, wallet);
+    return;
+  }
 
   state.ws.onopen = () => {
     console.log('[WS] Connected');
@@ -327,9 +342,63 @@ function connectWebSocket(playerName, wallet) {
     handleServerMessage(JSON.parse(event.data));
   };
   state.ws.onclose = () => {
-    console.log('[WS] Disconnected');
+    console.log('[WS] Disconnected — single-player mode');
     state.connected = false;
+    if (!state.player) enterSinglePlayer(playerName, wallet);
   };
+  state.ws.onerror = () => {
+    console.log('[WS] Error — single-player mode');
+    state.connected = false;
+    if (!state.player) enterSinglePlayer(playerName, wallet);
+  };
+
+  // Timeout — if WS doesn't connect in 3s, go single-player
+  setTimeout(() => {
+    if (!state.connected && !state.player) {
+      console.log('[WS] Timeout — single-player mode');
+      state.ws.close();
+      enterSinglePlayer(playerName, wallet);
+    }
+  }, 3000);
+}
+
+function enterSinglePlayer(playerName, wallet) {
+  state.connected = true; // allow gameplay
+  state.player = {
+    id: 'sp_' + Date.now(),
+    name: playerName || 'Adventurer',
+    wallet: wallet,
+    hp: 100, maxHp: 100,
+    mp: 50, maxMp: 50,
+    level: 1, xp: 0,
+    class: 'laborer',
+    attack: 5, defense: 2,
+    x: 0, z: 0,
+    inventory: [],
+    equipment: {},
+    zen: 0,
+    customization: state.customization,
+  };
+  state.playerId = state.player.id;
+
+  // Show game
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('hud').style.display = 'flex';
+
+  // Spawn player in world
+  spawnPlayer(state.player);
+  updatePlayerHP(state.player.hp, state.player.maxHp);
+  updatePlayerMP(state.player.mp, state.player.maxMp);
+  updatePlayerXP(state.player.xp, 100);
+  updatePlayerLevel(state.player.level);
+
+  // Add mode indicator
+  const badge = document.createElement('div');
+  badge.textContent = '⚡ SINGLE-PLAYER';
+  badge.style.cssText = 'position:fixed;top:50px;left:50%;transform:translateX(-50%);background:rgba(255,152,0,0.8);color:#fff;padding:4px 12px;border-radius:12px;font-size:0.7rem;z-index:100;';
+  document.body.appendChild(badge);
+
+  console.log('[GAME] Single-player mode started');
 }
 
 // ============================
@@ -339,7 +408,7 @@ function handleServerMessage(msg) {
   switch (msg.type) {
     case 'welcome':
       state.playerId = msg.playerId;
-      state.ws.send(JSON.stringify({
+      wsSend(JSON.stringify({
         type: 'join',
         name: document.getElementById('name-input').value || 'Adventurer',
         wallet: state.walletAddress || null,
@@ -441,7 +510,7 @@ function handleServerMessage(msg) {
     }
     case 'party_invite': {
       if (confirm(`${msg.from} invites you to a party. Accept?`)) {
-        state.ws.send(JSON.stringify({ type: 'party_accept', inviterId: msg.fromId }));
+      wsSend(JSON.stringify({ type: 'party_accept', inviterId: msg.fromId }));
       }
       break;
     }
@@ -520,7 +589,7 @@ function handleServerMessage(msg) {
     }
     case 'party_invite': {
       if (confirm(`${msg.from} invites you to a party. Accept?`)) {
-        state.ws.send(JSON.stringify({ type: 'party_accept', inviterId: msg.fromId }));
+      wsSend(JSON.stringify({ type: 'party_accept', inviterId: msg.fromId }));
       }
       break;
     }
@@ -848,7 +917,7 @@ canvas.addEventListener('click', (e) => {
         state.lastFacing = model.position.clone().add(faceDir);
         model.lookAt(state.lastFacing);
       }
-      state.ws.send(JSON.stringify({ type: 'interact_npc', npcId: npc.userData.id }));
+      wsSend(JSON.stringify({ type: 'interact_npc', npcId: npc.userData.id }));
       return;
     }
   }
@@ -862,7 +931,7 @@ canvas.addEventListener('click', (e) => {
         state.lastFacing = model.position.clone().add(faceDir);
         model.lookAt(state.lastFacing);
       }
-      state.ws.send(JSON.stringify({ type: 'attack', monsterId: mob.userData.id }));
+      wsSend(JSON.stringify({ type: 'attack', monsterId: mob.userData.id }));
       return;
     }
   }
@@ -903,7 +972,7 @@ function updateMovement() {
   const dir = new THREE.Vector3().subVectors(state.targetPos, model.position);
   if (dir.length() < 0.1) {
     model.position.copy(state.targetPos);
-    state.ws.send(JSON.stringify({ type: 'move', x: state.targetPos.x, y: 0, z: state.targetPos.z }));
+    wsSend(JSON.stringify({ type: 'move', x: state.targetPos.x, y: 0, z: state.targetPos.z }));
 
     // Next waypoint
     if (state.pathWaypoints && state.pathWaypoints.length > 0) {
@@ -932,7 +1001,7 @@ function updateMovement() {
   state.lastFacing = lookTarget;
   model.lookAt(lookTarget);
 
-  state.ws.send(JSON.stringify({
+  wsSend(JSON.stringify({
     type: 'move',
     x: model.position.x,
     y: 0,
@@ -947,7 +1016,7 @@ document.getElementById('chat-input').addEventListener('keydown', (e) => {
   if (e.key === 'Enter') {
     const msg = e.target.value.trim();
     if (msg && state.connected) {
-      state.ws.send(JSON.stringify({ type: 'chat', message: msg }));
+      wsSend(JSON.stringify({ type: 'chat', message: msg }));
       addChatMessage(state.player?.name || 'You', msg);
       e.target.value = '';
     }
