@@ -37,9 +37,9 @@ const state = {
   inventoryUI: null,
   questUI: null,
   partyUI: null,
-  cameraDistance: 20,
+  cameraDistance: window.innerWidth < 768 ? 30 : 20,
   cameraAngleX: 0,
-  cameraAngleY: 0.3,
+  cameraAngleY: window.innerWidth < 768 ? 0.5 : 0.3,
   isOrbiting: false,
   lastMouseX: 0,
   lastMouseY: 0,
@@ -62,7 +62,10 @@ function initScene() {
 
   state.camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 500);
   state.camera.position.set(0, 15, 20);
-  state.cameraDistance = 20;
+
+  // Mobile: bigger camera distance so character doesn't dominate screen
+  const isMobile = window.innerWidth < 768;
+  state.cameraDistance = isMobile ? 30 : 20;
 
   state.renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
   state.renderer.setSize(window.innerWidth, window.innerHeight);
