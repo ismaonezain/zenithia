@@ -288,9 +288,10 @@ export function createPlayerModel(options = {}) {
   const pantsMat = new THREE.MeshLambertMaterial({ color: pantsColor });
 
   // Gender proportions
-  const bodyW = gender === 'female' ? 0.55 : 0.6;
-  const shoulderW = gender === 'female' ? 0.35 : 0.38;
-  const hipW = gender === 'female' ? 0.35 : 0.15;
+  const isFemale = gender === 'female';
+  const bodyW = isFemale ? 0.55 : 0.6;
+  const shoulderW = isFemale ? 0.35 : 0.38;
+  const hipW = isFemale ? 0.35 : 0.15;
 
   // === NECK ===
   const neck = new THREE.Mesh(new THREE.BoxGeometry(0.2 * scale, 0.15 * scale, 0.2 * scale), skinMat);
@@ -345,7 +346,6 @@ export function createPlayerModel(options = {}) {
   group.add(rightEar);
 
   // === EYES === (gender-aware)
-  const isFemale = gender === 'female';
   const eyeScaleW = isFemale ? 1.25 : 1.0;
   const eyeScaleH = isFemale ? 1.2 : 1.0;
   // Eye whites
