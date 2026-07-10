@@ -1295,7 +1295,6 @@ function gameLoop() {
   }
 
   // Monster animation
-  const time = Date.now() * 0.001;
   Object.values(state.monsters).forEach(m => animateMonster(m, time));
 
   if (state.scene && state.camera && state.renderer) {
