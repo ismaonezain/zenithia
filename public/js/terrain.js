@@ -92,16 +92,23 @@ function addPaths(group) {
   mainPath.receiveShadow = true;
   group.add(mainPath);
 
-  // Main path → Herbalist (from stalls, avoids river)
-  const herbalPath = createDiagonalPath(2, 4, 18, -8, 1.5, pathMat);
+  // Main path → Herbalist (south of river, from bridge to herbalist)
+  const herbalPath = createDiagonalPath(0, 0, 18, -8, 1.5, pathMat);
   group.add(herbalPath);
 
-  // Main path → Stalls (short horizontal)
-  const stallPath = new THREE.Mesh(new THREE.PlaneGeometry(3, 1.2), pathMat);
-  stallPath.rotation.x = -Math.PI / 2;
-  stallPath.position.set(1, 0.02, 4);
-  stallPath.receiveShadow = true;
-  group.add(stallPath);
+  // Stalls → Bridge (horizontal, to cross river properly)
+  const stallToBridge = new THREE.Mesh(new THREE.PlaneGeometry(2.5, 1.2), pathMat);
+  stallToBridge.rotation.x = -Math.PI / 2;
+  stallToBridge.position.set(1, 0.02, 4);
+  stallToBridge.receiveShadow = true;
+  group.add(stallToBridge);
+
+  // Bridge crossing (vertical, south through bridge)
+  const bridgePath = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 4), pathMat);
+  bridgePath.rotation.x = -Math.PI / 2;
+  bridgePath.position.set(0, 0.02, 2);
+  bridgePath.receiveShadow = true;
+  group.add(bridgePath);
 
   // Main path → Barn (diagonal, ends at barn door z=14)
   const farmPath = createDiagonalPath(0, 8, -18, 14, 1.5, pathMat);
