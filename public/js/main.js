@@ -1,6 +1,6 @@
 // Zenithia — Client Entry Point
 import * as THREE from 'three';
-import { buildTerrain } from './terrain.js';
+import { buildTerrain, isWalkable } from './terrain.js';
 import { createPlayerModel, createNPCModel, PALETTES, animateWalk, stopWalk, applyEquipment, blinkEyes, waveHand, idleArms } from './character.js';
 import { DialogueSystem } from './dialogue_ui.js';
 import { InventoryUI } from './inventory.js';
@@ -617,11 +617,38 @@ function updatePlayerMP(mp, maxMp) {
 }
 
 // ============================
+// CLICK INDICATOR
+// ============================
+let clickIndicator = null;
+function showClickIndicator(x, z) {
+  if (!clickIndicator) {
+    const geo = new THREE.RingGeometry(0.3, 0.6, 16);
+    const mat = new THREE.MeshBasicMaterial({ color: 0xFFFF00, transparent: true, opacity: 0.8, side: THREE.DoubleSide });
+    clickIndicator = new THREE.Mesh(geo, mat);
+    clickIndicator.rotation.x = -Math.PI / 2;
+    clickIndicator.position.y = 0.05;
+    state.scene.add(clickIndicator);
+  }
+  clickIndicator.position.set(x, 0.05, z);
+  clickIndicator.material.opacity = 0.8;
+  clickIndicator.scale.set(1, 1, 1);
+  // Pulse animation
+  const startTime = Date.now();
+  const pulse = () => {
+    const elapsed = (Date.now() - startTime) / 500;
+    if (elapsed > 1) { clickIndicator.material.opacity = 0; return; }
+    clickIndicator.material.opacity = 0.8 * (1 - elapsed);
+    clickIndicator.scale.set(1 + elapsed * 0.5, 1 + elapsed * 0.5, 1 + elapsed * 0.5);
+    requestAnimationFrame(pulse);
+  };
+  pulse();
+}
+
+// ============================
 // CLICK TO MOVE
 // ============================
 canvas.addEventListener('click', (e) => {
   if (!state.connected || !state.player) return;
-  // Don't move if dialogue is open
   if (state.dialogue.container.style.display === 'block') return;
 
   const mouse = new THREE.Vector2(
@@ -652,14 +679,23 @@ canvas.addEventListener('click', (e) => {
   for (const mob of Object.values(state.monsters)) {
     if (mob.position.distanceTo(point) < 2) {
       state.ws.send(JSON.stringify({ type: 'attack', monsterId: mob.userData.id }));
-      // Face the monster
       const model = state.players[state.playerId];
       if (model) model.lookAt(mob.position);
       return;
     }
   }
 
-  state.targetPos = new THREE.Vector3(point.x, 0, point.z);
+  // Grid snap — round to nearest integer (tile center)
+  const snapX = Math.round(point.x);
+  const snapZ = Math.round(point.z);
+
+  // Collision check
+  if (!isWalkable(snapX, snapZ)) return;
+
+  // Show click indicator
+  showClickIndicator(snapX, snapZ);
+
+  state.targetPos = new THREE.Vector3(snapX, 0, snapZ);
 });
 
 // ============================
@@ -678,8 +714,16 @@ function updateMovement() {
     return;
   }
 
-  dir.normalize().multiplyScalar(0.15);
-  model.position.add(dir);
+  // Check next step collision — stop if blocked
+  const step = dir.clone().normalize().multiplyScalar(0.15);
+  const nextX = model.position.x + step.x;
+  const nextZ = model.position.z + step.z;
+  if (!isWalkable(nextX, nextZ)) {
+    state.targetPos = null;
+    return;
+  }
+
+  model.position.add(step);
   model.lookAt(state.targetPos);
 
   state.ws.send(JSON.stringify({

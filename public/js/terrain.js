@@ -3,6 +3,58 @@
 
 import * as THREE from 'three';
 
+// Collision boxes: { x, z, hw, hd } (half-width, half-depth) — player can't walk through
+export const COLLISIONS = [
+  // Elder's Hall
+  { x: 0, z: -15, hw: 3.5, hd: 3 },
+  // Stalls
+  { x: 4, z: -4, hw: 1.5, hd: 1.5 },
+  { x: 8, z: -4, hw: 1.5, hd: 1.5 },
+  { x: 12, z: -4, hw: 1.5, hd: 1.5 },
+  // Willow Cottage
+  { x: -6, z: 8, hw: 2, hd: 2 },
+  // River House
+  { x: -6, z: 14, hw: 2, hd: 2 },
+  // Green House
+  { x: 3, z: 12, hw: 2, hd: 2 },
+  // Herbalist
+  { x: 18, z: -8, hw: 2, hd: 2 },
+  // Gate
+  { x: -2, z: 22, hw: 1.5, hd: 1.5 },
+  // Barn
+  { x: -18, z: 12, hw: 3, hd: 2.5 },
+  // Trees (oak = 1.5 radius, willow = 2 radius, bush = 0.7)
+  { x: 12, z: -12, hw: 1.2, hd: 1.2 },
+  { x: -10, z: 5, hw: 1, hd: 1 },
+  { x: 15, z: 15, hw: 1.4, hd: 1.4 },
+  { x: -8, z: -25, hw: 2, hd: 2 },
+  { x: -3, z: -28, hw: 1.5, hd: 1.5 },
+  { x: 4, z: -26, hw: 2, hd: 2 },
+  { x: 10, z: -24, hw: 1.3, hd: 1.3 },
+  { x: -12, z: -30, hw: 1.6, hd: 1.6 },
+  { x: 7, z: -30, hw: 1.5, hd: 1.5 },
+  { x: -5, z: -33, hw: 2.1, hd: 2.1 },
+  { x: 2, z: -35, hw: 1.8, hd: 1.8 },
+  { x: -12, z: 0, hw: 2.3, hd: 2.3 },
+  { x: -14, z: -3, hw: 1.5, hd: 1.5 },
+  // Bushes
+  { x: -20, z: -5, hw: 0.8, hd: 0.8 },
+  { x: -22, z: 0, hw: 0.7, hd: 0.7 },
+  { x: -18, z: -2, hw: 0.9, hd: 0.9 },
+  // Creek — block walking in water (approx z = -1 to 1.5 area)
+  // Rocks
+  { x: -15, z: -8, hw: 0.7, hd: 0.7 },
+  { x: 14, z: 10, hw: 0.5, hd: 0.5 },
+  { x: -8, z: 18, hw: 0.6, hd: 0.6 },
+];
+
+export function isWalkable(x, z) {
+  for (const c of COLLISIONS) {
+    if (Math.abs(x - c.x) < c.hw && Math.abs(z - c.z) < c.hd) return false;
+  }
+  return true;
+}
+
 export function buildTerrain(scene) {
   const group = new THREE.Group();
   group.name = 'terrain';
