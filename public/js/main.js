@@ -316,7 +316,7 @@ function initCustomization() {
 
   // Hair style picker
   const stylePicker = document.getElementById('hair-style-picker');
-  ['short', 'medium', 'long', 'spiky', 'ponytail', 'mohawk', 'braids', 'bun', 'buzz', 'twin_tails', 'bowl'].forEach(style => {
+  ['short', 'spiky', 'mohawk', 'buzz', 'sidepart', 'long', 'twin_tails', 'ponytail', 'braids', 'bob', 'bun'].forEach(style => {
     const o = document.createElement('div');
     o.className = 'option' + (style === 'short' ? ' selected' : '');
     o.textContent = style;
