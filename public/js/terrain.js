@@ -114,20 +114,20 @@ function addPaths(group) {
   addPathLabel(group, 'JALAN UTAMA', 0, 4);
 
   // [B] Herbalist horizontal (lurus ke timur, jauh dari sungai)
-  const herbalPathH = new THREE.Mesh(new THREE.PlaneGeometry(19, 1.2), pathMat);
+  const herbalPathH = new THREE.Mesh(new THREE.PlaneGeometry(22, 1.2), pathMat);
   herbalPathH.rotation.x = -Math.PI / 2;
-  herbalPathH.position.set(9.5, 0.02, -2);
+  herbalPathH.position.set(9, 0.02, -2);
   herbalPathH.receiveShadow = true;
   group.add(herbalPathH);
   addPathLabel(group, 'JALAN HERBALIST H', 9, -2);
 
-  // [C] Herbalist vertical (turun ke herbalist, overlap corner)
-  const herbalPathV = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 7), pathMat);
+  // [C] Herbalist vertical (crossroads, extend both directions)
+  const herbalPathV = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 12), pathMat);
   herbalPathV.rotation.x = -Math.PI / 2;
-  herbalPathV.position.set(18, 0.02, -4.5);
+  herbalPathV.position.set(18, 0.02, -2);
   herbalPathV.receiveShadow = true;
   group.add(herbalPathV);
-  addPathLabel(group, 'JALAN HERBALIST V', 18, -5);
+  addPathLabel(group, 'JALAN HERBALIST V', 18, -2);
 
   // [D] Main → Herbalist H (vertical pendek)
   const mainToHerbal = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 4), pathMat);
@@ -198,18 +198,18 @@ function addBuildings(group) {
     // Elder's Hall — face south toward main path
     { x: 0, z: -15, w: 6, h: 4, d: 5, color: 0x8D6E63, roof: 0x5D4037, label: 'Elder\'s Hall', rot: 0 },
 
-    // Market stalls — off the path, face left
-    { x: 4, z: -4, w: 2, h: 2, d: 2, color: 0xFFCC80, roof: 0xE65100, label: 'Stall', rot: Math.PI / 2 },
-    { x: 8, z: -4, w: 2, h: 2, d: 2, color: 0xFFCC80, roof: 0xE65100, label: 'Stall', rot: Math.PI / 2 },
-    { x: 12, z: -4, w: 2, h: 2, d: 2, color: 0xFFCC80, roof: 0xE65100, label: 'Stall', rot: Math.PI / 2 },
+    // Market stalls — off the path, face north
+    { x: 4, z: -4, w: 2, h: 2, d: 2, color: 0xFFCC80, roof: 0xE65100, label: 'Stall', rot: Math.PI },
+    { x: 8, z: -4, w: 2, h: 2, d: 2, color: 0xFFCC80, roof: 0xE65100, label: 'Stall', rot: Math.PI },
+    { x: 12, z: -4, w: 2, h: 2, d: 2, color: 0xFFCC80, roof: 0xE65100, label: 'Stall', rot: Math.PI },
 
     // Houses — face road
     { x: -6, z: 8, w: 3, h: 2.5, d: 3, color: 0xD7CCC8, roof: 0x5D4037, rot: Math.PI / 2, label: 'Willow Cottage' },
     { x: -6, z: 14, w: 3, h: 2.5, d: 3, color: 0xBCAAA4, roof: 0x795548, rot: Math.PI / 2, label: 'River House' },
     { x: 2, z: 12, w: 3, h: 2.5, d: 3, color: 0xC5E1A5, roof: 0x33691E, rot: -Math.PI / 2, label: 'Green House' },
 
-    // Herbalist's hut — face left (west)
-    { x: 18, z: -8, w: 2.5, h: 2, d: 2.5, color: 0x6D4C41, roof: 0x33691E, label: 'Herbalist', rot: Math.PI / 2 },
+    // Herbalist's hut — face north
+    { x: 18, z: -8, w: 2.5, h: 2, d: 2.5, color: 0x6D4C41, roof: 0x33691E, label: 'Herbalist', rot: Math.PI },
 
     // Guard post — face left (west)
     { x: -2, z: 22, w: 2, h: 3, d: 2, color: 0x607D8B, roof: 0x455A64, label: 'Gate', rot: Math.PI / 2 },
