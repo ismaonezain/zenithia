@@ -726,6 +726,10 @@ function handleServerMessage(msg) {
 // ============================
 // PLAYER MODELS
 // ============================
+function spawnPlayer(player) {
+  createPlayerModelInWorld(player);
+}
+
 function createPlayerModelInWorld(player) {
   const c = state.customization;
   const model = createPlayerModel({
