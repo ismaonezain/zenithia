@@ -156,9 +156,9 @@ function addBuildings(group) {
     { x: 6, z: 8, w: 2, h: 2, d: 2, color: 0xFFCC80, roof: 0xE65100, label: 'Stall', rot: Math.PI / 2 },
 
     // Houses — varied colors, face nearest road
-    { x: -6, z: 8, w: 3, h: 2.5, d: 3, color: 0xD7CCC8, roof: 0x5D4037, rot: -Math.PI / 2 },   // light brown, face east
-    { x: -6, z: 14, w: 3, h: 2.5, d: 3, color: 0xBCAAA4, roof: 0x795548, rot: -Math.PI / 2 },   // tan, face east
-    { x: 2, z: 12, w: 3, h: 2.5, d: 3, color: 0xC5E1A5, roof: 0x33691E, rot: Math.PI / 2 },     // light green, face west
+    { x: -6, z: 8, w: 3, h: 2.5, d: 3, color: 0xD7CCC8, roof: 0x5D4037, rot: -Math.PI / 2, label: 'Willow Cottage' },
+    { x: -6, z: 14, w: 3, h: 2.5, d: 3, color: 0xBCAAA4, roof: 0x795548, rot: -Math.PI / 2, label: 'River House' },
+    { x: 2, z: 12, w: 3, h: 2.5, d: 3, color: 0xC5E1A5, roof: 0x33691E, rot: Math.PI / 2, label: 'Green House' },
 
     // Herbalist's hut — face west toward path
     { x: 18, z: -8, w: 2.5, h: 2, d: 2.5, color: 0x6D4C41, roof: 0x33691E, label: 'Herbalist', rot: Math.PI / 2 },
@@ -211,6 +211,28 @@ function addBuildings(group) {
     g.position.set(b.x, 0, b.z);
     g.rotation.y = b.rot || 0;
     group.add(g);
+
+    // Label (text sprite above building)
+    if (b.label) {
+      const canvas2 = document.createElement('canvas');
+      canvas2.width = 256;
+      canvas2.height = 64;
+      const ctx = canvas2.getContext('2d');
+      ctx.fillStyle = 'rgba(0,0,0,0.7)';
+      ctx.roundRect(0, 0, 256, 64, 8);
+      ctx.fill();
+      ctx.font = 'bold 28px Arial';
+      ctx.fillStyle = '#ffffff';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(b.label, 128, 32);
+      const tex = new THREE.CanvasTexture(canvas2);
+      const spriteMat = new THREE.SpriteMaterial({ map: tex, transparent: true });
+      const sprite = new THREE.Sprite(spriteMat);
+      sprite.scale.set(4, 1, 1);
+      sprite.position.set(b.x, b.h + 2.5, b.z);
+      group.add(sprite);
+    }
   });
 }
 
