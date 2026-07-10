@@ -111,7 +111,12 @@ function createFreshWorld() {
 
 function loadWorld() {
   try {
-    if (fs.existsSync(SAVE_FILE)) return JSON.parse(fs.readFileSync(SAVE_FILE, 'utf8'));
+    if (fs.existsSync(SAVE_FILE)) {
+      const saved = JSON.parse(fs.readFileSync(SAVE_FILE, 'utf8'));
+      // Always use fresh NPC positions from code (not saved data)
+      saved.npcs = initNPCs();
+      return saved;
+    }
   } catch (e) { console.error('[WARN] Load failed:', e.message); }
   return createFreshWorld();
 }
