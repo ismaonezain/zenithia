@@ -503,11 +503,51 @@ function handleServerMessage(msg) {
         Object.assign(state.customization, msg.player.customization);
       }
 
-      if (msg.npcs) Object.values(msg.npcs).forEach(npc => {
-        const model = createNPCModel(npc);
-        state.scene.add(model);
-        state.npcs[npc.id] = model;
-      });
+      if (msg.npcs) {
+        console.log('[NPC] Received', Object.keys(msg.npcs).length, 'NPCs:', Object.keys(msg.npcs));
+        Object.values(msg.npcs).forEach(npc => {
+          try {
+            const model = createNPCModel(npc);
+            state.scene.add(model);
+            state.npcs[npc.id] = model;
+            console.log('[NPC] Added', npc.id, 'at', npc.x, npc.z);
+          } catch(e) {
+            console.error('[NPC] Failed to create', npc.id, e);
+            // Fallback: simple colored cylinder
+            const g = new THREE.Group();
+            const body = new THREE.Mesh(
+              new THREE.CylinderGeometry(0.3, 0.4, 1.5, 8),
+              new THREE.MeshLambertMaterial({ color: 0xFFD700 })
+            );
+            body.position.y = 0.75;
+            g.add(body);
+            const head = new THREE.Mesh(
+              new THREE.SphereGeometry(0.35, 8, 8),
+              new THREE.MeshLambertMaterial({ color: 0xFFCC00 })
+            );
+            head.position.y = 1.8;
+            g.add(head);
+            // Name label
+            const canvas = document.createElement('canvas');
+            canvas.width = 256; canvas.height = 64;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#FFD700';
+            ctx.font = 'bold 32px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText(npc.name, 128, 40);
+            const tex = new THREE.CanvasTexture(canvas);
+            const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true }));
+            sprite.scale.set(3, 0.8, 1);
+            sprite.position.y = 2.5;
+            g.add(sprite);
+            g.position.set(npc.x, 0, npc.z);
+            g.userData = { id: npc.id, name: npc.name, type: 'npc' };
+            state.scene.add(g);
+            state.npcs[npc.id] = g;
+            console.log('[NPC] Fallback added', npc.id);
+          }
+        });
+      }
       if (msg.onlinePlayers) msg.onlinePlayers.forEach(p => createOtherPlayer(p));
       showHUD();
       createPlayerModelInWorld(state.player);

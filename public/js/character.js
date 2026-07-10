@@ -740,8 +740,12 @@ export function createNPCModel(npc) {
   canvas.height = 64;
   const ctx = canvas.getContext('2d');
   ctx.fillStyle = 'rgba(0,0,0,0.7)';
-  ctx.roundRect(0, 0, 256, 64, 8);
-  ctx.fill();
+  if (ctx.roundRect) {
+    ctx.roundRect(0, 0, 256, 64, 8);
+    ctx.fill();
+  } else {
+    ctx.fillRect(0, 0, 256, 64);
+  }
   ctx.fillStyle = '#FFD700';
   ctx.font = 'bold 28px Georgia';
   ctx.textAlign = 'center';
