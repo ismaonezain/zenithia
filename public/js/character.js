@@ -20,109 +20,129 @@ export const CLASS_COLORS = {
   shadow:       { body: 0x212121, trim: 0xD32F2F },
 };
 
-// --- Hair Styles — Cool names, unique silhouettes, asymmetric details ---
+// --- Hair Styles — Every piece connects to the next, no floating blocks ---
+// Head top = y=1.7. Hair base starts at y=1.65 (overlaps head).
 const HAIR_STYLES = {
   // ========== MALE ==========
   storm: (group, color, scale) => {
     const mat = new THREE.MeshLambertMaterial({ color });
-    // Volume base
-    const base = new THREE.Mesh(new THREE.BoxGeometry(0.7 * scale, 0.2 * scale, 0.7 * scale), mat);
-    base.position.y = 1.8 * scale;
+    // Base — sits ON head, overlaps top
+    const base = new THREE.Mesh(new THREE.BoxGeometry(0.68 * scale, 0.25 * scale, 0.68 * scale), mat);
+    base.position.y = 1.7 * scale;
     group.add(base);
-    // Windblown spikes — ALL swept to one side (asymmetric!)
-    const spikes = [
-      { x: 0.1, z: -0.05, h: 0.45, w: 0.14, r: 0.3 },   // center-right, tallest
-      { x: 0.2, z: 0, h: 0.35, w: 0.12, r: 0.5 },        // right
-      { x: 0.28, z: 0.05, h: 0.25, w: 0.1, r: 0.7 },     // far right
-      { x: 0.05, z: -0.12, h: 0.38, w: 0.12, r: 0.15 },   // back center
-      { x: 0.15, z: -0.1, h: 0.3, w: 0.11, r: 0.4 },     // back right
-      { x: -0.08, z: -0.08, h: 0.28, w: 0.1, r: -0.2 },   // back left (shorter)
-      { x: 0, z: 0.1, h: 0.22, w: 0.1, r: 0.1 },          // front
+    // Second layer — ON TOP of base
+    const mid = new THREE.Mesh(new THREE.BoxGeometry(0.55 * scale, 0.15 * scale, 0.55 * scale), mat);
+    mid.position.y = 1.88 * scale;
+    group.add(mid);
+    // Spikes — grow FROM mid, overlapping
+    const spikeData = [
+      { x: 0.08, z: -0.05, h: 0.35, w: 0.12 },
+      { x: 0.18, z: 0, h: 0.28, w: 0.1 },
+      { x: 0.25, z: 0.05, h: 0.2, w: 0.09 },
+      { x: 0, z: -0.1, h: 0.3, w: 0.11 },
+      { x: 0.12, z: -0.08, h: 0.25, w: 0.1 },
+      { x: -0.06, z: -0.06, h: 0.22, w: 0.09 },
     ];
-    spikes.forEach(s => {
-      const spike = new THREE.Mesh(new THREE.BoxGeometry(s.w * scale, s.h * scale, 0.1 * scale), mat);
-      spike.position.set(s.x * scale, (1.92 + s.h * 0.4) * scale, s.z * scale);
-      spike.rotation.z = s.r;
+    spikeData.forEach(s => {
+      const spike = new THREE.Mesh(new THREE.BoxGeometry(s.w * scale, s.h * scale, 0.09 * scale), mat);
+      spike.position.set(s.x * scale, (1.92 + s.h * 0.35) * scale, s.z * scale);
+      spike.rotation.z = s.x * 2.5;
       group.add(spike);
     });
-    // Left side shorter — swept back
-    const leftSweep = new THREE.Mesh(new THREE.BoxGeometry(0.12 * scale, 0.15 * scale, 0.1 * scale), mat);
-    leftSweep.position.set(-0.2 * scale, 1.75 * scale, -0.08 * scale);
-    leftSweep.rotation.z = -0.4;
-    group.add(leftSweep);
-    // Thick sideburn right
-    const sb = new THREE.Mesh(new THREE.BoxGeometry(0.1 * scale, 0.2 * scale, 0.12 * scale), mat);
-    sb.position.set(0.32 * scale, 1.5 * scale, 0.04 * scale);
-    group.add(sb);
-    // Back cascade
-    for (let i = 0; i < 3; i++) {
-      const back = new THREE.Mesh(new THREE.BoxGeometry(0.5 - i * 0.02, 0.14 * scale, 0.12 * scale), mat);
-      back.position.set(0.05 * scale, 1.6 * scale - i * 0.13 * scale, -0.3 * scale);
+    // Left side — connects base to sideburn
+    const leftSide = new THREE.Mesh(new THREE.BoxGeometry(0.12 * scale, 0.2 * scale, 0.1 * scale), mat);
+    leftSide.position.set(-0.28 * scale, 1.65 * scale, 0);
+    group.add(leftSide);
+    // Right side — connects base to sideburn
+    const rightSide = new THREE.Mesh(new THREE.BoxGeometry(0.12 * scale, 0.2 * scale, 0.1 * scale), mat);
+    rightSide.position.set(0.28 * scale, 1.65 * scale, 0);
+    group.add(rightSide);
+    // Sideburns — connect from side pieces down
+    for (const s of [-1, 1]) {
+      const sb = new THREE.Mesh(new THREE.BoxGeometry(0.08 * scale, 0.15 * scale, 0.1 * scale), mat);
+      sb.position.set(s * 0.3 * scale, 1.48 * scale, 0.04 * scale);
+      group.add(sb);
+    }
+    // Back — connects base downward
+    const backConn = new THREE.Mesh(new THREE.BoxGeometry(0.5 * scale, 0.15 * scale, 0.12 * scale), mat);
+    backConn.position.set(0, 1.6 * scale, -0.28 * scale);
+    group.add(backConn);
+    for (let i = 0; i < 2; i++) {
+      const back = new THREE.Mesh(new THREE.BoxGeometry(0.48 - i * 0.02, 0.12 * scale, 0.1 * scale), mat);
+      back.position.set(0, 1.48 * scale - i * 0.12 * scale, -0.28 * scale);
       group.add(back);
     }
   },
 
   rogue: (group, color, scale) => {
     const mat = new THREE.MeshLambertMaterial({ color });
-    // Compact volume
-    const base = new THREE.Mesh(new THREE.BoxGeometry(0.68 * scale, 0.22 * scale, 0.68 * scale), mat);
-    base.position.y = 1.8 * scale;
+    // Base on head
+    const base = new THREE.Mesh(new THREE.BoxGeometry(0.66 * scale, 0.22 * scale, 0.66 * scale), mat);
+    base.position.y = 1.7 * scale;
     group.add(base);
-    const top = new THREE.Mesh(new THREE.BoxGeometry(0.55 * scale, 0.1 * scale, 0.55 * scale), mat);
-    top.position.y = 1.95 * scale;
+    // Top layer
+    const top = new THREE.Mesh(new THREE.BoxGeometry(0.52 * scale, 0.12 * scale, 0.52 * scale), mat);
+    top.position.y = 1.86 * scale;
     group.add(top);
-    // LONG bang over one eye — signature piece
-    const longBang = new THREE.Mesh(new THREE.BoxGeometry(0.12 * scale, 0.35 * scale, 0.08 * scale), mat);
-    longBang.position.set(-0.1 * scale, 1.55 * scale, 0.28 * scale);
-    longBang.rotation.z = 0.15;
+    // Long bang — connects from top down over eye
+    const longBang = new THREE.Mesh(new THREE.BoxGeometry(0.11 * scale, 0.4 * scale, 0.08 * scale), mat);
+    longBang.position.set(-0.1 * scale, 1.5 * scale, 0.28 * scale);
+    longBang.rotation.z = 0.1;
     group.add(longBang);
-    // Short bangs on other side
+    // Short bangs — connect from top to forehead
     for (let i = 0; i < 3; i++) {
-      const bang = new THREE.Mesh(new THREE.BoxGeometry(0.1 * scale, 0.08 * scale, 0.07 * scale), mat);
-      bang.position.set((0.08 + i * 0.1) * scale, 1.72 * scale, 0.28 * scale);
+      const bang = new THREE.Mesh(new THREE.BoxGeometry(0.09 * scale, 0.08 * scale, 0.07 * scale), mat);
+      bang.position.set((0.06 + i * 0.09) * scale, 1.68 * scale, 0.28 * scale);
       group.add(bang);
     }
-    // Sideburns — sharp
+    // Side pieces — connect base to sideburns
     for (const s of [-1, 1]) {
-      const sb = new THREE.Mesh(new THREE.BoxGeometry(0.08 * scale, 0.18 * scale, 0.1 * scale), mat);
-      sb.position.set(s * 0.32 * scale, 1.52 * scale, 0.03 * scale);
+      const side = new THREE.Mesh(new THREE.BoxGeometry(0.09 * scale, 0.18 * scale, 0.1 * scale), mat);
+      side.position.set(s * 0.3 * scale, 1.62 * scale, 0.02 * scale);
+      group.add(side);
+      const sb = new THREE.Mesh(new THREE.BoxGeometry(0.07 * scale, 0.14 * scale, 0.09 * scale), mat);
+      sb.position.set(s * 0.3 * scale, 1.46 * scale, 0.02 * scale);
       group.add(sb);
     }
-    // Back — short, neat
-    const back = new THREE.Mesh(new THREE.BoxGeometry(0.5 * scale, 0.2 * scale, 0.12 * scale), mat);
-    back.position.set(0, 1.6 * scale, -0.3 * scale);
+    // Back — connects from base
+    const back = new THREE.Mesh(new THREE.BoxGeometry(0.48 * scale, 0.18 * scale, 0.12 * scale), mat);
+    back.position.set(0, 1.58 * scale, -0.28 * scale);
     group.add(back);
   },
 
   vanguard: (group, color, scale) => {
     const mat = new THREE.MeshLambertMaterial({ color });
-    // Wide base
-    const base = new THREE.Mesh(new THREE.BoxGeometry(0.72 * scale, 0.2 * scale, 0.72 * scale), mat);
-    base.position.y = 1.8 * scale;
+    // Wide base on head
+    const base = new THREE.Mesh(new THREE.BoxGeometry(0.7 * scale, 0.22 * scale, 0.7 * scale), mat);
+    base.position.y = 1.7 * scale;
     group.add(base);
-    // Tall center crest — warrior feel
+    // Mid — connects base to crest
+    const mid = new THREE.Mesh(new THREE.BoxGeometry(0.5 * scale, 0.12 * scale, 0.5 * scale), mat);
+    mid.position.y = 1.88 * scale;
+    group.add(mid);
+    // Crest — grows FROM mid
     for (let i = 0; i < 5; i++) {
-      const h = 0.4 - Math.abs(i - 2) * 0.08;
-      const spike = new THREE.Mesh(new THREE.BoxGeometry(0.12 * scale, h * scale, 0.1 * scale), mat);
-      spike.position.set(0, (1.9 + h * 0.4) * scale, (-0.15 + i * 0.07) * scale);
+      const h = 0.35 - Math.abs(i - 2) * 0.07;
+      const spike = new THREE.Mesh(new THREE.BoxGeometry(0.11 * scale, h * scale, 0.09 * scale), mat);
+      spike.position.set(0, (1.92 + h * 0.35) * scale, (-0.12 + i * 0.06) * scale);
       group.add(spike);
     }
-    // Side spikes — pointing outward
+    // Side spikes — connect from base
     for (const s of [-1, 1]) {
-      const side = new THREE.Mesh(new THREE.BoxGeometry(0.1 * scale, 0.25 * scale, 0.1 * scale), mat);
-      side.position.set(s * 0.35 * scale, 1.85 * scale, 0);
-      side.rotation.z = s * 0.5;
+      const side = new THREE.Mesh(new THREE.BoxGeometry(0.09 * scale, 0.22 * scale, 0.09 * scale), mat);
+      side.position.set(s * 0.32 * scale, 1.8 * scale, 0);
+      side.rotation.z = s * 0.4;
       group.add(side);
     }
-    // Forehead plate
-    const plate = new THREE.Mesh(new THREE.BoxGeometry(0.3 * scale, 0.08 * scale, 0.06 * scale),
+    // Forehead plate — on base front
+    const plate = new THREE.Mesh(new THREE.BoxGeometry(0.28 * scale, 0.07 * scale, 0.05 * scale),
       new THREE.MeshLambertMaterial({ color: 0xBDBDBD }));
-    plate.position.set(0, 1.78 * scale, 0.3 * scale);
+    plate.position.set(0, 1.76 * scale, 0.3 * scale);
     group.add(plate);
-    // Thick back
+    // Back — connects from base
     for (let i = 0; i < 3; i++) {
-      const back = new THREE.Mesh(new THREE.BoxGeometry(0.55 - i * 0.02, 0.14 * scale, 0.12 * scale), mat);
-      back.position.set(0, 1.6 * scale - i * 0.13 * scale, -0.32 * scale);
+      const back = new THREE.Mesh(new THREE.BoxGeometry(0.52 - i * 0.02, 0.12 * scale, 0.1 * scale), mat);
+      back.position.set(0, 1.58 * scale - i * 0.11 * scale, -0.3 * scale);
       group.add(back);
     }
   },
@@ -130,65 +150,70 @@ const HAIR_STYLES = {
   rebel: (group, color, scale) => {
     const mat = new THREE.MeshLambertMaterial({ color });
     // Base
-    const base = new THREE.Mesh(new THREE.BoxGeometry(0.68 * scale, 0.18 * scale, 0.68 * scale), mat);
-    base.position.y = 1.8 * scale;
+    const base = new THREE.Mesh(new THREE.BoxGeometry(0.66 * scale, 0.2 * scale, 0.66 * scale), mat);
+    base.position.y = 1.7 * scale;
     group.add(base);
-    // Central ridge — like a wave crashing forward
-    const ridge = new THREE.Mesh(new THREE.BoxGeometry(0.15 * scale, 0.35 * scale, 0.5 * scale), mat);
-    ridge.position.set(0, 1.95 * scale, 0.05 * scale);
-    ridge.rotation.x = -0.15;
+    // Ridge — grows FROM base, tilted forward
+    const ridge = new THREE.Mesh(new THREE.BoxGeometry(0.14 * scale, 0.32 * scale, 0.45 * scale), mat);
+    ridge.position.set(0, 1.88 * scale, 0.05 * scale);
+    ridge.rotation.x = -0.12;
     group.add(ridge);
-    // Wild side pieces — sticking out
+    // Side pieces — connect from base outward
     for (const s of [-1, 1]) {
-      const side = new THREE.Mesh(new THREE.BoxGeometry(0.14 * scale, 0.18 * scale, 0.12 * scale), mat);
-      side.position.set(s * 0.35 * scale, 1.78 * scale, 0.05 * scale);
-      side.rotation.z = s * 0.6;
+      const side = new THREE.Mesh(new THREE.BoxGeometry(0.12 * scale, 0.18 * scale, 0.1 * scale), mat);
+      side.position.set(s * 0.32 * scale, 1.72 * scale, 0.04 * scale);
+      side.rotation.z = s * 0.5;
       group.add(side);
-      // Lower piece
-      const lower = new THREE.Mesh(new THREE.BoxGeometry(0.1 * scale, 0.15 * scale, 0.1 * scale), mat);
-      lower.position.set(s * 0.3 * scale, 1.65 * scale, -0.05 * scale);
-      lower.rotation.z = s * 0.3;
+      const lower = new THREE.Mesh(new THREE.BoxGeometry(0.09 * scale, 0.14 * scale, 0.09 * scale), mat);
+      lower.position.set(s * 0.28 * scale, 1.56 * scale, -0.02 * scale);
       group.add(lower);
     }
-    // Back spikes
+    // Back spikes — connect from base
     for (let i = 0; i < 3; i++) {
-      const spike = new THREE.Mesh(new THREE.BoxGeometry(0.1 * scale, 0.2 * scale, 0.08 * scale), mat);
-      spike.position.set((i - 1) * 0.12 * scale, 1.85 * scale, -0.25 * scale);
-      spike.rotation.x = 0.3;
+      const spike = new THREE.Mesh(new THREE.BoxGeometry(0.09 * scale, 0.18 * scale, 0.07 * scale), mat);
+      spike.position.set((i - 1) * 0.1 * scale, 1.82 * scale, -0.22 * scale);
+      spike.rotation.x = 0.25;
       group.add(spike);
     }
   },
 
   phantom: (group, color, scale) => {
     const mat = new THREE.MeshLambertMaterial({ color });
-    // Sleek base — sharp and angular
-    const base = new THREE.Mesh(new THREE.BoxGeometry(0.7 * scale, 0.2 * scale, 0.72 * scale), mat);
-    base.position.y = 1.8 * scale;
+    // Base — sharp
+    const base = new THREE.Mesh(new THREE.BoxGeometry(0.68 * scale, 0.2 * scale, 0.7 * scale), mat);
+    base.position.y = 1.7 * scale;
     group.add(base);
-    // Two sharp peaks — villain silhouette
+    // Mid — connects base to peaks
+    const mid = new THREE.Mesh(new THREE.BoxGeometry(0.45 * scale, 0.1 * scale, 0.45 * scale), mat);
+    mid.position.y = 1.85 * scale;
+    group.add(mid);
+    // Two peaks — grow FROM mid
     for (const s of [-1, 1]) {
-      const peak = new THREE.Mesh(new THREE.BoxGeometry(0.12 * scale, 0.4 * scale, 0.12 * scale), mat);
-      peak.position.set(s * 0.15 * scale, 2.0 * scale, -0.1 * scale);
-      peak.rotation.z = s * 0.2;
+      const peak = new THREE.Mesh(new THREE.BoxGeometry(0.1 * scale, 0.35 * scale, 0.1 * scale), mat);
+      peak.position.set(s * 0.14 * scale, (1.9 + 0.35 * 0.4) * scale, -0.08 * scale);
+      peak.rotation.z = s * 0.18;
       group.add(peak);
     }
-    // Connecting ridge
-    const ridge = new THREE.Mesh(new THREE.BoxGeometry(0.18 * scale, 0.12 * scale, 0.1 * scale), mat);
-    ridge.position.set(0, 1.92 * scale, -0.1 * scale);
+    // Ridge — connects peaks
+    const ridge = new THREE.Mesh(new THREE.BoxGeometry(0.16 * scale, 0.1 * scale, 0.09 * scale), mat);
+    ridge.position.set(0, 1.88 * scale, -0.08 * scale);
     group.add(ridge);
-    // Long side pieces — framing face dramatically
+    // Side pieces — connect from base down
     for (const s of [-1, 1]) {
-      for (let i = 0; i < 3; i++) {
-        const piece = new THREE.Mesh(new THREE.BoxGeometry(0.1 * scale, 0.16 * scale, 0.08 * scale), mat);
-        piece.position.set(s * 0.34 * scale, 1.58 * scale - i * 0.14 * scale, 0.04 * scale);
+      const conn = new THREE.Mesh(new THREE.BoxGeometry(0.09 * scale, 0.18 * scale, 0.08 * scale), mat);
+      conn.position.set(s * 0.32 * scale, 1.6 * scale, 0.03 * scale);
+      group.add(conn);
+      for (let i = 0; i < 2; i++) {
+        const piece = new THREE.Mesh(new THREE.BoxGeometry(0.08 * scale, 0.14 * scale, 0.07 * scale), mat);
+        piece.position.set(s * 0.32 * scale, 1.46 * scale - i * 0.13 * scale, 0.03 * scale);
         group.add(piece);
       }
     }
-    // Sharp bangs — angular
+    // Bangs — connect from mid to forehead
     for (let i = 0; i < 4; i++) {
-      const bang = new THREE.Mesh(new THREE.BoxGeometry(0.1 * scale, 0.1 * scale, 0.07 * scale), mat);
-      bang.position.set((-0.15 + i * 0.1) * scale, 1.72 * scale, 0.3 * scale);
-      bang.rotation.z = (i - 1.5) * 0.15;
+      const bang = new THREE.Mesh(new THREE.BoxGeometry(0.09 * scale, 0.09 * scale, 0.06 * scale), mat);
+      bang.position.set((-0.12 + i * 0.09) * scale, 1.7 * scale, 0.3 * scale);
+      bang.rotation.z = (i - 1.5) * 0.12;
       group.add(bang);
     }
   },
@@ -196,202 +221,222 @@ const HAIR_STYLES = {
   // ========== FEMALE ==========
   cascade: (group, color, scale) => {
     const mat = new THREE.MeshLambertMaterial({ color });
-    // Flowing top
-    const main = new THREE.Mesh(new THREE.BoxGeometry(0.74 * scale, 0.28 * scale, 0.74 * scale), mat);
-    main.position.y = 1.82 * scale;
-    group.add(main);
-    const top = new THREE.Mesh(new THREE.BoxGeometry(0.62 * scale, 0.1 * scale, 0.62 * scale), mat);
-    top.position.y = 1.98 * scale;
+    // Big base
+    const base = new THREE.Mesh(new THREE.BoxGeometry(0.72 * scale, 0.28 * scale, 0.72 * scale), mat);
+    base.position.y = 1.7 * scale;
+    group.add(base);
+    const top = new THREE.Mesh(new THREE.BoxGeometry(0.6 * scale, 0.1 * scale, 0.6 * scale), mat);
+    top.position.y = 1.9 * scale;
     group.add(top);
-    // Waterfall layers — WIDER at bottom (opposite of normal hair!)
+    // Back connector — from base down
+    const bridge = new THREE.Mesh(new THREE.BoxGeometry(0.55 * scale, 0.18 * scale, 0.14 * scale), mat);
+    bridge.position.set(0, 1.55 * scale, -0.28 * scale);
+    group.add(bridge);
+    // Waterfall — each layer connects to the one above
     for (let i = 0; i < 8; i++) {
-      const w = 0.36 + i * 0.025; // gets wider going down
-      const layer = new THREE.Mesh(new THREE.BoxGeometry(w * scale, 0.14 * scale, 0.14 * scale), mat);
-      layer.position.set(0, 1.48 * scale - i * 0.14 * scale, -0.32 * scale);
+      const w = 0.35 + i * 0.02;
+      const layer = new THREE.Mesh(new THREE.BoxGeometry(w * scale, 0.13 * scale, 0.13 * scale), mat);
+      layer.position.set(0, 1.45 * scale - i * 0.13 * scale, -0.3 * scale);
       group.add(layer);
     }
-    // Side waterfalls
+    // Side connectors
     for (const s of [-1, 1]) {
+      const conn = new THREE.Mesh(new THREE.BoxGeometry(0.1 * scale, 0.16 * scale, 0.11 * scale), mat);
+      conn.position.set(s * 0.32 * scale, 1.55 * scale, 0.03 * scale);
+      group.add(conn);
       for (let i = 0; i < 5; i++) {
-        const w = 0.1 + i * 0.01;
-        const strand = new THREE.Mesh(new THREE.BoxGeometry(w * scale, 0.14 * scale, 0.12 * scale), mat);
-        strand.position.set(s * 0.34 * scale, 1.48 * scale - i * 0.14 * scale, 0.04 * scale);
+        const strand = new THREE.Mesh(new THREE.BoxGeometry(0.09 + i * 0.008, 0.12 * scale, 0.1 * scale), mat);
+        strand.position.set(s * 0.32 * scale, 1.43 * scale - i * 0.12 * scale, 0.03 * scale);
         group.add(strand);
       }
     }
-    // Soft bangs — rounded feel
+    // Bangs — from base to forehead
     for (let i = 0; i < 5; i++) {
-      const bang = new THREE.Mesh(new THREE.BoxGeometry(0.12 * scale, 0.1 * scale, 0.08 * scale), mat);
-      bang.position.set((-0.22 + i * 0.11) * scale, 1.7 * scale, 0.3 * scale);
+      const bang = new THREE.Mesh(new THREE.BoxGeometry(0.11 * scale, 0.1 * scale, 0.08 * scale), mat);
+      bang.position.set((-0.22 + i * 0.11) * scale, 1.68 * scale, 0.3 * scale);
       group.add(bang);
     }
   },
 
   valkyrie: (group, color, scale) => {
     const mat = new THREE.MeshLambertMaterial({ color });
-    // Volume base
-    const base = new THREE.Mesh(new THREE.BoxGeometry(0.72 * scale, 0.22 * scale, 0.72 * scale), mat);
-    base.position.y = 1.8 * scale;
+    // Base
+    const base = new THREE.Mesh(new THREE.BoxGeometry(0.7 * scale, 0.22 * scale, 0.7 * scale), mat);
+    base.position.y = 1.7 * scale;
     group.add(base);
-    // Two horn-like ridges — dramatic upward
+    // Horn bases — ON TOP of base
     for (const s of [-1, 1]) {
-      for (let i = 0; i < 4; i++) {
-        const h = 0.3 - i * 0.05;
-        const spike = new THREE.Mesh(new THREE.BoxGeometry(0.1 * scale, h * scale, 0.1 * scale), mat);
-        spike.position.set(s * 0.2 * scale, (1.9 + h * 0.4 + i * 0.05) * scale, -0.1 * scale);
-        spike.rotation.z = s * 0.3;
+      const hornBase = new THREE.Mesh(new THREE.BoxGeometry(0.12 * scale, 0.15 * scale, 0.12 * scale), mat);
+      hornBase.position.set(s * 0.18 * scale, 1.88 * scale, -0.08 * scale);
+      group.add(hornBase);
+      // Horn spikes — grow FROM hornBase
+      for (let i = 0; i < 3; i++) {
+        const h = 0.25 - i * 0.04;
+        const spike = new THREE.Mesh(new THREE.BoxGeometry(0.09 * scale, h * scale, 0.09 * scale), mat);
+        spike.position.set(s * 0.18 * scale, (1.95 + h * 0.35 + i * 0.04) * scale, -0.08 * scale);
+        spike.rotation.z = s * 0.25;
         group.add(spike);
       }
     }
-    // Center valley (between horns)
-    const valley = new THREE.Mesh(new THREE.BoxGeometry(0.15 * scale, 0.08 * scale, 0.1 * scale), mat);
-    valley.position.set(0, 1.88 * scale, -0.1 * scale);
+    // Valley — connects horns
+    const valley = new THREE.Mesh(new THREE.BoxGeometry(0.14 * scale, 0.08 * scale, 0.09 * scale), mat);
+    valley.position.set(0, 1.86 * scale, -0.08 * scale);
     group.add(valley);
-    // Flowing sides — long
+    // Side connectors — from base down
     for (const s of [-1, 1]) {
-      for (let i = 0; i < 5; i++) {
-        const strand = new THREE.Mesh(new THREE.BoxGeometry(0.12 * scale, 0.14 * scale, 0.12 * scale), mat);
-        strand.position.set(s * 0.34 * scale, 1.5 * scale - i * 0.14 * scale, 0.04 * scale);
+      const conn = new THREE.Mesh(new THREE.BoxGeometry(0.1 * scale, 0.16 * scale, 0.1 * scale), mat);
+      conn.position.set(s * 0.32 * scale, 1.55 * scale, 0.03 * scale);
+      group.add(conn);
+      for (let i = 0; i < 4; i++) {
+        const strand = new THREE.Mesh(new THREE.BoxGeometry(0.1 * scale, 0.12 * scale, 0.1 * scale), mat);
+        strand.position.set(s * 0.32 * scale, 1.43 * scale - i * 0.12 * scale, 0.03 * scale);
         group.add(strand);
       }
     }
-    // Side connectors
-    for (const s of [-1, 1]) {
-      const conn = new THREE.Mesh(new THREE.BoxGeometry(0.1 * scale, 0.16 * scale, 0.1 * scale), mat);
-      conn.position.set(s * 0.34 * scale, 1.58 * scale, 0.04 * scale);
-      group.add(conn);
-    }
-    // Bangs — swept to center
+    // Bangs
     for (let i = 0; i < 5; i++) {
-      const bang = new THREE.Mesh(new THREE.BoxGeometry(0.1 * scale, 0.1 * scale, 0.07 * scale), mat);
-      bang.position.set((-0.2 + i * 0.1) * scale, 1.7 * scale, 0.3 * scale);
+      const bang = new THREE.Mesh(new THREE.BoxGeometry(0.09 * scale, 0.09 * scale, 0.06 * scale), mat);
+      bang.position.set((-0.18 + i * 0.09) * scale, 1.68 * scale, 0.3 * scale);
       group.add(bang);
     }
   },
 
   blossom: (group, color, scale) => {
     const mat = new THREE.MeshLambertMaterial({ color });
-    // Round, soft volume
-    const main = new THREE.Mesh(new THREE.BoxGeometry(0.76 * scale, 0.3 * scale, 0.76 * scale), mat);
-    main.position.y = 1.82 * scale;
-    group.add(main);
-    const top = new THREE.Mesh(new THREE.BoxGeometry(0.64 * scale, 0.12 * scale, 0.64 * scale), mat);
-    top.position.y = 2.0 * scale;
+    // Round base
+    const base = new THREE.Mesh(new THREE.BoxGeometry(0.74 * scale, 0.28 * scale, 0.74 * scale), mat);
+    base.position.y = 1.7 * scale;
+    group.add(base);
+    const top = new THREE.Mesh(new THREE.BoxGeometry(0.62 * scale, 0.1 * scale, 0.62 * scale), mat);
+    top.position.y = 1.9 * scale;
     group.add(top);
-    // Petal layers — rounded, overlapping, soft
+    // Petals — ON TOP of base, overlapping
     const petals = [
-      { x: 0, z: 0.15, h: 0.18, w: 0.2 },      // front petal
-      { x: -0.2, z: 0.05, h: 0.16, w: 0.18 },   // left petal
-      { x: 0.2, z: 0.05, h: 0.16, w: 0.18 },    // right petal
-      { x: -0.15, z: -0.15, h: 0.15, w: 0.16 },  // back-left
-      { x: 0.15, z: -0.15, h: 0.15, w: 0.16 },   // back-right
+      { x: 0, z: 0.14, h: 0.16, w: 0.18 },
+      { x: -0.18, z: 0.04, h: 0.14, w: 0.16 },
+      { x: 0.18, z: 0.04, h: 0.14, w: 0.16 },
+      { x: -0.12, z: -0.14, h: 0.13, w: 0.14 },
+      { x: 0.12, z: -0.14, h: 0.13, w: 0.14 },
     ];
     petals.forEach(p => {
-      const petal = new THREE.Mesh(new THREE.BoxGeometry(p.w * scale, p.h * scale, 0.12 * scale), mat);
+      const petal = new THREE.Mesh(new THREE.BoxGeometry(p.w * scale, p.h * scale, 0.1 * scale), mat);
       petal.position.set(p.x * scale, 1.72 * scale, p.z * scale);
       group.add(petal);
     });
-    // Soft side coverage
+    // Side coverage — from base down
     for (const s of [-1, 1]) {
-      for (let i = 0; i < 3; i++) {
-        const side = new THREE.Mesh(new THREE.BoxGeometry(0.1 * scale, 0.14 * scale, 0.12 * scale), mat);
-        side.position.set(s * 0.34 * scale, 1.55 * scale - i * 0.13 * scale, 0.02 * scale);
+      const conn = new THREE.Mesh(new THREE.BoxGeometry(0.09 * scale, 0.16 * scale, 0.1 * scale), mat);
+      conn.position.set(s * 0.32 * scale, 1.55 * scale, 0.02 * scale);
+      group.add(conn);
+      for (let i = 0; i < 2; i++) {
+        const side = new THREE.Mesh(new THREE.BoxGeometry(0.08 * scale, 0.12 * scale, 0.1 * scale), mat);
+        side.position.set(s * 0.32 * scale, 1.43 * scale - i * 0.11 * scale, 0.02 * scale);
         group.add(side);
       }
     }
-    // Cute bangs — short, rounded
+    // Cute bangs
     for (let i = 0; i < 5; i++) {
-      const bang = new THREE.Mesh(new THREE.BoxGeometry(0.1 * scale, 0.09 * scale, 0.08 * scale), mat);
-      bang.position.set((-0.2 + i * 0.1) * scale, 1.7 * scale, 0.32 * scale);
+      const bang = new THREE.Mesh(new THREE.BoxGeometry(0.09 * scale, 0.08 * scale, 0.07 * scale), mat);
+      bang.position.set((-0.18 + i * 0.09) * scale, 1.68 * scale, 0.3 * scale);
       group.add(bang);
     }
   },
 
   silk: (group, color, scale) => {
     const mat = new THREE.MeshLambertMaterial({ color });
-    // Elegant top
-    const main = new THREE.Mesh(new THREE.BoxGeometry(0.72 * scale, 0.26 * scale, 0.72 * scale), mat);
-    main.position.y = 1.82 * scale;
-    group.add(main);
-    const top = new THREE.Mesh(new THREE.BoxGeometry(0.6 * scale, 0.1 * scale, 0.6 * scale), mat);
-    top.position.y = 1.98 * scale;
+    // Elegant base
+    const base = new THREE.Mesh(new THREE.BoxGeometry(0.7 * scale, 0.24 * scale, 0.7 * scale), mat);
+    base.position.y = 1.7 * scale;
+    group.add(base);
+    const top = new THREE.Mesh(new THREE.BoxGeometry(0.58 * scale, 0.1 * scale, 0.58 * scale), mat);
+    top.position.y = 1.88 * scale;
     group.add(top);
-    // Ribbon strands woven through — alternating colors
+    // Back connector
+    const bridge = new THREE.Mesh(new THREE.BoxGeometry(0.5 * scale, 0.16 * scale, 0.13 * scale), mat);
+    bridge.position.set(0, 1.55 * scale, -0.28 * scale);
+    group.add(bridge);
+    // Back — connected layers
     const ribbonMat = new THREE.MeshLambertMaterial({ color: 0xFFD600 });
-    // Back — long flowing with gold ribbons
-    for (let i = 0; i < 8; i++) {
-      const w = 0.48;
-      const layer = new THREE.Mesh(new THREE.BoxGeometry(w * scale, 0.14 * scale, 0.14 * scale), mat);
-      layer.position.set(0, 1.48 * scale - i * 0.14 * scale, -0.3 * scale);
+    for (let i = 0; i < 7; i++) {
+      const layer = new THREE.Mesh(new THREE.BoxGeometry(0.46 * scale, 0.12 * scale, 0.13 * scale), mat);
+      layer.position.set(0, 1.45 * scale - i * 0.12 * scale, -0.28 * scale);
       group.add(layer);
-      // Gold ribbon accent every 3rd layer
       if (i % 3 === 1) {
-        const ribbon = new THREE.Mesh(new THREE.BoxGeometry(0.06 * scale, 0.06 * scale, 0.16 * scale), ribbonMat);
-        ribbon.position.set(0, 1.48 * scale - i * 0.14 * scale, -0.3 * scale);
+        const ribbon = new THREE.Mesh(new THREE.BoxGeometry(0.05 * scale, 0.05 * scale, 0.14 * scale), ribbonMat);
+        ribbon.position.set(0, 1.45 * scale - i * 0.12 * scale, -0.28 * scale);
         group.add(ribbon);
       }
     }
-    // Side strands with ribbon accents
+    // Side connectors + strands
     for (const s of [-1, 1]) {
-      for (let i = 0; i < 5; i++) {
-        const strand = new THREE.Mesh(new THREE.BoxGeometry(0.12 * scale, 0.14 * scale, 0.12 * scale), mat);
-        strand.position.set(s * 0.34 * scale, 1.48 * scale - i * 0.14 * scale, 0.04 * scale);
+      const conn = new THREE.Mesh(new THREE.BoxGeometry(0.1 * scale, 0.14 * scale, 0.1 * scale), mat);
+      conn.position.set(s * 0.32 * scale, 1.55 * scale, 0.03 * scale);
+      group.add(conn);
+      for (let i = 0; i < 4; i++) {
+        const strand = new THREE.Mesh(new THREE.BoxGeometry(0.1 * scale, 0.12 * scale, 0.1 * scale), mat);
+        strand.position.set(s * 0.32 * scale, 1.43 * scale - i * 0.12 * scale, 0.03 * scale);
         group.add(strand);
       }
-      // Gold ribbon on side
-      const ribbon = new THREE.Mesh(new THREE.BoxGeometry(0.04 * scale, 0.3 * scale, 0.04 * scale), ribbonMat);
-      ribbon.position.set(s * 0.34 * scale, 1.35 * scale, 0.04 * scale);
+      const ribbon = new THREE.Mesh(new THREE.BoxGeometry(0.03 * scale, 0.25 * scale, 0.03 * scale), ribbonMat);
+      ribbon.position.set(s * 0.32 * scale, 1.3 * scale, 0.03 * scale);
       group.add(ribbon);
     }
-    // Elegant side-swept bangs
+    // Side-swept bangs
     for (let i = 0; i < 5; i++) {
-      const bang = new THREE.Mesh(new THREE.BoxGeometry(0.11 * scale, 0.1 * scale, 0.08 * scale), mat);
-      bang.position.set((-0.2 + i * 0.1) * scale, 1.7 * scale, 0.3 * scale);
-      bang.rotation.z = -0.15 + i * 0.08;
+      const bang = new THREE.Mesh(new THREE.BoxGeometry(0.1 * scale, 0.09 * scale, 0.07 * scale), mat);
+      bang.position.set((-0.18 + i * 0.09) * scale, 1.68 * scale, 0.3 * scale);
+      bang.rotation.z = -0.12 + i * 0.06;
       group.add(bang);
     }
   },
 
   crown: (group, color, scale) => {
     const mat = new THREE.MeshLambertMaterial({ color });
-    // Volume base
-    const base = new THREE.Mesh(new THREE.BoxGeometry(0.72 * scale, 0.24 * scale, 0.72 * scale), mat);
-    base.position.y = 1.8 * scale;
+    // Base
+    const base = new THREE.Mesh(new THREE.BoxGeometry(0.7 * scale, 0.22 * scale, 0.7 * scale), mat);
+    base.position.y = 1.7 * scale;
     group.add(base);
-    // Crown points — 5 upward spikes like a tiara
+    // Crown points — grow FROM base
     const points = [
-      { x: 0, h: 0.4 },       // center — tallest
-      { x: -0.18, h: 0.3 },   // left
-      { x: 0.18, h: 0.3 },    // right
-      { x: -0.3, h: 0.2 },    // far left
-      { x: 0.3, h: 0.2 },     // far right
+      { x: 0, h: 0.35 },
+      { x: -0.16, h: 0.26 },
+      { x: 0.16, h: 0.26 },
+      { x: -0.28, h: 0.18 },
+      { x: 0.28, h: 0.18 },
     ];
     points.forEach(p => {
-      const point = new THREE.Mesh(new THREE.BoxGeometry(0.1 * scale, p.h * scale, 0.1 * scale), mat);
-      point.position.set(p.x * scale, (1.92 + p.h * 0.4) * scale, 0.05 * scale);
+      const point = new THREE.Mesh(new THREE.BoxGeometry(0.09 * scale, p.h * scale, 0.09 * scale), mat);
+      point.position.set(p.x * scale, (1.82 + p.h * 0.35) * scale, 0.04 * scale);
       group.add(point);
     });
-    // Gold band across forehead
-    const band = new THREE.Mesh(new THREE.BoxGeometry(0.5 * scale, 0.06 * scale, 0.06 * scale),
+    // Gold band — ON base front
+    const band = new THREE.Mesh(new THREE.BoxGeometry(0.48 * scale, 0.05 * scale, 0.05 * scale),
       new THREE.MeshLambertMaterial({ color: 0xFFD600 }));
-    band.position.set(0, 1.82 * scale, 0.3 * scale);
+    band.position.set(0, 1.76 * scale, 0.3 * scale);
     group.add(band);
-    // Gem in center
-    const gem = new THREE.Mesh(new THREE.BoxGeometry(0.06 * scale, 0.06 * scale, 0.06 * scale),
+    // Gem
+    const gem = new THREE.Mesh(new THREE.BoxGeometry(0.05 * scale, 0.05 * scale, 0.05 * scale),
       new THREE.MeshLambertMaterial({ color: 0xE91E63 }));
-    gem.position.set(0, 1.82 * scale, 0.34 * scale);
+    gem.position.set(0, 1.76 * scale, 0.33 * scale);
     group.add(gem);
-    // Flowing back
-    for (let i = 0; i < 6; i++) {
-      const layer = new THREE.Mesh(new THREE.BoxGeometry(0.5 - i * 0.01, 0.14 * scale, 0.14 * scale), mat);
-      layer.position.set(0, 1.48 * scale - i * 0.14 * scale, -0.32 * scale);
+    // Back connector
+    const bridge = new THREE.Mesh(new THREE.BoxGeometry(0.48 * scale, 0.14 * scale, 0.12 * scale), mat);
+    bridge.position.set(0, 1.55 * scale, -0.28 * scale);
+    group.add(bridge);
+    // Back layers
+    for (let i = 0; i < 5; i++) {
+      const layer = new THREE.Mesh(new THREE.BoxGeometry(0.46 - i * 0.01, 0.12 * scale, 0.11 * scale), mat);
+      layer.position.set(0, 1.45 * scale - i * 0.12 * scale, -0.28 * scale);
       group.add(layer);
     }
-    // Side strands
+    // Side connectors
     for (const s of [-1, 1]) {
-      for (let i = 0; i < 4; i++) {
-        const strand = new THREE.Mesh(new THREE.BoxGeometry(0.1 * scale, 0.14 * scale, 0.1 * scale), mat);
-        strand.position.set(s * 0.34 * scale, 1.48 * scale - i * 0.14 * scale, 0.04 * scale);
+      const conn = new THREE.Mesh(new THREE.BoxGeometry(0.09 * scale, 0.14 * scale, 0.09 * scale), mat);
+      conn.position.set(s * 0.32 * scale, 1.55 * scale, 0.03 * scale);
+      group.add(conn);
+      for (let i = 0; i < 3; i++) {
+        const strand = new THREE.Mesh(new THREE.BoxGeometry(0.08 * scale, 0.12 * scale, 0.08 * scale), mat);
+        strand.position.set(s * 0.32 * scale, 1.43 * scale - i * 0.12 * scale, 0.03 * scale);
         group.add(strand);
       }
     }
