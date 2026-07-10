@@ -51,6 +51,8 @@ export const COLLISIONS = [
 ];
 
 export function isWalkable(x, z) {
+  // Bridge exception — allow walking on bridge (x=-1 to 1, z=0 to 4)
+  if (Math.abs(x) < 1 && z >= 0 && z <= 4) return true;
   for (const c of COLLISIONS) {
     if (Math.abs(x - c.x) < c.hw && Math.abs(z - c.z) < c.hd) return false;
   }
