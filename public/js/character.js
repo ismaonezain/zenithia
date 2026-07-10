@@ -145,18 +145,28 @@ const HAIR_STYLES = {
     const poof = new THREE.Mesh(new THREE.BoxGeometry(0.52 * scale, 0.1 * scale, 0.54 * scale), mat);
     poof.position.y = 1.9 * scale;
     group.add(poof);
-    // Thick back curtain — wide chunky layers draping down
-    for (let i = 0; i < 7; i++) {
-      const w = 0.46 - i * 0.01;
+    // Back connector — bridges cap to curtain (no gap)
+    const bridge = new THREE.Mesh(new THREE.BoxGeometry(0.5 * scale, 0.18 * scale, 0.14 * scale), mat);
+    bridge.position.set(0, 1.58 * scale, -0.26 * scale);
+    group.add(bridge);
+    // Thick back curtain — starts right under cap, drapes down
+    for (let i = 0; i < 8; i++) {
+      const w = 0.48 - i * 0.01;
       const layer = new THREE.Mesh(new THREE.BoxGeometry(w * scale, 0.16 * scale, 0.14 * scale), mat);
-      layer.position.set(0, 1.25 * scale - i * 0.15 * scale, -0.28 * scale);
+      layer.position.set(0, 1.48 * scale - i * 0.15 * scale, -0.28 * scale);
       group.add(layer);
     }
-    // Thick side hair framing face — chunky strands
+    // Side connector — bridges cap to side strands
+    for (const s of [-1, 1]) {
+      const sideBridge = new THREE.Mesh(new THREE.BoxGeometry(0.1 * scale, 0.16 * scale, 0.12 * scale), mat);
+      sideBridge.position.set(s * 0.3 * scale, 1.58 * scale, 0.05 * scale);
+      group.add(sideBridge);
+    }
+    // Thick side hair framing face — starts right under cap
     for (const s of [-1, 1]) {
       for (let i = 0; i < 5; i++) {
         const strand = new THREE.Mesh(new THREE.BoxGeometry(0.12 * scale, 0.15 * scale, 0.12 * scale), mat);
-        strand.position.set(s * 0.3 * scale, 1.45 * scale - i * 0.15 * scale, 0.05 * scale);
+        strand.position.set(s * 0.3 * scale, 1.48 * scale - i * 0.14 * scale, 0.05 * scale);
         group.add(strand);
       }
     }
