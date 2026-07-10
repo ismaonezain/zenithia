@@ -157,55 +157,116 @@ export function createPlayerModel(options = {}) {
   } = options;
 
   const group = new THREE.Group();
+  const skinMat = new THREE.MeshLambertMaterial({ color: skinColor });
+  const bodyMat = new THREE.MeshLambertMaterial({ color: bodyColor });
+  const trimMat = new THREE.MeshLambertMaterial({ color: trimColor });
+
+  // === NECK ===
+  const neck = new THREE.Mesh(new THREE.BoxGeometry(0.2 * scale, 0.15 * scale, 0.2 * scale), skinMat);
+  neck.position.y = 1.28 * scale;
+  group.add(neck);
 
   // === BODY ===
-  const bodyGeo = new THREE.BoxGeometry(0.6 * scale, 0.8 * scale, 0.4 * scale);
-  const bodyMat = new THREE.MeshLambertMaterial({ color: bodyColor });
-  const body = new THREE.Mesh(bodyGeo, bodyMat);
+  const body = new THREE.Mesh(new THREE.BoxGeometry(0.6 * scale, 0.8 * scale, 0.4 * scale), bodyMat);
   body.position.y = 0.8 * scale;
   body.castShadow = true;
   group.add(body);
 
-  // Trim (belt/waist detail)
-  const trimGeo = new THREE.BoxGeometry(0.62 * scale, 0.08 * scale, 0.42 * scale);
-  const trimMat = new THREE.MeshLambertMaterial({ color: trimColor });
-  const trim = new THREE.Mesh(trimGeo, trimMat);
-  trim.position.y = 0.55 * scale;
-  group.add(trim);
+  // Chest center stripe (vest/shirt detail)
+  const chestStripe = new THREE.Mesh(new THREE.BoxGeometry(0.08 * scale, 0.5 * scale, 0.02 * scale), trimMat);
+  chestStripe.position.set(0, 0.85 * scale, 0.21 * scale);
+  group.add(chestStripe);
+
+  // Shoulder pads
+  const shoulderGeo = new THREE.BoxGeometry(0.2 * scale, 0.1 * scale, 0.25 * scale);
+  const leftShoulder = new THREE.Mesh(shoulderGeo, trimMat);
+  leftShoulder.position.set(-0.38 * scale, 1.15 * scale, 0);
+  group.add(leftShoulder);
+  const rightShoulder = new THREE.Mesh(shoulderGeo, trimMat);
+  rightShoulder.position.set(0.38 * scale, 1.15 * scale, 0);
+  group.add(rightShoulder);
+
+  // Belt (thicker)
+  const belt = new THREE.Mesh(new THREE.BoxGeometry(0.62 * scale, 0.1 * scale, 0.42 * scale), trimMat);
+  belt.position.y = 0.52 * scale;
+  group.add(belt);
+
+  // Belt buckle
+  const buckle = new THREE.Mesh(new THREE.BoxGeometry(0.08 * scale, 0.08 * scale, 0.03 * scale),
+    new THREE.MeshLambertMaterial({ color: 0xFFD600 }));
+  buckle.position.set(0, 0.52 * scale, 0.22 * scale);
+  group.add(buckle);
 
   // === HEAD ===
-  const headGeo = new THREE.BoxGeometry(0.5 * scale, 0.5 * scale, 0.5 * scale);
-  const headMat = new THREE.MeshLambertMaterial({ color: skinColor });
-  const head = new THREE.Mesh(headGeo, headMat);
+  const head = new THREE.Mesh(new THREE.BoxGeometry(0.5 * scale, 0.5 * scale, 0.5 * scale), skinMat);
   head.position.y = 1.45 * scale;
   head.castShadow = true;
   group.add(head);
 
-  // === EYES ===
-  const eyeGeo = new THREE.BoxGeometry(0.08 * scale, 0.08 * scale, 0.05 * scale);
-  const eyeMat = new THREE.MeshBasicMaterial({ color: eyeColor });
-  const leftEye = new THREE.Mesh(eyeGeo, eyeMat);
-  leftEye.position.set(-0.12 * scale, 1.5 * scale, 0.26 * scale);
-  group.add(leftEye);
-  const rightEye = new THREE.Mesh(eyeGeo, eyeMat);
-  rightEye.position.set(0.12 * scale, 1.5 * scale, 0.26 * scale);
-  group.add(rightEye);
+  // === EARS ===
+  const earGeo = new THREE.BoxGeometry(0.06 * scale, 0.12 * scale, 0.1 * scale);
+  const leftEar = new THREE.Mesh(earGeo, skinMat);
+  leftEar.position.set(-0.28 * scale, 1.45 * scale, 0);
+  group.add(leftEar);
+  const rightEar = new THREE.Mesh(earGeo, skinMat);
+  rightEar.position.set(0.28 * scale, 1.45 * scale, 0);
+  group.add(rightEar);
 
-  // Eye whites
-  const whiteGeo = new THREE.BoxGeometry(0.1 * scale, 0.1 * scale, 0.04 * scale);
+  // === EYES ===
+  // Eye whites (slightly bigger)
+  const whiteGeo = new THREE.BoxGeometry(0.12 * scale, 0.1 * scale, 0.04 * scale);
   const whiteMat = new THREE.MeshBasicMaterial({ color: 0xFFFFFF });
   const leftWhite = new THREE.Mesh(whiteGeo, whiteMat);
-  leftWhite.position.set(-0.12 * scale, 1.5 * scale, 0.25 * scale);
+  leftWhite.name = 'leftWhite';
+  leftWhite.position.set(-0.12 * scale, 1.5 * scale, 0.255 * scale);
   group.add(leftWhite);
   const rightWhite = new THREE.Mesh(whiteGeo, whiteMat);
-  rightWhite.position.set(0.12 * scale, 1.5 * scale, 0.25 * scale);
+  rightWhite.name = 'rightWhite';
+  rightWhite.position.set(0.12 * scale, 1.5 * scale, 0.255 * scale);
   group.add(rightWhite);
 
+  // Pupils
+  const eyeGeo = new THREE.BoxGeometry(0.07 * scale, 0.07 * scale, 0.05 * scale);
+  const eyeMat = new THREE.MeshBasicMaterial({ color: eyeColor });
+  const leftEye = new THREE.Mesh(eyeGeo, eyeMat);
+  leftEye.name = 'leftEye';
+  leftEye.position.set(-0.12 * scale, 1.5 * scale, 0.27 * scale);
+  group.add(leftEye);
+  const rightEye = new THREE.Mesh(eyeGeo, eyeMat);
+  rightEye.name = 'rightEye';
+  rightEye.position.set(0.12 * scale, 1.5 * scale, 0.27 * scale);
+  group.add(rightEye);
+
+  // Eye shine (tiny white dot)
+  const shineGeo = new THREE.BoxGeometry(0.025 * scale, 0.025 * scale, 0.02 * scale);
+  const shineMat = new THREE.MeshBasicMaterial({ color: 0xFFFFFF });
+  const leftShine = new THREE.Mesh(shineGeo, shineMat);
+  leftShine.position.set(-0.1 * scale, 1.52 * scale, 0.28 * scale);
+  group.add(leftShine);
+  const rightShine = new THREE.Mesh(shineGeo, shineMat);
+  rightShine.position.set(0.14 * scale, 1.52 * scale, 0.28 * scale);
+  group.add(rightShine);
+
+  // === EYEBROWS ===
+  const browGeo = new THREE.BoxGeometry(0.12 * scale, 0.035 * scale, 0.04 * scale);
+  const browMat = new THREE.MeshLambertMaterial({ color: hairColor });
+  const leftBrow = new THREE.Mesh(browGeo, browMat);
+  leftBrow.position.set(-0.12 * scale, 1.57 * scale, 0.26 * scale);
+  group.add(leftBrow);
+  const rightBrow = new THREE.Mesh(browGeo, browMat);
+  rightBrow.position.set(0.12 * scale, 1.57 * scale, 0.26 * scale);
+  group.add(rightBrow);
+
+  // === NOSE ===
+  const nose = new THREE.Mesh(new THREE.BoxGeometry(0.06 * scale, 0.06 * scale, 0.06 * scale),
+    new THREE.MeshLambertMaterial({ color: skinColor }));
+  nose.position.set(0, 1.42 * scale, 0.28 * scale);
+  group.add(nose);
+
   // === MOUTH ===
-  const mouthGeo = new THREE.BoxGeometry(0.12 * scale, 0.03 * scale, 0.04 * scale);
-  const mouthMat = new THREE.MeshLambertMaterial({ color: 0xD32F2F });
-  const mouth = new THREE.Mesh(mouthGeo, mouthMat);
-  mouth.position.set(0, 1.32 * scale, 0.26 * scale);
+  const mouth = new THREE.Mesh(new THREE.BoxGeometry(0.1 * scale, 0.03 * scale, 0.04 * scale),
+    new THREE.MeshLambertMaterial({ color: 0xD32F2F }));
+  mouth.position.set(0, 1.34 * scale, 0.26 * scale);
   group.add(mouth);
 
   // === HAIR ===
@@ -214,56 +275,89 @@ export function createPlayerModel(options = {}) {
   }
 
   // === LEGS ===
-  const legGeo = new THREE.BoxGeometry(0.2 * scale, 0.5 * scale, 0.3 * scale);
   const legMat = new THREE.MeshLambertMaterial({ color: 0x5D4037 });
-  const leftLeg = new THREE.Mesh(legGeo, legMat);
-  leftLeg.position.set(-0.15 * scale, 0.25 * scale, 0);
+  const leftLeg = new THREE.Mesh(new THREE.BoxGeometry(0.2 * scale, 0.45 * scale, 0.3 * scale), legMat);
+  leftLeg.name = 'leftLeg';
+  leftLeg.position.set(-0.15 * scale, 0.28 * scale, 0);
   leftLeg.castShadow = true;
   group.add(leftLeg);
-  const rightLeg = new THREE.Mesh(legGeo, legMat);
-  rightLeg.position.set(0.15 * scale, 0.25 * scale, 0);
+  const rightLeg = new THREE.Mesh(new THREE.BoxGeometry(0.2 * scale, 0.45 * scale, 0.3 * scale), legMat);
+  rightLeg.name = 'rightLeg';
+  rightLeg.position.set(0.15 * scale, 0.28 * scale, 0);
   rightLeg.castShadow = true;
   group.add(rightLeg);
 
-  // === FEET ===
-  const footGeo = new THREE.BoxGeometry(0.22 * scale, 0.1 * scale, 0.35 * scale);
-  const footMat = new THREE.MeshLambertMaterial({ color: 0x3E2723 });
-  const leftFoot = new THREE.Mesh(footGeo, footMat);
-  leftFoot.position.set(-0.15 * scale, 0.05 * scale, 0.03 * scale);
+  // Knee pads
+  const kneeGeo = new THREE.BoxGeometry(0.22 * scale, 0.1 * scale, 0.06 * scale);
+  const kneeMat = new THREE.MeshLambertMaterial({ color: trimColor });
+  const leftKnee = new THREE.Mesh(kneeGeo, kneeMat);
+  leftKnee.position.set(-0.15 * scale, 0.28 * scale, 0.16 * scale);
+  group.add(leftKnee);
+  const rightKnee = new THREE.Mesh(kneeGeo, kneeMat);
+  rightKnee.position.set(0.15 * scale, 0.28 * scale, 0.16 * scale);
+  group.add(rightKnee);
+
+  // === FEET / BOOTS ===
+  const bootMat = new THREE.MeshLambertMaterial({ color: 0x3E2723 });
+  // Boot tops (slightly lighter)
+  const bootTopMat = new THREE.MeshLambertMaterial({ color: 0x5D4037 });
+  const leftBootTop = new THREE.Mesh(new THREE.BoxGeometry(0.22 * scale, 0.08 * scale, 0.32 * scale), bootTopMat);
+  leftBootTop.position.set(-0.15 * scale, 0.1 * scale, 0);
+  group.add(leftBootTop);
+  const rightBootTop = new THREE.Mesh(new THREE.BoxGeometry(0.22 * scale, 0.08 * scale, 0.32 * scale), bootTopMat);
+  rightBootTop.position.set(0.15 * scale, 0.1 * scale, 0);
+  group.add(rightBootTop);
+  // Boot soles
+  const leftFoot = new THREE.Mesh(new THREE.BoxGeometry(0.24 * scale, 0.08 * scale, 0.36 * scale), bootMat);
+  leftFoot.position.set(-0.15 * scale, 0.04 * scale, 0.02 * scale);
   group.add(leftFoot);
-  const rightFoot = new THREE.Mesh(footGeo, footMat);
-  rightFoot.position.set(0.15 * scale, 0.05 * scale, 0.03 * scale);
+  const rightFoot = new THREE.Mesh(new THREE.BoxGeometry(0.24 * scale, 0.08 * scale, 0.36 * scale), bootMat);
+  rightFoot.position.set(0.15 * scale, 0.04 * scale, 0.02 * scale);
   group.add(rightFoot);
 
   // === ARMS ===
-  const armGeo = new THREE.BoxGeometry(0.15 * scale, 0.55 * scale, 0.15 * scale);
-  const armMat = new THREE.MeshLambertMaterial({ color: skinColor });
-
-  const leftArm = new THREE.Mesh(armGeo, armMat);
+  const armMat = new THREE.MeshLambertMaterial({ color: bodyColor });
+  const leftArm = new THREE.Mesh(new THREE.BoxGeometry(0.15 * scale, 0.5 * scale, 0.15 * scale), armMat);
   leftArm.name = 'leftArm';
-  leftArm.position.set(-0.42 * scale, 0.9 * scale, 0);
+  leftArm.position.set(-0.42 * scale, 0.88 * scale, 0);
   leftArm.castShadow = true;
   group.add(leftArm);
-
-  const rightArm = new THREE.Mesh(armGeo, armMat);
+  const rightArm = new THREE.Mesh(new THREE.BoxGeometry(0.15 * scale, 0.5 * scale, 0.15 * scale), armMat);
   rightArm.name = 'rightArm';
-  rightArm.position.set(0.42 * scale, 0.9 * scale, 0);
+  rightArm.position.set(0.42 * scale, 0.88 * scale, 0);
   rightArm.castShadow = true;
   group.add(rightArm);
 
+  // Arm cuffs (trim color)
+  const cuffGeo = new THREE.BoxGeometry(0.17 * scale, 0.06 * scale, 0.17 * scale);
+  const leftCuff = new THREE.Mesh(cuffGeo, trimMat);
+  leftCuff.position.set(-0.42 * scale, 0.65 * scale, 0);
+  group.add(leftCuff);
+  const rightCuff = new THREE.Mesh(cuffGeo, trimMat);
+  rightCuff.position.set(0.42 * scale, 0.65 * scale, 0);
+  group.add(rightCuff);
+
   // === HANDS ===
   const handGeo = new THREE.BoxGeometry(0.1 * scale, 0.1 * scale, 0.1 * scale);
-  const handMat = new THREE.MeshLambertMaterial({ color: skinColor });
-
-  const leftHand = new THREE.Mesh(handGeo, handMat);
+  const leftHand = new THREE.Mesh(handGeo, skinMat);
   leftHand.name = 'leftHand';
   leftHand.position.set(-0.42 * scale, 0.58 * scale, 0);
   group.add(leftHand);
-
-  const rightHand = new THREE.Mesh(handGeo, handMat);
+  const rightHand = new THREE.Mesh(handGeo, skinMat);
   rightHand.name = 'rightHand';
   rightHand.position.set(0.42 * scale, 0.58 * scale, 0);
   group.add(rightHand);
+
+  // Fingers (3 tiny boxes per hand)
+  const fingerGeo = new THREE.BoxGeometry(0.025 * scale, 0.06 * scale, 0.025 * scale);
+  for (let i = -1; i <= 1; i++) {
+    const lf = new THREE.Mesh(fingerGeo, skinMat);
+    lf.position.set(-0.42 * scale + i * 0.03 * scale, 0.52 * scale, 0);
+    group.add(lf);
+    const rf = new THREE.Mesh(fingerGeo, skinMat);
+    rf.position.set(0.42 * scale + i * 0.03 * scale, 0.52 * scale, 0);
+    group.add(rf);
+  }
 
   return group;
 }
@@ -307,8 +401,8 @@ export function createNPCModel(npc) {
 // --- Walk Animation ---
 export function animateWalk(model, dt) {
   if (!model) return;
-  const leftLeg = model.children.find(c => c.position.x < 0 && c.position.y < 0.4);
-  const rightLeg = model.children.find(c => c.position.x > 0 && c.position.y < 0.4);
+  const leftLeg = model.getObjectByName('leftLeg');
+  const rightLeg = model.getObjectByName('rightLeg');
 
   if (leftLeg && rightLeg) {
     const time = Date.now() * 0.005;
