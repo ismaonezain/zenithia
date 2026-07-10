@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Zenithia — Guardian High-Poly</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #1a1a2e; overflow: hidden; height: 100vh; }
+canvas { display: block; width: 100%; height: 100%; }
+#ui {
+  position: fixed; top: 12px; left: 12px;
+  background: rgba(16,16,32,0.92); border-radius: 10px;
+  padding: 14px 18px; font: 12px/1.6 'Segoe UI', sans-serif;
+  color: #ccc; border: 1px solid rgba(255,255,255,0.08);
+}
+#ui h3 { color: #7ec8e3; font-size: 14px; margin-bottom: 4px; }
+#ui .row { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+#ui button {
+  background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12);
+  color: #ddd; padding: 4px 10px; border-radius: 5px; font-size: 11px; cursor: pointer;
+}
+#ui button:hover { background: rgba(255,255,255,0.18); }
+#ui button.active { background: rgba(126,200,227,0.25); border-color: #7ec8e3; }
+#stats {
+  position: fixed; bottom: 12px; left: 12px;
+  background: rgba(16,16,32,0.9); border-radius: 10px;
+  padding: 10px 14px; font: 11px/1.5 'Segoe UI', sans-serif;
+  color: #888; border: 1px solid rgba(255,255,255,0.08);
+}
+</style>
+</head>
+<body>
+
+<div id="ui">
+  <h3>Zenithia — Guardian</h3>
+  <div>Chibi 1.3x · High-poly · Procedural</div>
+  <div class="row">
+    <button id="btnIdle" class="active">Idle</button>
+    <button id="btnWalk">Walk</button>
+    <button id="btnAttack">Attack</button>
+    <button id="btnBlock">Block</button>
+  </div>
+  <div class="row">
+    <button id="btnWire">Wire</button>
+    <button id="btnSpin">Auto Spin</button>
+  </div>
+</div>
+
+<div id="stats">Loading...</div>
+
+<script type="importmap">
+{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/" } }
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+// ══════════════════════════════════════════════
+// RENDERER
+// ══════════════════════════════════════════════
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.3;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.setClearColor(0x1a1a2e);
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(35, innerWidth / innerHeight, 0.1, 100);
+camera.position.set(0, 1.3, 4.5);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.06;
+controls.target.set(0, 0.75, 0);
+controls.minDistance = 1.5;
+controls.maxDistance = 8;
+
+scene.add(new THREE.AmbientLight(0x404060, 0.5));
+const key = new THREE.DirectionalLight(0xfff5e6, 2.0);
+key.position.set(3, 5, 4);
+key.castShadow = true;
+key.shadow.mapSize.set(1024, 1024);
+scene.add(key);
+scene.add(new THREE.DirectionalLight(0x7ec8e3, 0.4).translateX(-3).translateY(3));
+
+// ══════════════════════════════════════════════
+// MATERIALS
+// ══════════════════════════════════════════════
+const M = (color, opts = {}) => new THREE.MeshStandardMaterial({ color, roughness: 0.65, metalness: 0.1, ...opts });
+const MAT = {
+  skin:    M(0xf5cba7, { roughness: 0.8 }),
+  hair:    M(0x5d4037, { roughness: 0.9 }),
+  eye:     M(0x2c3e50, { roughness: 0.3 }),
+  eyeW:    M(0xffffff, { roughness: 0.5 }),
+  mouth:   M(0xc0392b, { roughness: 0.6 }),
+  tongue:  M(0xe8a0a0, { roughness: 0.7 }),
+  armor:   M(0x5d6d7e, { roughness: 0.45, metalness: 0.25 }),
+  armorD:  M(0x34495e, { roughness: 0.55, metalness: 0.15 }),
+  trim:    M(0xd4ac0d, { roughness: 0.25, metalness: 0.55 }),
+  sword:   M(0xc0c0c0, { roughness: 0.2, metalness: 0.6 }),
+  hilt:    M(0x8b4513, { roughness: 0.8 }),
+  shield:  M(0x5d6d7e, { roughness: 0.45, metalness: 0.25 }),
+  boot:    M(0x3e2723, { roughness: 0.8 }),
+  belt:    M(0x6d4c41, { roughness: 0.7 }),
+  gem:     M(0xe74c3c, { emissive: 0x661111, roughness: 0.2, metalness: 0.3 }),
+  gemBlue: M(0x3498db, { emissive: 0x112244, roughness: 0.2, metalness: 0.3 }),
+  chain:   M(0x888888, { roughness: 0.4, metalness: 0.4 }),
+};
+
+// ══════════════════════════════════════════════
+// BUILD GUARDIAN
+// ══════════════════════════════════════════════
+const root = new THREE.Group();
+const parts = {};
+let verts = 0, tris = 0;
+
+function P(name, geo, mat, pos, parent) {
+  const m = new THREE.Mesh(geo, mat);
+  if (pos) m.position.set(...pos);
+  m.castShadow = true;
+  m.receiveShadow = true;
+  (parent || root).add(m);
+  parts[name] = m;
+  verts += geo.attributes.position.count;
+  if (geo.index) tris += geo.index.count / 3;
+  return m;
+}
+
+// Helper: smoother sphere/cylinder with more segments
+const SG = (r, w=20, h=16) => new THREE.SphereGeometry(r, w, h);
+const CG = (rt, rb, h, s=16) => new THREE.CylinderGeometry(rt, rb, h, s);
+const BG = (w, h, d, sw=1, sh=1, sd=1) => new THREE.BoxGeometry(w, h, d, sw, sh, sd);
+
+// ── HEAD ──
+P('head', SG(0.28), MAT.skin, [0, 1.08, 0]);
+// Hair top (smooth cap)
+P('hair', new THREE.SphereGeometry(0.29, 20, 12, 0, Math.PI*2, 0, Math.PI*0.5), MAT.hair, [0, 1.11, -0.01]);
+// Hair sides
+P('hairL', SG(0.06, 10, 8), MAT.hair, [-0.22, 1.02, -0.05]);
+P('hairR', SG(0.06, 10, 8), MAT.hair, [0.22, 1.02, -0.05]);
+// Hair back flowing
+P('hairBack', BG(0.22, 0.20, 0.10), MAT.hair, [0, 0.98, -0.20]);
+// Hair bangs (front fringe)
+P('bangL', BG(0.08, 0.04, 0.06), MAT.hair, [-0.12, 1.18, 0.22]);
+P('bangR', BG(0.08, 0.04, 0.06), MAT.hair, [0.12, 1.18, 0.22]);
+
+// Eyes (white + iris + pupil + shine)
+P('eyeWL', SG(0.052, 12, 10), MAT.eyeW, [-0.10, 1.10, 0.24]);
+P('eyeWR', SG(0.052, 12, 10), MAT.eyeW, [0.10, 1.10, 0.24]);
+P('eyeIL', SG(0.032, 10, 8), MAT.eye, [-0.10, 1.10, 0.28]);
+P('eyeIR', SG(0.032, 10, 8), MAT.eye, [0.10, 1.10, 0.28]);
+P('eyePL', SG(0.015, 8, 6), MAT.eye, [-0.10, 1.10, 0.30]);
+P('eyePR', SG(0.015, 8, 6), MAT.eye, [0.10, 1.10, 0.30]);
+P('eyeSL', SG(0.008, 6, 4), new THREE.MeshBasicMaterial({color:0xffffff}), [-0.09, 1.11, 0.31]);
+P('eyeSR', SG(0.008, 6, 4), new THREE.MeshBasicMaterial({color:0xffffff}), [0.11, 1.11, 0.31]);
+
+// Eyebrows (arched)
+P('browL', BG(0.08, 0.018, 0.025), MAT.hair, [-0.10, 1.17, 0.26]);
+P('browR', BG(0.08, 0.018, 0.025), MAT.hair, [0.10, 1.17, 0.26]);
+
+// Nose (tiny bump)
+P('nose', SG(0.02, 8, 6), MAT.skin, [0, 1.06, 0.28]);
+
+// Mouth (small smile)
+P('mouth', BG(0.05, 0.012, 0.02), MAT.mouth, [0, 1.01, 0.27]);
+// Cheek blush
+P('blushL', SG(0.035, 10, 8), new THREE.MeshStandardMaterial({color:0xf0a0a0, roughness:0.9, transparent:true, opacity:0.3}), [-0.18, 1.04, 0.20]);
+P('blushR', SG(0.035, 10, 8), new THREE.MeshStandardMaterial({color:0xf0a0a0, roughness:0.9, transparent:true, opacity:0.3}), [0.18, 1.04, 0.20]);
+
+// Ears
+P('earL', SG(0.04, 10, 8), MAT.skin, [-0.28, 1.08, 0]);
+P('earR', SG(0.04, 10, 8), MAT.skin, [0.28, 1.08, 0]);
+
+// Neck
+P('neck', CG(0.06, 0.08, 0.08), MAT.skin, [0, 0.88, 0]);
+
+// ── TORSO ──
+P('torso', CG(0.20, 0.17, 0.36), MAT.armor, [0, 0.66, 0]);
+// Chest plate (front armor)
+P('chestF', BG(0.28, 0.20, 0.05), MAT.armor, [0, 0.70, 0.15]);
+// Chest emblem (crest)
+P('emblem', SG(0.04, 12, 10), MAT.trim, [0, 0.72, 0.19]);
+P('emblemD', SG(0.02, 8, 6), MAT.gemBlue, [0, 0.72, 0.22]);
+// Back plate
+P('backPlate', BG(0.26, 0.18, 0.04), MAT.armorD, [0, 0.68, -0.16]);
+// Side plates
+P('sideL', BG(0.04, 0.18, 0.24), MAT.armorD, [-0.20, 0.66, 0]);
+P('sideR', BG(0.04, 0.18, 0.24), MAT.armorD, [0.20, 0.66, 0]);
+
+// ── SHOULDERS ──
+P('shoulderL', SG(0.09, 14, 10), MAT.trim, [-0.26, 0.80, 0]);
+P('shoulderR', SG(0.09, 14, 10), MAT.trim, [0.26, 0.80, 0]);
+// Shoulder trim rings
+P('shoulderRingL', new THREE.TorusGeometry(0.09, 0.012, 8, 14), MAT.trim, [-0.26, 0.80, 0]);
+P('shoulderRingR', new THREE.TorusGeometry(0.09, 0.012, 8, 14), MAT.trim, [0.26, 0.80, 0]);
+
+// ── RIGHT ARM (sword) ──
+const armRG = new THREE.Group();
+armRG.position.set(0.26, 0.76, 0);
+root.add(armRG);
+parts.armRG = armRG;
+
+P('armRU', CG(0.055, 0.05, 0.14), MAT.armorD, [0, -0.07, 0], armRG);
+P('elbowR', SG(0.045, 10, 8), MAT.trim, [0, -0.14, 0], armRG);
+P('armRL', CG(0.05, 0.045, 0.14), MAT.armorD, [0, -0.21, 0], armRG);
+P('handR', SG(0.048, 12, 10), MAT.skin, [0, -0.30, 0], armRG);
+
+// Sword group (child of hand)
+const swordG = new THREE.Group();
+swordG.position.set(0.01, -0.02, 0.04);
+swordG.rotation.x = Math.PI * 0.06;
+armRG.add(swordG);
+parts.swordG = swordG;
+
+// Blade
+P('blade', CG(0.012, 0.028, 0.52, 8), MAT.sword, [0, -0.28, 0], swordG);
+P('bladeTip', new THREE.ConeGeometry(0.028, 0.10, 8), MAT.sword, [0, -0.57, 0], swordG);
+// Fuller (groove on blade)
+P('fuller', BG(0.008, 0.36, 0.005), MAT.armorD, [0, -0.30, 0.014], swordG);
+// Crossguard
+P('guard', BG(0.16, 0.025, 0.03), MAT.trim, [0, 0, 0], swordG);
+P('guardEndL', SG(0.018, 8, 6), MAT.trim, [-0.08, 0, 0], swordG);
+P('guardEndR', SG(0.018, 8, 6), MAT.trim, [0.08, 0, 0], swordG);
+// Handle
+P('hilt', CG(0.020, 0.020, 0.12, 8), MAT.hilt, [0, 0.07, 0], swordG);
+// Grip wrap
+for (let i = 0; i < 4; i++) {
+  P('grip'+i, new THREE.TorusGeometry(0.022, 0.005, 6, 8), MAT.chain, [0, 0.02 + i * 0.025, 0], swordG);
+}
+// Pommel
+P('pommel', SG(0.025, 10, 8), MAT.trim, [0, 0.14, 0], swordG);
+P('pommelGem', SG(0.012, 8, 6), MAT.gem, [0, 0.14, 0.025], swordG);
+
+// ── LEFT ARM (shield) ──
+const armLG = new THREE.Group();
+armLG.position.set(-0.26, 0.76, 0);
+root.add(armLG);
+parts.armLG = armLG;
+
+P('armLU', CG(0.055, 0.05, 0.14), MAT.armorD, [0, -0.07, 0], armLG);
+P('elbowL', SG(0.045, 10, 8), MAT.trim, [0, -0.14, 0], armLG);
+P('armLL', CG(0.05, 0.045, 0.14), MAT.armorD, [0, -0.21, 0], armLG);
+P('handL', SG(0.048, 12, 10), MAT.skin, [0, -0.30, 0], armLG);
+
+// Shield (child of hand)
+const shieldG = new THREE.Group();
+shieldG.position.set(0.02, -0.06, 0.12);
+shieldG.rotation.x = -0.15;
+armLG.add(shieldG);
+parts.shieldG = shieldG;
+
+const SR = 0.24;
+const shieldShape = new THREE.Shape();
+shieldShape.moveTo(SR, 0);
+for (let i = 1; i <= 32; i++) {
+  const a = (i / 32) * Math.PI * 2;
+  shieldShape.lineTo(Math.cos(a) * SR, Math.sin(a) * SR);
+}
+P('shieldFace', new THREE.ExtrudeGeometry(shieldShape, {
+  depth: 0.025, bevelEnabled: true, bevelThickness: 0.01, bevelSize: 0.01, bevelSegments: 3
+}), MAT.shield, [0, 0, -0.012], shieldG);
+// Rim
+P('shieldRim', new THREE.TorusGeometry(SR, 0.016, 10, 32), MAT.trim, [0, 0, 0], shieldG);
+// Boss (center dome)
+P('shieldBoss', SG(0.05, 12, 10), MAT.trim, [0, 0, 0.03], shieldG);
+// Cross pattern
+P('crossV', BG(0.022, 0.38, 0.012), MAT.trim, [0, 0, 0.02], shieldG);
+P('crossH', BG(0.38, 0.022, 0.012), MAT.trim, [0, 0, 0.02], shieldG);
+// Corner rivets
+const rivetAngles = [Math.PI*0.25, Math.PI*0.75, Math.PI*1.25, Math.PI*1.75];
+rivetAngles.forEach((a, i) => {
+  P('rivet'+i, SG(0.015, 8, 6), MAT.trim, [Math.cos(a)*SR*0.7, Math.sin(a)*SR*0.7, 0.02], shieldG);
+});
+
+// ── BELT ──
+P('belt', CG(0.19, 0.18, 0.05), MAT.belt, [0, 0.46, 0]);
+P('buckle', BG(0.06, 0.06, 0.04), MAT.trim, [0, 0.46, 0.20]);
+P('buckleGem', SG(0.018, 8, 6), MAT.gem, [0, 0.46, 0.22]);
+// Belt pouches
+P('pouchL', BG(0.06, 0.06, 0.04), MAT.hilt, [-0.14, 0.43, 0.16]);
+P('pouchR', BG(0.06, 0.06, 0.04), MAT.hilt, [0.14, 0.43, 0.16]);
+
+// ── LEGS ──
+P('legL', CG(0.065, 0.06, 0.24), MAT.armorD, [-0.09, 0.30, 0]);
+P('legR', CG(0.065, 0.06, 0.24), MAT.armorD, [0.09, 0.30, 0]);
+// Knee guards
+P('kneeL', SG(0.045, 10, 8), MAT.trim, [-0.09, 0.36, 0.07]);
+P('kneeR', SG(0.045, 10, 8), MAT.trim, [0.09, 0.36, 0.07]);
+// Shin guards
+P('shinL', BG(0.04, 0.14, 0.04), MAT.armor, [-0.09, 0.26, 0.06]);
+P('shinR', BG(0.04, 0.14, 0.04), MAT.armor, [0.09, 0.26, 0.06]);
+
+// ── BOOTS ──
+P('bootL', CG(0.07, 0.085, 0.10), MAT.boot, [-0.09, 0.15, 0.01]);
+P('bootR', CG(0.07, 0.085, 0.10), MAT.boot, [0.09, 0.15, 0.01]);
+// Boot toes (rounded)
+P('toeL', SG(0.065, 10, 8), MAT.boot, [-0.09, 0.11, 0.07]);
+P('toeR', SG(0.065, 10, 8), MAT.boot, [0.09, 0.11, 0.07]);
+// Boot straps
+P('strapL', new THREE.TorusGeometry(0.072, 0.008, 6, 12), MAT.trim, [-0.09, 0.17, 0.01]);
+P('strapR', new THREE.TorusGeometry(0.072, 0.008, 6, 12), MAT.trim, [0.09, 0.17, 0.01]);
+
+// ══════════════════════════════════════════════
+scene.add(root);
+document.getElementById('stats').textContent = `Verts: ${verts} | Tris: ${Math.floor(tris)}`;
+
+// ══════════════════════════════════════════════
+// ANIMATION
+// ══════════════════════════════════════════════
+let currentAnim = 'idle', animTime = 0, autoSpin = false, wireMode = false;
+const clock = new THREE.Clock();
+function lerp(a, b, t) { return a + (b - a) * Math.min(Math.max(t, 0), 1); }
+
+const DEF = {};
+function saveDef() {
+  root.traverse(c => {
+    if (c.isMesh || c.isGroup) {
+      DEF[c.uuid] = { pos: c.position.clone(), rot: c.rotation.clone() };
+    }
+  });
+  DEF['armRG'] = { pos: armRG.position.clone(), rot: armRG.rotation.clone() };
+  DEF['armLG'] = { pos: armLG.position.clone(), rot: armLG.rotation.clone() };
+}
+saveDef();
+
+function resetPose() {
+  root.traverse(c => {
+    if (DEF[c.uuid]) {
+      c.position.copy(DEF[c.uuid].pos);
+      c.rotation.set(DEF[c.uuid].rot.x, DEF[c.uuid].rot.y, DEF[c.uuid].rot.z);
+    }
+  });
+}
+
+// Head parts list
+const HEAD = ['head','hair','hairL','hairR','hairBack','bangL','bangR',
+  'eyeWL','eyeWR','eyeIL','eyeIR','eyePL','eyePR','eyeSL','eyeSR',
+  'browL','browR','nose','mouth','blushL','blushR','earL','earR','neck'];
+
+function breathe(t, amt) {
+  HEAD.forEach(n => { if (parts[n]) parts[n].position.y += amt; });
+  parts.torso.position.y += amt * 0.5;
+}
+
+function applyIdle(t) {
+  const b = Math.sin(t * 2.0) * 0.012;
+  breathe(t, b);
+  armLG.rotation.x = Math.sin(t * 1.5) * 0.04;
+  armRG.rotation.x = Math.sin(t * 1.5 + 0.5) * 0.04;
+}
+
+function applyWalk(t) {
+  const s = 4.5, bounce = Math.abs(Math.sin(t * s)) * 0.035;
+  breathe(t, bounce);
+  parts.legL.rotation.x = Math.sin(t * s) * 0.45;
+  parts.legR.rotation.x = Math.sin(t * s + Math.PI) * 0.45;
+  parts.bootL.position.z = 0.01 + Math.sin(t * s) * 0.07;
+  parts.bootR.position.z = 0.01 + Math.sin(t * s + Math.PI) * 0.07;
+  parts.toeL.position.z = 0.07 + Math.sin(t * s) * 0.07;
+  parts.toeR.position.z = 0.07 + Math.sin(t * s + Math.PI) * 0.07;
+  parts.kneeL.position.z = 0.07 + Math.sin(t * s) * 0.04;
+  parts.kneeR.position.z = 0.07 + Math.sin(t * s + Math.PI) * 0.04;
+  parts.shinL.position.z = 0.06 + Math.sin(t * s) * 0.03;
+  parts.shinR.position.z = 0.06 + Math.sin(t * s + Math.PI) * 0.03;
+  armLG.rotation.x = Math.sin(t * s + Math.PI) * 0.35;
+  armRG.rotation.x = Math.sin(t * s) * 0.35;
+  parts.head.rotation.z = Math.sin(t * s) * 0.03;
+}
+
+function applyAttack(t) {
+  const phase = (t * 2.5) % 1;
+  if (phase < 0.25) {
+    const e = (phase / 0.25) ** 2;
+    armRG.rotation.x = lerp(0, -0.8, e);
+    armRG.rotation.z = lerp(0, 0.2, e);
+    parts.torso.rotation.y = lerp(0, -0.15, e);
+    parts.head.rotation.y = lerp(0, -0.1, e);
+    parts.legL.rotation.x = lerp(0, 0.15, e);
+  } else if (phase < 0.45) {
+    const e = 1 - (1 - (phase - 0.25) / 0.2) ** 2;
+    armRG.rotation.x = lerp(-0.8, 0.7, e);
+    armRG.rotation.z = lerp(0.2, -0.1, e);
+    parts.torso.rotation.y = lerp(-0.15, 0.1, e);
+    parts.head.rotation.y = lerp(-0.1, 0.05, e);
+    parts.legL.rotation.x = lerp(0.15, -0.1, e);
+    parts.legR.rotation.x = lerp(0, 0.2, e);
+  } else {
+    const e = 1 - (1 - (phase - 0.45) / 0.55) ** 2;
+    armRG.rotation.x = lerp(0.7, 0, e);
+    armRG.rotation.z = lerp(-0.1, 0, e);
+    parts.torso.rotation.y = lerp(0.1, 0, e);
+    parts.head.rotation.y = lerp(0.05, 0, e);
+    parts.legL.rotation.x = lerp(-0.1, 0, e);
+    parts.legR.rotation.x = lerp(0.2, 0, e);
+  }
+}
+
+function applyBlock(t) {
+  const phase = (t * 2.0) % 1;
+  const dArmL = DEF['armLG'];
+  if (phase < 0.2) {
+    const p = phase / 0.2;
+    armLG.rotation.x = lerp(0, -0.3, p);
+    armLG.rotation.z = lerp(0, 0.6, p);
+    const crouch = lerp(0, -0.04, p);
+    HEAD.forEach(n => { if (parts[n]) parts[n].position.y = DEF[parts[n].uuid].pos.y + crouch; });
+    parts.torso.position.y = DEF[parts.torso.uuid].pos.y + crouch;
+  } else if (phase < 0.7) {
+    const hit = Math.sin((phase - 0.2) * 25) * 0.008 * Math.max(0, 1 - (phase - 0.2) / 0.5);
+    armLG.position.set(dArmL.pos.x + hit, dArmL.pos.y, dArmL.pos.z);
+  } else {
+    const p = (phase - 0.7) / 0.3;
+    armLG.rotation.x = lerp(-0.3, 0, p);
+    armLG.rotation.z = lerp(0.6, 0, p);
+    armLG.position.set(dArmL.pos.x, dArmL.pos.y, dArmL.pos.z);
+    const crouch = lerp(-0.04, 0, p);
+    HEAD.forEach(n => { if (parts[n]) parts[n].position.y = DEF[parts[n].uuid].pos.y + crouch; });
+    parts.torso.position.y = DEF[parts.torso.uuid].pos.y + crouch;
+  }
+}
+
+// ── UI ──
+const animBtns = { idle: 'btnIdle', walk: 'btnWalk', attack: 'btnAttack', block: 'btnBlock' };
+Object.entries(animBtns).forEach(([anim, id]) => {
+  document.getElementById(id).addEventListener('click', () => {
+    currentAnim = anim; animTime = 0; resetPose();
+    Object.values(animBtns).forEach(bid => document.getElementById(bid).classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+  });
+});
+document.getElementById('btnWire').addEventListener('click', () => {
+  wireMode = !wireMode;
+  root.traverse(c => { if (c.isMesh) c.material.wireframe = wireMode; });
+  document.getElementById('btnWire').classList.toggle('active', wireMode);
+});
+document.getElementById('btnSpin').addEventListener('click', () => {
+  autoSpin = !autoSpin;
+  controls.autoRotate = autoSpin;
+  controls.autoRotateSpeed = 2;
+  document.getElementById('btnSpin').classList.toggle('active', autoSpin);
+});
+
+// ── Render ──
+(function loop() {
+  requestAnimationFrame(loop);
+  animTime += clock.getDelta();
+  resetPose();
+  if (currentAnim === 'idle') applyIdle(animTime);
+  else if (currentAnim === 'walk') applyWalk(animTime);
+  else if (currentAnim === 'attack') applyAttack(animTime);
+  else if (currentAnim === 'block') applyBlock(animTime);
+  controls.update();
+  renderer.render(scene, camera);
+})();
+
+window.addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+</script>
+</body>
+</html>
