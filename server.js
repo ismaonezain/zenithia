@@ -125,15 +125,16 @@ function saveWorld() {
 }
 
 function initNPCs() {
+  // NPC positions: placed IN FRONT of their buildings (outside, visible)
   return {
-    elder_maren:     { id: 'elder_maren', name: 'Elder Maren', title: 'Village Elder', x: 0, z: -15 },
-    sir_gendut:      { id: 'sir_gendut', name: 'Sir Gendut', title: 'Merchant', x: 8, z: 0 },
-    miss_lira:       { id: 'miss_lira', name: 'Miss Lira', title: 'Aspiring Adventurer', x: -8, z: 3 },
-    mr_tani:         { id: 'mr_tani', name: 'Mr. Tani', title: 'Farmer', x: -18, z: 12 },
-    mrs_ningsih:     { id: 'mrs_ningsih', name: 'Mrs. Ningsih', title: 'Cook', x: 8, z: 8 },
-    kris:            { id: 'kris', name: 'Kris', title: 'Troublemaker', x: -3, z: -10 },
-    guard_ren:       { id: 'guard_ren', name: 'Guard Ren', title: 'Gate Guard', x: 0, z: 22 },
-    herbalist_sari:  { id: 'herbalist_sari', name: 'Herbalist Sari', title: 'Herbalist', x: 18, z: -8 },
+    elder_maren:     { id: 'elder_maren', name: 'Elder Maren', title: 'Village Elder', x: 0, z: -11 },
+    sir_gendut:      { id: 'sir_gendut', name: 'Sir Gendut', title: 'Merchant', x: 6, z: -2 },
+    miss_lira:       { id: 'miss_lira', name: 'Miss Lira', title: 'Aspiring Adventurer', x: -4, z: 5 },
+    mr_tani:         { id: 'mr_tani', name: 'Mr. Tani', title: 'Farmer', x: -15, z: 14 },
+    mrs_ningsih:     { id: 'mrs_ningsih', name: 'Mrs. Ningsih', title: 'Cook', x: 5, z: 10 },
+    kris:            { id: 'kris', name: 'Kris', title: 'Troublemaker', x: -2, z: -7 },
+    guard_ren:       { id: 'guard_ren', name: 'Guard Ren', title: 'Gate Guard', x: -2, z: 19 },
+    herbalist_sari:  { id: 'herbalist_sari', name: 'Herbalist Sari', title: 'Herbalist', x: 16, z: -5 },
   };
 }
 
