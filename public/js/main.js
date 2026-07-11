@@ -23,7 +23,9 @@ const state = {
   connected: false,
   targetPos: null,
   interactTarget: null,
-  customization: {
+  customization: (() => {
+    try { return JSON.parse(localStorage.getItem('zenithia_customization')) || {}; } catch(e) { return {}; }
+  })() || {
     gender: 'male',
     classType: 'laborer',
     skinIdx: 0,
@@ -328,6 +330,71 @@ function updatePreviewModel() {
 // ============================
 // CUSTOMIZATION UI
 // ============================
+function restoreCustomizationUI() {
+  const c = state.customization;
+  // Restore gender
+  if (c.gender) {
+    const gp = document.getElementById('gender-picker');
+    if (gp) {
+      gp.querySelectorAll('.option').forEach(o => {
+        o.classList.toggle('selected', o.textContent.toLowerCase().includes(c.gender));
+      });
+    }
+  }
+  // Restore class
+  if (c.classType) {
+    const cp = document.getElementById('class-picker');
+    if (cp) {
+      cp.querySelectorAll('.option').forEach(o => {
+        o.classList.toggle('selected', o.textContent.toLowerCase().includes(c.classType));
+      });
+    }
+  }
+  // Restore skin
+  if (c.skinIdx !== undefined) {
+    const sp = document.getElementById('skin-picker');
+    if (sp) {
+      sp.querySelectorAll('.swatch').forEach((s, i) => s.classList.toggle('selected', i === c.skinIdx));
+    }
+  }
+  // Restore hair color
+  if (c.hairColorIdx !== undefined) {
+    const hp = document.getElementById('hair-color-picker');
+    if (hp) {
+      hp.querySelectorAll('.swatch').forEach((s, i) => s.classList.toggle('selected', i === c.hairColorIdx));
+    }
+  }
+  // Restore hair style
+  if (c.hairStyle) {
+    const sp = document.getElementById('hair-style-picker');
+    if (sp) {
+      sp.querySelectorAll('.option').forEach(o => o.classList.toggle('selected', o.textContent === c.hairStyle));
+    }
+  }
+  // Restore top color
+  if (c.topColorIdx !== undefined) {
+    const tp = document.getElementById('top-picker');
+    if (tp) {
+      tp.querySelectorAll('.swatch').forEach((s, i) => s.classList.toggle('selected', i === c.topColorIdx));
+    }
+  }
+  // Restore bottom color
+  if (c.bottomColorIdx !== undefined) {
+    const bp = document.getElementById('bottom-picker');
+    if (bp) {
+      bp.querySelectorAll('.swatch').forEach((s, i) => s.classList.toggle('selected', i === c.bottomColorIdx));
+    }
+  }
+  // Restore eye color
+  if (c.eyeColorIdx !== undefined) {
+    const ep = document.getElementById('eye-picker');
+    if (ep) {
+      ep.querySelectorAll('.swatch').forEach((s, i) => s.classList.toggle('selected', i === c.eyeColorIdx));
+    }
+  }
+  updatePreviewModel();
+}
+
 function initCustomization() {
   // Gender picker
   const genderPicker = document.getElementById('gender-picker');
@@ -340,6 +407,7 @@ function initCustomization() {
       o.classList.add('selected');
       state.customization.gender = g;
       updatePreviewModel();
+      window._saveCustomization?.();
     };
     genderPicker.appendChild(o);
   });
@@ -376,12 +444,22 @@ function initCustomization() {
       state.customization.classType = cls;
       showClassInfo(cls);
       updatePreviewModel();
+      window._saveCustomization?.();
     };
     classPicker.appendChild(o);
   });
   // Show default class info
-  showClassInfo('laborer');
+  if (state.customization.classType) showClassInfo(state.customization.classType);
+  else showClassInfo('laborer');
 
+  // Restore selected state from saved customization
+  restoreCustomizationUI();
+
+  // Save to localStorage helper
+  window._saveCustomization = () => {
+    localStorage.setItem('zenithia_customization', JSON.stringify(state.customization));
+  };
+}
   // Skin picker
   const skinPicker = document.getElementById('skin-picker');
   PALETTES.skin.forEach((color, i) => {
@@ -393,6 +471,7 @@ function initCustomization() {
       s.classList.add('selected');
       state.customization.skinIdx = i;
       updatePreviewModel();
+      window._saveCustomization?.();
     };
     skinPicker.appendChild(s);
   });
@@ -408,6 +487,7 @@ function initCustomization() {
       s.classList.add('selected');
       state.customization.hairColorIdx = i;
       updatePreviewModel();
+      window._saveCustomization?.();
     };
     hairPicker.appendChild(s);
   });
@@ -423,6 +503,7 @@ function initCustomization() {
       o.classList.add('selected');
       state.customization.hairStyle = style;
       updatePreviewModel();
+      window._saveCustomization?.();
     };
     stylePicker.appendChild(o);
   });
@@ -438,6 +519,7 @@ function initCustomization() {
       s.classList.add('selected');
       state.customization.topColorIdx = i;
       updatePreviewModel();
+      window._saveCustomization?.();
     };
     topPicker.appendChild(s);
   });
@@ -453,6 +535,7 @@ function initCustomization() {
       s.classList.add('selected');
       state.customization.bottomColorIdx = i;
       updatePreviewModel();
+      window._saveCustomization?.();
     };
     bottomPicker.appendChild(s);
   });
@@ -468,6 +551,7 @@ function initCustomization() {
       s.classList.add('selected');
       state.customization.eyeColorIdx = i;
       updatePreviewModel();
+      window._saveCustomization?.();
     };
     eyePicker.appendChild(s);
   });

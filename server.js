@@ -124,8 +124,7 @@ function loadWorld() {
 function saveWorld() {
   try {
     if (!fs.existsSync(SAVE_DIR)) fs.mkdirSync(SAVE_DIR, { recursive: true });
-    const toSave = { ...world, players: {} };
-    fs.writeFileSync(SAVE_FILE, JSON.stringify(toSave, null, 2));
+    fs.writeFileSync(SAVE_FILE, JSON.stringify(world, null, 2));
   } catch (e) { console.error('[WARN] Save failed:', e.message); }
 }
 
