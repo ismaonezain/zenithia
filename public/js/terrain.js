@@ -799,27 +799,29 @@ function addBuildings(group) {
   barnWall.castShadow = true;
   barnWall.receiveShadow = true;
   barnG.add(barnWall);
-  // Roof — gambrel (barn-style, 2 slopes) — lower↔upper swapped
+  // Roof — gambrel (barn-style, 2 slopes)
   const barnRoofMat = new THREE.MeshLambertMaterial({ color: 0xB71C1C });
-  // Lower slope (gentle — was upper)
+  // Lower slope (gentle) — front
   const roofL = new THREE.Mesh(new THREE.BoxGeometry(5.4, 0.1, 2.5), barnRoofMat);
   roofL.position.set(0, 3.8, 1.2);
-  roofL.rotation.x = -0.15;
+  roofL.rotation.x = 0.15;
   roofL.castShadow = true;
   barnG.add(roofL);
+  // Lower slope (gentle) — back
   const roofR = new THREE.Mesh(new THREE.BoxGeometry(5.4, 0.1, 2.5), barnRoofMat);
   roofR.position.set(0, 3.8, -1.2);
-  roofR.rotation.x = 0.15;
+  roofR.rotation.x = -0.15;
   roofR.castShadow = true;
   barnG.add(roofR);
-  // Upper slope (steep — was lower) — attached to ridge
+  // Upper slope (steep) — front, attached to ridge
   const roofT = new THREE.Mesh(new THREE.BoxGeometry(5.4, 0.1, 1.2), barnRoofMat);
   roofT.position.set(0, 4.35, 0.55);
-  roofT.rotation.x = -0.3;
+  roofT.rotation.x = 0.3;
   barnG.add(roofT);
+  // Upper slope (steep) — back, attached to ridge
   const roofT2 = new THREE.Mesh(new THREE.BoxGeometry(5.4, 0.1, 1.2), barnRoofMat);
   roofT2.position.set(0, 4.35, -0.55);
-  roofT2.rotation.x = 0.3;
+  roofT2.rotation.x = -0.3;
   barnG.add(roofT2);
   // Ridge
   const ridge = new THREE.Mesh(
