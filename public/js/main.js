@@ -813,6 +813,13 @@ function handleServerMessage(msg) {
       if (msg.loot && msg.loot.length > 0) {
         showLootPopup(msg.loot);
       }
+      // Fallback: also remove monster from scene (in case monster_died broadcast is delayed)
+      const deadMob = state.monsters[msg.monsterId];
+      if (deadMob) {
+        state.scene.remove(deadMob);
+        delete state.monsters[msg.monsterId];
+      }
+      if (state.targetedMonster === msg.monsterId) cancelTarget();
       break;
     }
 
@@ -1733,7 +1740,7 @@ function performAttack() {
   const mobId = state.targetedMonster;
   if (!mobId) return;
   const mob = state.monsters[mobId];
-  if (!mob) { cancelTarget(); return; }
+  if (!mob || (mob.userData.hp !== undefined && mob.userData.hp <= 0)) { cancelTarget(); return; }
 
   const model = state.players[state.playerId];
   if (!model) return;
@@ -2486,7 +2493,7 @@ function gameLoop() {
   // --- COMBAT: Target indicator + auto-attack ---
   if (state.targetedMonster) {
     const mob = state.monsters[state.targetedMonster];
-    if (!mob) {
+    if (!mob || (mob.userData.hp !== undefined && mob.userData.hp <= 0)) {
       // Monster died or despawned — cancel target
       cancelTarget();
     } else {

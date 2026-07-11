@@ -286,25 +286,25 @@ export function createMonsterModel(monsterType, monsterData) {
     group.add(mesh);
   }
 
-  // HP bar
+  // HP bar — bigger, always visible
   const hpBg = new THREE.Mesh(
-    new THREE.PlaneGeometry(0.8, 0.08),
-    new THREE.MeshBasicMaterial({ color: 0x333333 })
+    new THREE.PlaneGeometry(1.0, 0.1),
+    new THREE.MeshBasicMaterial({ color: 0x333333, depthTest: false })
   );
-  hpBg.position.y = (monsterData.size || 0.5) + 0.3;
-  hpBg.rotation.x = -0.3;
+  hpBg.position.y = (monsterData.size || 0.5) + 0.35;
+  hpBg.renderOrder = 998;
   group.add(hpBg);
 
   const hpFill = new THREE.Mesh(
-    new THREE.PlaneGeometry(0.8, 0.08),
-    new THREE.MeshBasicMaterial({ color: 0xF44336 })
+    new THREE.PlaneGeometry(1.0, 0.1),
+    new THREE.MeshBasicMaterial({ color: 0xF44336, depthTest: false })
   );
-  hpFill.position.y = (monsterData.size || 0.5) + 0.3;
+  hpFill.position.y = (monsterData.size || 0.5) + 0.35;
   hpFill.position.z = 0.001;
-  hpFill.rotation.x = -0.3;
+  hpFill.renderOrder = 999;
   group.add(hpFill);
   group.userData.hpBar = hpFill;
-  group.userData.hpBarWidth = 0.8;
+  group.userData.hpBarWidth = 1.0;
 
   // Name tag
   const nameCanvas = document.createElement('canvas');
