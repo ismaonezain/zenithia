@@ -370,8 +370,10 @@ setInterval(() => {
       const dx = nearest.x - m.x;
       const dz = nearest.z - m.z;
       const dist = Math.sqrt(dx * dx + dz * dz);
-      if (dist > data.attackRange) {
-        const speed = data.spd * 0.05;
+      // Monster uses player's attack range (3) so they can fight back fairly
+      const effectiveRange = Math.max(data.attackRange, 3);
+      if (dist > effectiveRange) {
+        const speed = data.spd * 0.12;
         m.x += (dx / dist) * speed;
         m.z += (dz / dist) * speed;
         broadcast({ type: 'monster_move', monsterId: m.id, x: m.x, z: m.z });
@@ -411,13 +413,13 @@ setInterval(() => {
       const dx = m.x - (nearest?.x || 0);
       const dz = m.z - (nearest?.z || 0);
       const dist = Math.sqrt(dx * dx + dz * dz) || 1;
-      m.x += (dx / dist) * data.spd * 0.03;
-      m.z += (dz / dist) * data.spd * 0.03;
+      m.x += (dx / dist) * data.spd * 0.08;
+      m.z += (dz / dist) * data.spd * 0.08;
+      broadcast({ type: 'monster_move', monsterId: m.id, x: m.x, z: m.z });
       if (nearestDist > data.aggroRange * 1.5) {
         m.state = 'idle';
         m.hp = Math.min(m.hp + data.hp * 0.1, data.hp); // Heal when retreated
       }
-      broadcast({ type: 'monster_move', monsterId: m.id, x: m.x, z: m.z });
     }
   });
   } catch (e) { console.error('[AI-ERROR]', e.message); }
