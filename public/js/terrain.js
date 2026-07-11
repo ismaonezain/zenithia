@@ -813,22 +813,22 @@ function addBuildings(group) {
   roofR.rotation.x = -0.15;
   roofR.castShadow = true;
   barnG.add(roofR);
-  // Upper slope (steep) — front, connects lower slope inner edge to ridge
+  // Upper slope (steep) — front, outer edge connects to lower slope inner edge
   const roofT = new THREE.Mesh(new THREE.BoxGeometry(5.4, 0.1, 1.2), barnRoofMat);
-  roofT.position.set(0, 3.95, 0.55);
+  roofT.position.set(0, 3.7, 0.55);
   roofT.rotation.x = 0.3;
   barnG.add(roofT);
   // Upper slope (steep) — back
   const roofT2 = new THREE.Mesh(new THREE.BoxGeometry(5.4, 0.1, 1.2), barnRoofMat);
-  roofT2.position.set(0, 3.95, -0.55);
+  roofT2.position.set(0, 3.7, -0.55);
   roofT2.rotation.x = -0.3;
   barnG.add(roofT2);
-  // Ridge
+  // Ridge — attached to upper slope inner edge
   const ridge = new THREE.Mesh(
     new THREE.BoxGeometry(5.4, 0.15, 0.2),
     new THREE.MeshLambertMaterial({ color: 0x8B0000 })
   );
-  ridge.position.y = 4.5;
+  ridge.position.y = 3.9;
   barnG.add(ridge);
   // Big sliding door (front)
   const slideDoor = new THREE.Mesh(
