@@ -1490,6 +1490,9 @@ canvas.addEventListener('click', (e) => {
   // Collision check
   if (!isWalkable(snapX, snapZ)) return;
 
+  // Click jalan = cancel auto-attack
+  cancelTarget();
+
   // Show click indicator
   showClickIndicator(snapX, snapZ);
 
@@ -1653,7 +1656,10 @@ function performAttack() {
   // If in attack range (3 units), send attack
   if (dist <= 3) {
     const now = Date.now();
-    if (now - state.lastAttackTime < 600) return; // client cooldown 600ms
+    // ASPD-based cooldown: higher SPD = faster attacks
+    const spd = state.player?.spd || 7;
+    const aspdCooldown = 600 + (10 - spd) * 80; // SPD 6→1080ms, SPD 10→600ms
+    if (now - state.lastAttackTime < aspdCooldown) return;
     state.lastAttackTime = now;
     // Face the monster
     const faceDir = mob.position.clone().sub(model.position).normalize();

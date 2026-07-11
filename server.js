@@ -419,9 +419,11 @@ function handleAttack(ws, playerId, msg) {
   const monster = world.monsters[msg.monsterId];
   if (!player || !monster || !monster.alive) return;
 
-  // Attack cooldown (500ms)
+  // Attack cooldown — ASPD-based (higher SPD = faster)
   const now = Date.now();
-  if (player._lastAttack && now - player._lastAttack < 500) return;
+  const spd = player.spd || 7;
+  const aspdCooldown = 600 + (10 - spd) * 80; // SPD 6→1080ms, SPD 10→600ms
+  if (player._lastAttack && now - player._lastAttack < aspdCooldown) return;
   player._lastAttack = now;
 
   const data = MONSTERS[monster.type];
