@@ -1009,7 +1009,7 @@ function createNameHPBar(name, hp, maxHp, mp, maxMp) {
   nameTex.minFilter = THREE.LinearFilter;
   const nameSprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: nameTex, transparent: true, depthWrite: false }));
   nameSprite.scale.set(3, 0.8, 1);
-  nameSprite.position.y = 3.4;
+  nameSprite.position.y = 2.5;
 
   // === HP/MP sprite (below feet) ===
   const barCanvas = document.createElement('canvas');
@@ -1018,7 +1018,7 @@ function createNameHPBar(name, hp, maxHp, mp, maxMp) {
   barTex.minFilter = THREE.LinearFilter;
   const barSprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: barTex, transparent: true, depthWrite: false }));
   barSprite.scale.set(3, 0.8, 1);
-  barSprite.position.y = -0.3;
+  barSprite.position.y = 0.15;
 
   function render() {
     // Name
