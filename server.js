@@ -301,8 +301,10 @@ setInterval(() => {
   Object.values(world.monsters).forEach(m => {
     if (!m.alive && !m.respawnAt) {
       m.respawnAt = Date.now() + (MONSTERS[m.type]?.respawnTime || 30) * 1000;
+      console.log(`[RESPAWN] ${m.id}(${m.type}) scheduled respawn in ${MONSTERS[m.type]?.respawnTime || 30}s`);
     }
     if (!m.alive && m.respawnAt && Date.now() >= m.respawnAt) {
+      console.log(`[RESPAWN] ${m.id}(${m.type}) respawning NOW`);
       respawnMonster(m);
       delete m.respawnAt;
       broadcast({ type: 'monster_spawn', monster: sanitizeMonster(m) });
@@ -332,6 +334,11 @@ setInterval(() => {
     });
 
     if (!nearest) { m.state = 'idle'; return; }
+
+    // Debug: log AI state periodically
+    if (Math.random() < 0.02) {
+      console.log(`[AI] ${m.id}(${m.type}) state=${m.state} dist=${nearestDist.toFixed(1)} target=${m.target} hp=${m.hp}/${data.hp}`);
+    }
 
     // Behavior logic
     switch (data.behavior) {
@@ -374,6 +381,7 @@ setInterval(() => {
         m.state = 'attack';
         m.lastAttack = now;
         const playerWs = nearest._ws;
+        console.log(`[AI] Monster ${m.id}(${m.type}) attacking ${nearest.id} dist=${nearestDist.toFixed(1)} ws=${!!playerWs} ready=${playerWs?.readyState} monsterState=${m.state}`);
         if (playerWs && playerWs.readyState === 1) {
           const dmg = Math.max(1, m.atk - Math.floor(nearest.def * 0.6));
           nearest.hp = Math.max(0, nearest.hp - dmg);
@@ -388,6 +396,8 @@ setInterval(() => {
             m.state = 'idle';
             m.target = null;
           }
+        } else {
+          console.log(`[AI] SKIP attack — ws unavailable`);
         }
         m.state = 'chase';
       }
@@ -510,14 +520,7 @@ function handleAttack(ws, playerId, msg) {
 
     broadcast({ type: 'monster_died', monsterId: monster.id });
     console.log(`[KILL] Broadcast monster_died for ${monster.id}`);
-
-    // Schedule respawn — remove dead monster, let spawnMonsters create a new one
-    const respawnMs = (data.respawnTime || 30) * 1000;
-    setTimeout(() => {
-      delete world.monsters[monster.id];
-      console.log(`[RESPAWN] Removed dead ${monster.id}, will respawn on next tick`);
-      spawnMonsters();
-    }, respawnMs);
+    // Respawn handled by existing respawn timer at line 300
   }
 }
 
@@ -977,12 +980,6 @@ function handleMessage(ws, playerId, msg) {
         addLootToPlayer(player, loot);
         ws.send(JSON.stringify({ type: 'monster_killed', monsterId: monster.id, monsterName: monster.name, xp: xpGain, loot, hp: player.hp, maxHp: player.maxHp, mp: player.mp, maxMp: player.maxMp }));
         broadcast({ type: 'monster_died', monsterId: monster.id });
-        // Schedule respawn
-        const respawnMs = (data.respawnTime || 30) * 1000;
-        setTimeout(() => {
-          delete world.monsters[monster.id];
-          spawnMonsters();
-        }, respawnMs);
       }
       break;
     }
