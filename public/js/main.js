@@ -745,6 +745,8 @@ function handleServerMessage(msg) {
       // Always update HUD from server data
       document.getElementById('hud-name').textContent = state.player.name;
       document.getElementById('hud-level').textContent = 'Lv.' + state.player.level;
+      updatePlayerHP(state.player.hp, state.player.maxHp);
+      updatePlayerMP(state.player.mp, state.player.maxMp);
       break;
 
     case 'player_joined':
@@ -1018,7 +1020,7 @@ function createNameHPBar(name, hp, maxHp, mp, maxMp) {
   barTex.minFilter = THREE.LinearFilter;
   const barSprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: barTex, transparent: true, depthWrite: false, depthTest: false }));
   barSprite.scale.set(3, 0.8, 1);
-  barSprite.position.y = -0.3;
+  barSprite.position.y = -0.6;
   barSprite.renderOrder = 999;
 
   function render() {
