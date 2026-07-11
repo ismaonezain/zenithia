@@ -303,7 +303,14 @@ let aiDebugCounter = 0;
 setInterval(() => {
   const now = Date.now();
   const playerCount = Object.keys(connectedPlayers).length;
+  const aliveMonsters = Object.values(world.monsters).filter(m => m.alive).length;
   aiDebugCounter++;
+
+  // Log EVERY 5 seconds — tells us everything
+  if (aiDebugCounter % 25 === 0) {
+    const pList = Object.values(connectedPlayers).map(p => `${p.name}(${(p.x||0).toFixed(0)},${(p.z||0).toFixed(0)})hp=${p.hp}`).join(', ');
+    console.log(`[AI-TICK] alive_mobs=${aliveMonsters} players=${playerCount} [${pList}]`);
+  }
 
   for (const m of Object.values(world.monsters)) {
     if (!m.alive) continue;
