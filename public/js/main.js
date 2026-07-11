@@ -271,6 +271,9 @@ function initScene() {
 
   // Combat: target indicator ring
   createTargetIndicator();
+
+  // Init minimap canvas
+  initMinimap();
 }
 
 // ============================
@@ -2566,6 +2569,112 @@ function updateCompass() {
   ring.style.transform = `rotate(${degrees}deg)`;
 }
 
+
+// ============================
+// MINIMAP
+// ============================
+let minimapCanvas, minimapCtx;
+const MINIMAP_RANGE = 60; // world units visible on minimap
+
+function initMinimap() {
+  const el = document.getElementById('mini-map');
+  if (!el) return;
+  minimapCanvas = document.createElement('canvas');
+  minimapCanvas.width = 150;
+  minimapCanvas.height = 150;
+  minimapCanvas.style.cssText = 'width:100%;height:100%;border-radius:50%;';
+  el.appendChild(minimapCanvas);
+  minimapCtx = minimapCanvas.getContext('2d');
+}
+
+function updateMinimap() {
+  if (!minimapCtx || !state.player) return;
+  const ctx = minimapCtx;
+  const w = minimapCanvas.width;
+  const h = minimapCanvas.height;
+  const cx = w / 2;
+  const cy = h / 2;
+  const scale = w / (MINIMAP_RANGE * 2);
+
+  // Clear
+  ctx.clearRect(0, 0, w, h);
+
+  // Background (dark green village)
+  ctx.fillStyle = 'rgba(20, 40, 20, 0.8)';
+  ctx.beginPath();
+  ctx.arc(cx, cy, cx, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Grid lines
+  ctx.strokeStyle = 'rgba(76, 175, 80, 0.15)';
+  ctx.lineWidth = 0.5;
+  for (let i = -MINIMAP_RANGE; i <= MINIMAP_RANGE; i += 15) {
+    const x = cx + i * scale;
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
+    const y = cy + i * scale;
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+  }
+
+  const px = state.player.x || 0;
+  const pz = state.player.z || 0;
+
+  // Draw NPCs (yellow dots)
+  Object.values(state.npcs).forEach(npc => {
+    const dx = (npc.position.x - px) * scale;
+    const dz = (npc.position.z - pz) * scale;
+    const sx = cx + dx;
+    const sy = cy + dz;
+    if (sx < -5 || sx > w + 5 || sy < -5 || sy > h + 5) return;
+    ctx.fillStyle = '#FFD54F';
+    ctx.beginPath();
+    ctx.arc(sx, sy, 3, 0, Math.PI * 2);
+    ctx.fill();
+  });
+
+  // Draw Monsters (red dots)
+  Object.values(state.monsters).forEach(m => {
+    const dx = (m.position.x - px) * scale;
+    const dz = (m.position.z - pz) * scale;
+    const sx = cx + dx;
+    const sy = cy + dz;
+    if (sx < -5 || sx > w + 5 || sy < -5 || sy > h + 5) return;
+    ctx.fillStyle = '#F44336';
+    ctx.beginPath();
+    ctx.arc(sx, sy, 2, 0, Math.PI * 2);
+    ctx.fill();
+  });
+
+  // Draw other players (cyan dots)
+  Object.entries(state.players).forEach(([id, model]) => {
+    if (id === state.playerId) return;
+    const dx = (model.position.x - px) * scale;
+    const dz = (model.position.z - pz) * scale;
+    const sx = cx + dx;
+    const sy = cy + dz;
+    if (sx < -5 || sx > w + 5 || sy < -5 || sy > h + 5) return;
+    ctx.fillStyle = '#00BCD4';
+    ctx.beginPath();
+    ctx.arc(sx, sy, 3, 0, Math.PI * 2);
+    ctx.fill();
+  });
+
+  // Draw player (white dot, always center)
+  ctx.fillStyle = '#FFFFFF';
+  ctx.beginPath();
+  ctx.arc(cx, cy, 4, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = '#4CAF50';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  // Clip to circle
+  ctx.globalCompositeOperation = 'destination-in';
+  ctx.beginPath();
+  ctx.arc(cx, cy, cx, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalCompositeOperation = 'source-over';
+}
+
 function gameLoop() {
   requestAnimationFrame(gameLoop);
   let dt = state.clock ? state.clock.getDelta() : 0.016;
@@ -2675,6 +2784,7 @@ function gameLoop() {
   updateDayNight(dt);
   updateCompass();
   updateTargetHPBar();
+  updateMinimap();
 
   if (state.scene && state.camera && state.renderer) {
     state.renderer.render(state.scene, state.camera);

@@ -39,7 +39,7 @@ export class QuestUI {
     this.trackerEl = document.createElement('div');
     this.trackerEl.id = 'quest-tracker';
     this.trackerEl.style.cssText = `
-      position:fixed; top:100px; right:20px; width:250px;
+      position:fixed; top:180px; right:20px; width:250px;
       background:rgba(0,0,0,0.7); border-radius:10px; padding:12px;
       font-family:'Courier New',monospace; font-size:0.75rem; color:#ddd;
       z-index:15; pointer-events:none;

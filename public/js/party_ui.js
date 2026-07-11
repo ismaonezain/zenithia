@@ -16,8 +16,8 @@ export class PartyUI {
     this.container.id = 'party-ui';
     this.container.style.cssText = `
       position:fixed; top:50%; right:20px; transform:translateY(-50%);
-      background:rgba(10,10,20,0.9); color:white; border-radius:12px;
-      border:2px solid #2196F3; z-index:20; display:block;
+      background:rgba(10,10,20,0.92); color:white; border-radius:12px;
+      border:2px solid #2196F3; z-index:20; display:none;
       font-family:'Courier New',monospace; width:200px; padding:12px;
     `;
     document.body.appendChild(this.container);
@@ -59,11 +59,23 @@ export class PartyUI {
     const inParty = this.party && this.party.members?.length > 0;
     const isLeader = inParty && this.party.leader === this.player?.id;
 
+    // Count includes self
+    const totalCount = this.onlinePlayers.length + 1;
+
     let html = `
-      <div style="color:#2196F3; font-weight:bold; margin-bottom:8px;">👥 Online (${this.onlinePlayers.length})</div>
+      <div style="color:#2196F3; font-weight:bold; margin-bottom:8px;">👥 Online (${totalCount})</div>
     `;
 
-    // Online players list
+    // Show self
+    html += `
+      <div style="display:flex; justify-content:space-between; align-items:center; padding:4px 0; border-bottom:1px solid #333;">
+        <span style="color:#FFD54F; font-size:0.8rem;">
+          ${this.player?.name || 'You'} <span style="color:#888;">Lv.${this.player?.level || 1}</span> <span style="color:#4CAF50;">(you)</span>
+        </span>
+      </div>
+    `;
+
+    // Online players list (others)
     this.onlinePlayers.forEach(p => {
       const inPartyMember = inParty && this.party.members.some(m => m.id === p.id);
       html += `
@@ -94,16 +106,10 @@ export class PartyUI {
       html += `</div>`;
     }
 
-    // Chat section
+    // Shortcut hint
     html += `
-      <div style="margin-top:12px; padding-top:8px; border-top:1px solid #333;">
-        <div style="color:#FFD54F; font-weight:bold; margin-bottom:6px;">💬 Chat</div>
-        <div id="chat-messages" style="height:80px; overflow-y:auto; font-size:0.7rem; color:#aaa;"></div>
-        <input id="chat-input" type="text" placeholder="Type..." maxlength="200" style="
-          width:100%; padding:4px 6px; margin-top:4px; font-size:0.7rem;
-          background:rgba(255,255,255,0.1); border:1px solid #555; border-radius:4px;
-          color:white; font-family:inherit; outline:none;
-        ">
+      <div style="margin-top:10px; padding-top:6px; border-top:1px solid #333; font-size:0.6rem; color:#555; text-align:center;">
+        Press <b>P</b> to toggle
       </div>
     `;
 
@@ -123,24 +129,11 @@ export class PartyUI {
         this.ws.send(JSON.stringify({ type: 'party_leave' }));
       });
     }
-
-    // Bind chat input
-    const chatInput = this.container.querySelector('#chat-input');
-    if (chatInput) {
-      chatInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
-          const msg = chatInput.value.trim();
-          if (msg && this.ws?.readyState === 1) {
-            this.ws.send(JSON.stringify({ type: 'chat', message: msg }));
-            chatInput.value = '';
-          }
-        }
-      });
-    }
   }
 
   addChatMessage(name, message) {
-    const el = this.container.querySelector('#chat-messages');
+    // Use HUD chat instead
+    const el = document.getElementById('chat-messages');
     if (!el) return;
     const div = document.createElement('div');
     div.innerHTML = `<strong>${name}:</strong> ${message}`;
