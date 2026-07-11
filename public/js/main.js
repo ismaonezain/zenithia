@@ -815,28 +815,14 @@ function handleServerMessage(msg) {
       break;
 
     case 'monster_killed': {
-      console.log('[KILL] Received monster_killed for', msg.monsterId);
-      // *** REMOVAL FIRST — before any DOM/logic that could crash ***
-      const deadMob = state.monsters[msg.monsterId];
-      if (deadMob) {
-        state.scene.remove(deadMob);
-        delete state.monsters[msg.monsterId];
-        console.log('[KILL] Removed monster from scene:', msg.monsterId);
-      }
-      if (state.targetedMonster === msg.monsterId) cancelTarget();
-      // Now do UI updates
-      try {
-        const lootText = msg.loot?.length > 0 ? msg.loot.map(l => `${l.name} x${l.quantity}`).join(', ') : 'Nothing';
-        addChatMessage('System', `Defeated ${msg.monsterName}! +${msg.xp} XP | Loot: ${lootText}`);
-        updatePlayerHP(msg.hp, msg.maxHp);
-        updatePlayerMP(msg.mp, msg.maxMp);
-        if (msg.xp !== undefined) state.player.xp = (state.player.xp || 0) + msg.xp;
-        if (msg.loot && msg.loot.length > 0) {
-          showLootPopup(msg.loot);
-        }
-      } catch (e) {
-        console.error('[KILL] Error in UI update:', e);
-      }
+      // Server confirmed kill — update loot, XP, etc.
+      const lootText = msg.loot?.length > 0 ? msg.loot.map(l => `${l.name} x${l.quantity}`).join(', ') : 'Nothing';
+      addChatMessage('System', `Defeated! +${msg.xp} XP | Loot: ${lootText}`);
+      if (msg.hp !== undefined) updatePlayerHP(msg.hp, msg.maxHp);
+      if (msg.mp !== undefined) updatePlayerMP(msg.mp, msg.maxMp);
+      if (msg.xp !== undefined) state.player.xp = (state.player.xp || 0) + msg.xp;
+      if (msg.leveledUp) addChatMessage('System', `🎉 Level Up! Now Lv.${msg.level}`);
+      if (msg.loot?.length > 0) showLootPopup(msg.loot);
       break;
     }
 
@@ -887,18 +873,10 @@ function handleServerMessage(msg) {
 
     case 'monster_hit': {
       const mob = state.monsters[msg.monsterId];
-      console.log('[COMBAT] monster_hit', msg.monsterId, 'hp:', msg.hp, '/', msg.maxHp);
       if (mob) {
         updateMonsterHPBar(mob, msg.hp, msg.maxHp);
         mob.userData.hp = msg.hp;
         mob.userData.maxHp = msg.maxHp;
-        // Safety net: if hp=0, remove monster immediately
-        if (msg.hp <= 0) {
-          console.log('[COMBAT] Monster hp=0, removing from scene:', msg.monsterId);
-          state.scene.remove(mob);
-          delete state.monsters[msg.monsterId];
-          if (state.targetedMonster === msg.monsterId) cancelTarget();
-        }
       }
       showDamageNumber(msg.monsterId, msg.damage, msg.isCrit);
       break;
@@ -906,23 +884,20 @@ function handleServerMessage(msg) {
 
     case 'monster_died': {
       const mob = state.monsters[msg.monsterId];
-      console.log('[COMBAT] monster_died', msg.monsterId, 'mob exists:', !!mob);
       if (mob) {
         state.scene.remove(mob);
         delete state.monsters[msg.monsterId];
       }
-      // Cancel target if this was our target
       if (state.targetedMonster === msg.monsterId) cancelTarget();
       break;
     }
 
     case 'monster_attack': {
       if (msg.targetId === state.playerId) {
-        // Apply damage directly (Cahaya v2 pattern)
         state.player.hp = Math.max(0, (state.player.hp || 0) - msg.damage);
         updatePlayerHP(state.player.hp, state.player.maxHp);
         showDamageNumber(null, msg.damage, false, state.playerId);
-        // Screen shake
+        // Screen shake (Cahaya v2 pattern)
         document.body.style.transform = `translate(${Math.random()*6-3}px, ${Math.random()*6-3}px)`;
         setTimeout(() => document.body.style.transform = '', 100);
       }
@@ -943,11 +918,9 @@ function handleServerMessage(msg) {
 
     case 'player_died': {
       if (msg.targetId && msg.targetId !== state.playerId) break;
-      // Auto-respawn handled by server (Cahaya v2 pattern)
       state.isDead = true;
       cancelTarget();
       addChatMessage('System', 'You died! Respawning in 5 seconds...');
-      // Show death overlay (simple)
       const deathEl = document.getElementById('death-screen');
       if (deathEl) deathEl.style.display = 'flex';
       break;
@@ -964,11 +937,8 @@ function handleServerMessage(msg) {
       updatePlayerMP(msg.mp, msg.maxMp);
       // Move player back to spawn
       const model = state.players[state.playerId];
-      if (model) {
-        model.position.set(msg.x || 0, 0, msg.z || 0);
-      }
+      if (model) model.position.set(msg.x || 0, 0, msg.z || 0);
       wsSend(JSON.stringify({ type: 'move', x: msg.x || 0, y: 0, z: msg.z || 0 }));
-      // Hide death screen
       const deathEl = document.getElementById('death-screen');
       if (deathEl) deathEl.style.display = 'none';
       addChatMessage('System', '🏠 Respawned at village!');
@@ -1812,27 +1782,22 @@ function performAttack() {
   if (!model) return;
 
   const dist = model.position.distanceTo(mob.position);
-
-  // If in attack range (3 units), send attack
   if (dist <= 3) {
     const now = Date.now();
-    // ASPD-based cooldown: higher SPD = faster attacks
     const spd = state.player?.spd || 7;
-    const aspdCooldown = 600 + (10 - spd) * 80; // SPD 6→1080ms, SPD 10→600ms
+    const aspdCooldown = 600 + (10 - spd) * 80;
     if (now - state.lastAttackTime < aspdCooldown) return;
     state.lastAttackTime = now;
     // Face the monster
     const faceDir = mob.position.clone().sub(model.position).normalize();
     state.lastFacing = model.position.clone().add(faceDir);
     model.lookAt(state.lastFacing);
-    // Attack swing animation
+    // Swing animation
     attackSwing(model);
-    // NO client-side HP prediction — server is authoritative
-    // HP bar updates only when server sends monster_hit response
-    // Send attack to server
+    // Send attack to server (Cahaya v2: just targetId)
     wsSend(JSON.stringify({ type: 'attack', monsterId: mobId }));
   } else {
-    // Walk to monster — pathfind to it
+    // Walk to monster
     const startX = Math.round(model.position.x);
     const startZ = Math.round(model.position.z);
     const targetX = Math.round(mob.position.x);
@@ -2564,15 +2529,15 @@ function gameLoop() {
     if (!mob) {
       cancelTarget();
     } else {
-      // Move indicator ring to follow monster
+      // Move indicator ring
       if (state.targetIndicator) {
         state.targetIndicator.position.x = mob.position.x;
         state.targetIndicator.position.z = mob.position.z;
-        // Pulse effect
+        state.targetIndicator.position.y = 0.05;
         const pulse = 1 + Math.sin(time * 4) * 0.15;
         state.targetIndicator.scale.set(pulse, pulse, 1);
       }
-      // Auto-attack: walk to monster if out of range, attack if in range
+      // Auto-attack
       if (state.autoAttacking && !state.targetPos) {
         const model = state.players[state.playerId];
         if (model) {
@@ -2580,11 +2545,13 @@ function gameLoop() {
           if (dist <= 3) {
             performAttack();
           } else {
-            performAttack(); // this will pathfind to monster
+            performAttack(); // will pathfind to monster
           }
         }
       }
     }
+  } else if (state.targetIndicator) {
+    state.targetIndicator.visible = false;
   }
 
   // Day/night cycle + compass

@@ -286,63 +286,74 @@ setInterval(() => {
   });
 }, 5000);
 
-// --- Monster AI (server-side) — Cahaya v2 pattern ---
+// --- Monster AI (Cahaya v2 pattern) ---
 setInterval(() => {
   const now = Date.now();
-  Object.values(world.monsters).forEach(m => {
-    if (!m.alive) return;
+  for (const m of Object.values(world.monsters)) {
+    if (!m.alive) continue;
     const data = MONSTERS[m.type];
-    if (!data) return;
+    if (!data) continue;
+
+    // Dead check
+    if (m.hp <= 0) {
+      m.alive = false;
+      m.state = 'idle';
+      continue;
+    }
 
     // Find closest player
     let closestPlayer = null;
     let closestDist = Infinity;
-    Object.values(connectedPlayers).forEach(p => {
+    for (const p of Object.values(connectedPlayers)) {
+      if (!p || p.hp <= 0) continue;
       const dx = p.x - m.x;
       const dz = p.z - m.z;
-      const dist = Math.sqrt(dx * dx + dz * dz);
-      if (dist < closestDist) { closestDist = dist; closestPlayer = p; }
-    });
+      const d = Math.sqrt(dx * dx + dz * dz);
+      if (d < closestDist) { closestDist = d; closestPlayer = p; }
+    }
 
     if (closestPlayer && closestDist < (data.aggroRange || 5)) {
-      // Aggro/Chase/Attack
-      const target = closestPlayer;
-      const dx = target.x - m.x;
-      const dz = target.z - m.z;
-      const dist = Math.sqrt(dx * dx + dz * dz);
+      // Chase
+      m.targetId = closestPlayer.id;
+      if (m.state === 'attack') {
+        if (now - m.lastAttack > 800) m.state = 'chase';
+      } else {
+        m.state = 'chase';
+      }
+
+      const dist = closestDist;
       const attackRange = Math.max(data.attackRange || 1.5, 3);
 
       if (dist > attackRange) {
-        // Chase
-        m.state = 'chase';
+        // Move toward player
+        const dx = closestPlayer.x - m.x;
+        const dz = closestPlayer.z - m.z;
+        const len = Math.sqrt(dx * dx + dz * dz) || 1;
         const speed = data.spd * 0.1;
-        m.x += (dx / dist) * speed;
-        m.z += (dz / dist) * speed;
+        m.x += (dx / len) * speed;
+        m.z += (dz / len) * speed;
         broadcast({ type: 'monster_move', monsterId: m.id, x: m.x, z: m.z });
       } else if (now - m.lastAttack > 1500) {
-        // Attack (Cahaya v2: 1500ms cooldown, atk - def)
+        // Attack
         m.lastAttack = now;
         m.state = 'attack';
-        const dmg = Math.max(1, m.atk - (target.def || 0));
-        target.hp = Math.max(0, target.hp - dmg);
-        broadcast({ type: 'monster_attack', monsterId: m.id, targetId: target.id, damage: dmg });
-
-        if (target.hp <= 0) {
-          // Player died — auto-respawn after 5s (Cahaya v2 pattern)
-          broadcast({ type: 'player_died', targetId: target.id });
+        const dmg = Math.max(1, m.atk - (closestPlayer.def || 0));
+        closestPlayer.hp = Math.max(0, closestPlayer.hp - dmg);
+        broadcast({ type: 'monster_attack', monsterId: m.id, targetId: closestPlayer.id, damage: dmg });
+        if (closestPlayer.hp <= 0) {
+          broadcast({ type: 'player_died', targetId: closestPlayer.id });
           setTimeout(() => {
-            target.hp = target.maxHp;
-            target.mp = target.maxMp;
-            target.x = 0;
-            target.z = 0;
-            broadcast({ type: 'player_respawn', targetId: target.id, hp: target.hp, maxHp: target.maxHp, mp: target.mp, maxMp: target.maxMp });
+            closestPlayer.hp = closestPlayer.maxHp;
+            closestPlayer.mp = closestPlayer.maxMp;
+            closestPlayer.x = 0;
+            closestPlayer.z = 0;
+            broadcast({ type: 'player_respawn', targetId: closestPlayer.id, hp: closestPlayer.hp, maxHp: closestPlayer.maxHp, mp: closestPlayer.mp, maxMp: closestPlayer.maxMp, x: 0, z: 0 });
           }, 5000);
           m.state = 'idle';
         }
       }
     } else {
-      // Return to spawn (Cahaya v2 pattern)
-      m.targetId = null;
+      // No player in range — return to spawn
       m.state = 'idle';
       if (m.spawnX !== undefined) {
         const dx = m.spawnX - m.x;
@@ -355,104 +366,92 @@ setInterval(() => {
         }
       }
     }
-  });
+  }
 }, 200);
 
-// --- Combat Handler ---
 function handleAttack(ws, playerId, msg) {
   const player = connectedPlayers[ws];
   const monster = world.monsters[msg.monsterId];
   if (!player || !monster || !monster.alive) return;
+  if (monster.hp <= 0) return;
 
-  // Attack cooldown — ASPD-based (higher SPD = faster)
   const now = Date.now();
   const spd = player.spd || 7;
-  const aspdCooldown = 600 + (10 - spd) * 80; // SPD 6→1080ms, SPD 10→600ms
+  const aspdCooldown = 600 + (10 - spd) * 80;
   if (player._lastAttack && now - player._lastAttack < aspdCooldown) return;
   player._lastAttack = now;
 
   const data = MONSTERS[monster.type];
   if (!data) return;
 
-  // Check distance
+  // Distance check
   const dx = player.x - monster.x;
   const dz = player.z - monster.z;
   const dist = Math.sqrt(dx * dx + dz * dz);
-  if (dist > 3) return; // too far
+  const attackRange = Math.max(data.attackRange || 1.5, 3) + 1.0; // lag buffer
+  if (dist > attackRange) return;
 
   // Wind Sprite immune to melee
-  if (data.immuneToMelee) {
-    ws.send(JSON.stringify({ type: 'combat_message', text: `${monster.name} is immune to melee!` }));
-    return;
-  }
+  if (data.immuneToMelee) return;
 
-  // Calculate damage
+  // Calculate damage (Cahaya v2: atk - def, with crit)
   const isCrit = Math.random() < player.crit;
   let dmg = Math.max(1, player.atk - (monster.def || 0));
   if (isCrit) dmg = Math.floor(dmg * 1.5);
-
   monster.hp -= dmg;
-  // Clamp HP to 0 before broadcast so client never sees negative HP
-  const displayHp = Math.max(0, monster.hp);
 
-  // Broadcast damage
-  console.log(`[COMBAT] monster_hit ${monster.id} dmg=${dmg} hp=${displayHp}/${monster.maxHp} clients=${wss.clients.size}`);
+  // Broadcast to ALL clients (Cahaya v2 pattern — proven reliable)
   broadcast({
     type: 'monster_hit',
     monsterId: monster.id,
+    playerId: playerId,
     damage: dmg,
     isCrit,
-    hp: displayHp,
+    hp: Math.max(0, monster.hp),
     maxHp: monster.maxHp,
   });
-
-  // Always aggro when hit (Cahaya v2: game loop picks closest player naturally)
-  monster.state = 'chase';
 
   // Monster died
   if (monster.hp <= 0) {
     monster.alive = false;
     monster.hp = 0;
-    console.log(`[KILL] Monster ${monster.id} (${monster.name}) killed by ${playerId}`);
 
     // XP + Gold reward
-    const xpGain = data.xp;
+    const xpGain = data.xp || 0;
     const zenGain = data.zen ? data.zen[0] + Math.floor(Math.random() * (data.zen[1] - data.zen[0])) : 0;
     player.xp += xpGain;
 
     // Level up check
     const xpNeeded = 100 + (player.level - 1) * 200;
+    let leveledUp = false;
     if (player.xp >= xpNeeded) {
       player.level++;
       player.xp -= xpNeeded;
-      player.maxHp += 10;
-      player.hp = player.maxHp;
-      player.maxMp += 5;
-      player.mp = player.maxMp;
-      ws.send(JSON.stringify({ type: 'level_up', level: player.level, maxHp: player.maxHp, maxMp: player.maxMp }));
+      player.maxHp += 10; player.hp = player.maxHp;
+      player.maxMp += 5; player.mp = player.maxMp;
+      player.atk += 1; player.def += 1;
+      leveledUp = true;
     }
 
-    // Roll loot drops
+    // Loot
     const loot = rollLoot(monster.type);
     addLootToPlayer(player, loot);
 
-    ws.send(JSON.stringify({
+    broadcast({
       type: 'monster_killed',
       monsterId: monster.id,
-      monsterName: monster.name,
+      killerId: playerId,
       xp: xpGain,
       zen: zenGain,
       loot,
+      level: player.level,
+      expToNext: xpNeeded,
+      leveledUp,
       hp: player.hp,
       maxHp: player.maxHp,
       mp: player.mp,
       maxMp: player.maxMp,
-    }));
-    console.log(`[KILL] Sending monster_killed to attacker for ${monster.id}`);
-
-    broadcast({ type: 'monster_died', monsterId: monster.id });
-    console.log(`[KILL] Broadcast monster_died for ${monster.id}`);
-    // Respawn handled by existing respawn timer at line 300
+    });
   }
 }
 
@@ -838,6 +837,18 @@ function handleMessage(ws, playerId, msg) {
         ws.send(JSON.stringify({ type: 'respawned', x: player.x, z: player.z, hp: player.hp, maxHp: player.maxHp, mp: player.mp, maxMp: player.maxMp }));
         broadcast({ type: 'player_moved', playerId, x: player.x, y: 0, z: player.z });
         broadcast({ type: 'player_respawn', targetId: playerId, hp: player.hp, maxHp: player.maxHp, mp: player.mp, maxMp: player.maxMp, x: player.x, z: player.z });
+      }
+      break;
+    }
+    case 'player_respawn': {
+      // Client requesting manual respawn (fallback if auto-respawn didn't fire)
+      const p = connectedPlayers[ws];
+      if (p) {
+        p.hp = p.maxHp;
+        p.mp = p.maxMp;
+        p.x = 0;
+        p.z = 0;
+        broadcast({ type: 'player_respawn', targetId: p.id, hp: p.hp, maxHp: p.maxHp, mp: p.mp, maxMp: p.maxMp, x: 0, z: 0 });
       }
       break;
     }
