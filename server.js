@@ -540,7 +540,7 @@ function handleMessage(ws, playerId, msg) {
     }
     case 'chat': {
       const player = connectedPlayers[ws];
-      if (player) broadcast({ type: 'chat', playerId, name: player.name, message: (msg.message || '').slice(0, 200) });
+      if (player) broadcast({ type: 'chat', playerId, name: player.name, message: (msg.message || '').slice(0, 200) }, ws);
       break;
     }
     case 'interact_npc': {

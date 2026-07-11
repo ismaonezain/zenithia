@@ -766,6 +766,10 @@ function handleServerMessage(msg) {
 
     case 'chat':
       addChatMessage(msg.name, msg.message);
+      // Show bubble above speaking player
+      if (msg.playerId && state.players[msg.playerId]) {
+        showChatBubble(state.players[msg.playerId], msg.message);
+      }
       break;
 
     case 'time_sync':
@@ -836,9 +840,6 @@ function handleServerMessage(msg) {
       state.partyUI.updateOnline(msg.players);
       break;
     }
-    case 'quest_started':
-      addChatMessage('System', `Quest started: ${msg.questName}`);
-      break;
 
     case 'joined':
       // Spawn existing monsters
@@ -884,13 +885,6 @@ function handleServerMessage(msg) {
     case 'player_died': {
       updatePlayerHP(msg.hp, msg.hp);
       addChatMessage('System', 'You died! Respawning at village...');
-      break;
-    }
-
-    case 'monster_killed': {
-      addChatMessage('System', `Defeated ${msg.monsterName}! +${msg.xp} XP, +${msg.zen} Zen`);
-      updatePlayerHP(msg.hp, msg.maxHp);
-      updatePlayerMP(msg.mp, msg.maxMp);
       break;
     }
 
@@ -982,8 +976,10 @@ function createPlayerModelInWorld(player) {
   });
   model.position.set(player.x, player.y, player.z);
   model.userData = { id: player.id, name: player.name, type: 'player' };
+  addNameHPBarToModel(model, player.name, player.hp || 100, player.maxHp || 100, player.mp || 50, player.maxMp || 50);
   state.scene.add(model);
   state.players[player.id] = model;
+  state.playerModel = model;
 }
 
 function createOtherPlayer(player) {
@@ -1001,8 +997,107 @@ function createOtherPlayer(player) {
   });
   model.position.set(player.x, player.y, player.z);
   model.userData = { id: player.id, name: player.name, type: 'player' };
+  addNameHPBarToModel(model, player.name, player.hp || 100, player.maxHp || 100, player.mp || 50, player.maxMp || 50);
   state.scene.add(model);
   state.players[player.id] = model;
+}
+function createNameHPBar(name, hp, maxHp, mp, maxMp) {
+  const canvas = document.createElement('canvas');
+  canvas.width = 256; canvas.height = 80;
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.minFilter = THREE.LinearFilter;
+  const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false }));
+  sprite.scale.set(3, 1, 1);
+  sprite.position.y = 3.2;
+  // Store canvas refs for updates
+  sprite.userData.canvas = canvas;
+  sprite.userData.texture = tex;
+  sprite.userData.renderNameHPBar = function(n, h, mH, mp2, mMp) {
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, 256, 80);
+    // Name
+    ctx.fillStyle = '#FFFFFF';
+    ctx.font = 'bold 20px Arial';
+    ctx.textAlign = 'center';
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = 3;
+    ctx.strokeText(n, 128, 18);
+    ctx.fillText(n, 128, 18);
+    // HP bar
+    const hpPct = Math.max(0, Math.min(1, h / mH));
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    ctx.fillRect(58, 28, 140, 12);
+    ctx.fillStyle = hpPct > 0.3 ? '#4CAF50' : hpPct > 0.15 ? '#FF9800' : '#F44336';
+    ctx.fillRect(58, 28, 140 * hpPct, 12);
+    ctx.fillStyle = '#FFF'; ctx.font = '9px Arial'; ctx.textAlign = 'center';
+    ctx.fillText(Math.ceil(h) + '/' + mH, 128, 38);
+    // MP bar
+    const mpPct = mMp > 0 ? Math.max(0, Math.min(1, mp2 / mMp)) : 0;
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    ctx.fillRect(58, 48, 140, 10);
+    ctx.fillStyle = '#42A5F5';
+    ctx.fillRect(58, 48, 140 * mpPct, 10);
+    ctx.fillStyle = '#FFF'; ctx.font = '8px Arial';
+    ctx.fillText(Math.ceil(mp2) + '/' + mMp, 128, 56);
+    tex.needsUpdate = true;
+  };
+  sprite.userData.renderNameHPBar(name, hp, maxHp, mp, maxMp);
+  return sprite;
+}
+
+function addNameHPBarToModel(model, name, hp, maxHp, mp, maxMp) {
+  const bar = createNameHPBar(name, hp, maxHp, mp, maxMp);
+  model.add(bar);
+  model.userData.nameHPBar = bar;
+}
+
+function updateNameHPBar(model, hp, maxHp, mp, maxMp) {
+  if (model?.userData?.nameHPBar?.userData?.renderNameHPBar) {
+    model.userData.nameHPBar.userData.renderNameHPBar(model.userData.name, hp, maxHp, mp, maxMp);
+  }
+}
+
+// ============================
+// CHAT BUBBLE (above character)
+// ============================
+function showChatBubble(model, message) {
+  // Remove existing bubble
+  if (model.userData.chatBubble) {
+    model.remove(model.userData.chatBubble);
+  }
+  const canvas = document.createElement('canvas');
+  canvas.width = 512; canvas.height = 128;
+  const ctx = canvas.getContext('2d');
+  // Bubble background
+  ctx.fillStyle = 'rgba(0,0,0,0.7)';
+  const radius = 16;
+  const w = Math.min(ctx.measureText(message).width + 40, 480);
+  const bx = (512 - w) / 2;
+  ctx.beginPath();
+  ctx.roundRect(bx, 10, w, 50, radius);
+  ctx.fill();
+  // Triangle pointer
+  ctx.beginPath();
+  ctx.moveTo(256 - 8, 60); ctx.lineTo(256, 72); ctx.lineTo(256 + 8, 60);
+  ctx.fill();
+  // Text
+  ctx.fillStyle = '#FFFFFF';
+  ctx.font = '22px Arial';
+  ctx.textAlign = 'center';
+  ctx.fillText(message.length > 40 ? message.slice(0, 37) + '...' : message, 256, 42);
+  const tex = new THREE.CanvasTexture(canvas);
+  const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false }));
+  sprite.scale.set(5, 1.2, 1);
+  sprite.position.y = 4.0;
+  model.add(sprite);
+  model.userData.chatBubble = sprite;
+  // Fade out after 5 seconds
+  setTimeout(() => {
+    if (model.userData.chatBubble === sprite) {
+      model.remove(sprite);
+      model.userData.chatBubble = null;
+    }
+  }, 5000);
 }
 
 // ============================
@@ -1116,6 +1211,11 @@ function updatePlayerHP(hp, maxHp) {
   const text = document.getElementById('hp-text');
   if (fill) fill.style.width = `${(hp / maxHp) * 100}%`;
   if (text) text.textContent = `${Math.round(hp)}/${maxHp}`;
+  // Update 3D name plate
+  if (state.player && state.playerModel) {
+    state.player.hp = hp; state.player.maxHp = maxHp;
+    updateNameHPBar(state.playerModel, hp, maxHp, state.player.mp || 0, state.player.maxMp || 0);
+  }
 }
 
 function updatePlayerMP(mp, maxMp) {
@@ -1123,6 +1223,11 @@ function updatePlayerMP(mp, maxMp) {
   const text = document.getElementById('mp-text');
   if (fill) fill.style.width = `${(mp / maxMp) * 100}%`;
   if (text) text.textContent = `${Math.round(mp)}/${maxMp}`;
+  // Update 3D name plate
+  if (state.player && state.playerModel) {
+    state.player.mp = mp; state.player.maxMp = maxMp;
+    updateNameHPBar(state.playerModel, state.player.hp || 0, state.player.maxHp || 0, mp, maxMp);
+  }
 }
 
 // ============================
@@ -1424,6 +1529,8 @@ document.getElementById('chat-input').addEventListener('keydown', (e) => {
     if (msg && state.connected) {
       wsSend(JSON.stringify({ type: 'chat', message: msg }));
       addChatMessage(state.player?.name || 'You', msg);
+      // Show bubble above own character
+      if (state.playerModel) showChatBubble(state.playerModel, msg);
       e.target.value = '';
     }
   }
