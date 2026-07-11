@@ -427,17 +427,15 @@ function addPaths(group) {
   group.add(housePath2);
   addPathLabel(group, 'JALAN RUMAH 2', -3, 14);
 
-  // [I] Main → Green House (5,19) — L-shaped path: horizontal + north
-  // Horizontal segment from main path
+  // [I] Main → Green House (5,10) — path going east then north
   const housePath3a = new THREE.Mesh(new THREE.PlaneGeometry(4, 2), pathMat);
   housePath3a.rotation.x = -Math.PI / 2;
-  housePath3a.position.set(3, 0.02, 14.5);
+  housePath3a.position.set(3, 0.02, 11);
   housePath3a.receiveShadow = true;
   group.add(housePath3a);
-  // Vertical segment going north to Green House
-  const housePath3b = new THREE.Mesh(new THREE.PlaneGeometry(2, 6), pathMat);
+  const housePath3b = new THREE.Mesh(new THREE.PlaneGeometry(2, 3), pathMat);
   housePath3b.rotation.x = -Math.PI / 2;
-  housePath3b.position.set(5, 0.02, 17.5);
+  housePath3b.position.set(5, 0.02, 9.5);
   housePath3b.receiveShadow = true;
   group.add(housePath3b);
   addPathLabel(group, 'JALAN RUMAH 3', 1, 14);
@@ -776,7 +774,7 @@ function addBuildings(group) {
   const houseData = [
     { x: -6, z: 8, color: 0xD7CCC8, roof: 0x5D4037, rot: Math.PI / 2, label: 'Willow Cottage' },
     { x: -6, z: 14, color: 0xBCAAA4, roof: 0x795548, rot: Math.PI / 2, label: 'River House' },
-    { x: 5, z: 19, color: 0xC5E1A5, roof: 0x33691E, rot: -Math.PI / 2, label: 'Green House' },
+    { x: 5, z: 10, color: 0xC5E1A5, roof: 0x33691E, rot: -Math.PI / 2, label: 'Green House' },
   ];
   houseData.forEach(hd => {
     const hg = new THREE.Group();
@@ -1764,7 +1762,7 @@ export function getHouseLights() { return houseLights; }
 function addStreetLamps(group) {
   streetLamps = [];
   const lampPositions = [
-    // Main path (north-south)
+    // Main path (north-south) — alternating left/right
     { x: 1.5, z: -10 },
     { x: -1.5, z: -5 },
     { x: 1.5, z: 0 },
@@ -1774,14 +1772,13 @@ function addStreetLamps(group) {
     // Market area
     { x: 3, z: -6 },
     { x: 13, z: -6 },
-    // Bridge approaches
-    { x: 2, z: -1 },
-    { x: -2, z: 5 },
+    // Bridge approaches (offset from road)
+    { x: 3.5, z: -1 },
     // Village paths
-    { x: -3, z: 5.5 },
-    { x: -2.5, z: 12 },
+    { x: -4, z: 12 },
     { x: 4, z: 11 },
-    { x: 7, z: 20 },
+    // Green House area
+    { x: 7, z: 9 },
   ];
 
   const poleMat = new THREE.MeshLambertMaterial({ color: 0x5D4037 });
