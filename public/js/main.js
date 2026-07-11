@@ -1637,10 +1637,9 @@ function updateDayTimeDisplay(t) {
 function updateCompass() {
   const ring = document.getElementById('compass-ring');
   if (!ring) return;
-  // cameraAngleX is 0 = +Z axis (south), increases counterclockwise
-  // compass: N is at angle PI (facing -Z)
-  // We want the ring to rotate opposite to camera so N always points to actual north
-  const degrees = -(state.cameraAngleX * 180 / Math.PI);
+  // cameraAngleX: 0 = camera at +Z (south), increases counterclockwise
+  // Ring rotates SAME direction as camera orbit so N always points to actual north
+  const degrees = state.cameraAngleX * 180 / Math.PI;
   ring.style.transform = `rotate(${degrees}deg)`;
 }
 
