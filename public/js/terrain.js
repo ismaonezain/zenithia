@@ -370,7 +370,7 @@ function addPaths(group) {
   mainPath.position.set(0, 0.02, 4);
   mainPath.receiveShadow = true;
   group.add(mainPath);
-  addPathLabel(group, 'JALAN UTAMA', 0, 4);
+  // path label removed
 
   // [B] Herbalist horizontal (lurus ke timur, jauh dari sungai)
   const herbalPathH = new THREE.Mesh(new THREE.PlaneGeometry(18.5, 1.2), pathMat);
@@ -378,7 +378,7 @@ function addPaths(group) {
   herbalPathH.position.set(9, 0.02, -2);
   herbalPathH.receiveShadow = true;
   group.add(herbalPathH);
-  addPathLabel(group, 'JALAN HERBALIST H', 9, -2);
+  // path label removed
 
   // [C] Herbalist vertical (from H path down to herbalist only)
   const herbalPathV = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 6.5), pathMat);
@@ -386,7 +386,7 @@ function addPaths(group) {
   herbalPathV.position.set(18, 0.02, -4.75);
   herbalPathV.receiveShadow = true;
   group.add(herbalPathV);
-  addPathLabel(group, 'JALAN HERBALIST V', 18, -4.75);
+  // path label removed
 
   // [D] Main → Herbalist H (vertical pendek)
   const mainToHerbal = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 4), pathMat);
@@ -401,7 +401,7 @@ function addPaths(group) {
   bridgePath.position.set(0, 0.02, 2);
   bridgePath.receiveShadow = true;
   group.add(bridgePath);
-  addPathLabel(group, 'JALAN BRIDGE', 0, 2);
+  // path label removed
 
   // [F] Main → Barn (lurus horizontal ke barat)
   const farmPath = new THREE.Mesh(new THREE.PlaneGeometry(18, 1.2), pathMat);
@@ -409,7 +409,7 @@ function addPaths(group) {
   farmPath.position.set(-9, 0.02, 12);
   farmPath.receiveShadow = true;
   group.add(farmPath);
-  addPathLabel(group, 'JALAN BARN', -9, 12);
+  // path label removed
 
   // [G] Main → Houses (horizontal ke kiri, z=8)
   const housePath1 = new THREE.Mesh(new THREE.PlaneGeometry(5, 1.2), pathMat);
@@ -417,7 +417,7 @@ function addPaths(group) {
   housePath1.position.set(-3, 0.02, 8);
   housePath1.receiveShadow = true;
   group.add(housePath1);
-  addPathLabel(group, 'JALAN RUMAH 1', -3, 8);
+  // path label removed
 
   // [H] Main → Houses (horizontal ke kiri, z=14)
   const housePath2 = new THREE.Mesh(new THREE.PlaneGeometry(5, 1.2), pathMat);
@@ -425,7 +425,7 @@ function addPaths(group) {
   housePath2.position.set(-3, 0.02, 14);
   housePath2.receiveShadow = true;
   group.add(housePath2);
-  addPathLabel(group, 'JALAN RUMAH 2', -3, 14);
+  // path label removed
 
   // [I] Main → Green House (5,10) — straight horizontal, nempel jalan utama
   const housePath3 = new THREE.Mesh(new THREE.PlaneGeometry(6, 1.2), pathMat);
@@ -433,7 +433,7 @@ function addPaths(group) {
   housePath3.position.set(2.5, 0.02, 10);
   housePath3.receiveShadow = true;
   group.add(housePath3);
-  addPathLabel(group, 'JALAN RUMAH 3', 1, 14);
+  // path label removed
 }
 
 function createDiagonalPath(x1, z1, x2, z2, width, material) {
