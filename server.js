@@ -147,6 +147,18 @@ let world = loadWorld();
 const connectedPlayers = {};
 
 // --- Player Management ---
+function recalcClassStats(customization) {
+  const CLASS_STATS = {
+    laborer:  { hp: 120, mp: 30, atk: 8,  def: 7,  spd: 6,  crit: 0.05 },
+    miner:    { hp: 90,  mp: 40, atk: 12, def: 4,  spd: 10, crit: 0.10 },
+    gardener: { hp: 100, mp: 50, atk: 6,  def: 6,  spd: 8,  crit: 0.08 },
+    herbalist:{ hp: 85,  mp: 70, atk: 5,  def: 5,  spd: 7,  crit: 0.05 },
+    watchman: { hp: 110, mp: 35, atk: 10, def: 8,  spd: 7,  crit: 0.07 },
+  };
+  const cls = (customization && customization.classType) || 'laborer';
+  return CLASS_STATS[cls] || CLASS_STATS.laborer;
+}
+
 function getOrCreatePlayer(playerId, name, wallet, customization, persistentId) {
   // 1. Try to load existing player by persistentId (cross-device identity)
   if (persistentId) {
@@ -155,7 +167,20 @@ function getOrCreatePlayer(playerId, name, wallet, customization, persistentId) 
       existing.lastLogin = Date.now();
       existing.id = playerId; // rebind to current session
       if (name) existing.name = name; // always update name from client
-      if (customization && Object.keys(customization).length > 0) existing.customization = customization;
+      if (customization && Object.keys(customization).length > 0) {
+        // Recalculate stats if class changed
+        const oldClass = existing.customization?.classType;
+        const newClass = customization.classType;
+        existing.customization = customization;
+        if (newClass && newClass !== oldClass) {
+          const s = recalcClassStats(customization);
+          existing.hp = s.hp; existing.maxHp = s.hp;
+          existing.mp = s.mp; existing.maxMp = s.mp;
+          existing.atk = s.atk; existing.def = s.def;
+          existing.spd = s.spd; existing.crit = s.crit;
+          existing.class = newClass;
+        }
+      }
       world.players[playerId] = existing;
       // Remove old entry if different id
       Object.keys(world.players).forEach(k => {
@@ -171,7 +196,19 @@ function getOrCreatePlayer(playerId, name, wallet, customization, persistentId) 
       existing.lastLogin = Date.now();
       existing.id = playerId;
       if (name) existing.name = name;
-      if (customization && Object.keys(customization).length > 0) existing.customization = customization;
+      if (customization && Object.keys(customization).length > 0) {
+        const oldClass = existing.customization?.classType;
+        const newClass = customization.classType;
+        existing.customization = customization;
+        if (newClass && newClass !== oldClass) {
+          const s = recalcClassStats(customization);
+          existing.hp = s.hp; existing.maxHp = s.hp;
+          existing.mp = s.mp; existing.maxMp = s.mp;
+          existing.atk = s.atk; existing.def = s.def;
+          existing.spd = s.spd; existing.crit = s.crit;
+          existing.class = newClass;
+        }
+      }
       if (persistentId) existing.persistentId = persistentId; // backfill
       world.players[playerId] = existing;
       Object.keys(world.players).forEach(k => {
