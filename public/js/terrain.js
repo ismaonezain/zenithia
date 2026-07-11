@@ -1054,31 +1054,55 @@ function addTrees(group) {
     topLeaf.castShadow = true;
     g.add(topLeaf);
 
-    // Drooping vines (willow signature)
+    // Drooping vines (willow signature) — from canopy, drooping down
     const vineMat = new THREE.MeshLambertMaterial({ color: 0x81C784 });
     for (let i = 0; i < 8; i++) {
       const angle = (i / 8) * Math.PI * 2;
+      const r = (0.6 + Math.random() * 0.4) * scale;
+      const startY = (2.5 + Math.random() * 0.3) * scale;
+      const endY = (0.8 + Math.random() * 0.4) * scale;
+
+      // Vine stem (drooping from canopy)
       const vine = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.02 * scale, 0.04 * scale, 1.8 * scale, 4),
+        new THREE.CylinderGeometry(0.015 * scale, 0.03 * scale, startY - endY, 4),
         vineMat
       );
       vine.position.set(
-        Math.cos(angle) * 1.8 * scale,
-        1.2 * scale,
-        Math.sin(angle) * 1.8 * scale
+        Math.cos(angle) * r,
+        (startY + endY) / 2,
+        Math.sin(angle) * r
       );
       g.add(vine);
-      // Leaf clusters on vine tips
+
+      // Leaf cluster at vine tip (bottom)
       const tipLeaf = new THREE.Mesh(
-        new THREE.SphereGeometry(0.15 * scale, 4, 3),
+        new THREE.SphereGeometry(0.18 * scale, 5, 4),
         new THREE.MeshLambertMaterial({ color: 0xA5D6A7 })
       );
       tipLeaf.position.set(
-        Math.cos(angle) * 1.8 * scale,
-        0.3 * scale,
-        Math.sin(angle) * 1.8 * scale
+        Math.cos(angle) * r,
+        endY,
+        Math.sin(angle) * r
       );
+      tipLeaf.scale.y = 0.6;
       g.add(tipLeaf);
+    }
+
+    // Extra small leaf clusters around canopy base
+    const extraLeafMat = new THREE.MeshLambertMaterial({ color: 0x81C784 });
+    for (let i = 0; i < 6; i++) {
+      const angle = (i / 6) * Math.PI * 2 + 0.2;
+      const extraLeaf = new THREE.Mesh(
+        new THREE.SphereGeometry(0.2 * scale, 4, 3),
+        extraLeafMat
+      );
+      extraLeaf.position.set(
+        Math.cos(angle) * 0.8 * scale,
+        2.3 * scale,
+        Math.sin(angle) * 0.8 * scale
+      );
+      extraLeaf.scale.y = 0.5;
+      g.add(extraLeaf);
     }
 
     g.position.set(x, 0, z);
