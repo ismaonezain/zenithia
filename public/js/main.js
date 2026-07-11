@@ -455,6 +455,13 @@ function initCustomization() {
   // Restore selected state from saved customization
   restoreCustomizationUI();
 
+  // Restore saved name
+  const savedName = localStorage.getItem('zenithia_name');
+  if (savedName) {
+    const nameInput = document.getElementById('name-input');
+    if (nameInput) nameInput.value = savedName;
+  }
+
   // Save to localStorage helper
   window._saveCustomization = () => {
     localStorage.setItem('zenithia_customization', JSON.stringify(state.customization));
@@ -987,7 +994,7 @@ function createOtherPlayer(player) {
   const model = createPlayerModel({
     skinColor: PALETTES.skin[c.skinIdx || 0],
     hairColor: PALETTES.hair[c.hairColorIdx || 0],
-    hairStyle: look.hairStyle || 'undercut',
+    hairStyle: c.hairStyle || 'undercut',
     bodyColor: PALETTES.body[c.topColorIdx || 0],
     pantsColor: PANTS_COLORS[c.bottomColorIdx || 0],
     eyeColor: PALETTES.eyes[c.eyeColorIdx || 0],
@@ -1554,7 +1561,10 @@ document.getElementById('sign-wallet').addEventListener('click', signAndLogin);
 // ============================
 document.getElementById('start-game').addEventListener('click', () => {
   const name = document.getElementById('name-input').value.trim();
-  if (name) connectWebSocket(name, state.walletAddress);
+  if (name) {
+    localStorage.setItem('zenithia_name', name);
+    connectWebSocket(name, state.walletAddress);
+  }
 });
 
 // ============================
