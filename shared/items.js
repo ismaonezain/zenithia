@@ -5,24 +5,25 @@ const ITEMS = {
   // ═══════════════════════════════════════
   // CONSUMABLES
   // ═══════════════════════════════════════
-  potion_small:      { name: 'Herb Potion',     type: 'consumable', description: 'Restores 30 HP',  healAmount: 30,  price: 50,  icon: { bg: 0xF44336, fg: 0xFFFFFF, symbol: '+' } },
-  potion_medium:     { name: 'Healing Tonic',    type: 'consumable', description: 'Restores 80 HP',  healAmount: 80,  price: 200, icon: { bg: 0xE53935, fg: 0xFFFFFF, symbol: '++' } },
-  mp_potion_small:   { name: 'Aether Dew',       type: 'consumable', description: 'Restores 20 MP',  manaAmount: 20,  price: 60,  icon: { bg: 0x2196F3, fg: 0xFFFFFF, symbol: '+' } },
-  antidote:          { name: 'Antidote',         type: 'consumable', description: 'Cures poison',    curePoison: true, price: 40, icon: { bg: 0x4CAF50, fg: 0xFFFFFF, symbol: '!' } },
-  willow_rice:       { name: 'Willowmere Rice',  type: 'consumable', description: 'HP+25, ATK+5% 60s', healAmount: 25, buff: { stat: 'atk', value: 0.05, duration: 60 }, price: 30, icon: { bg: 0xFF9800, fg: 0xFFF9C4, symbol: '~' } },
-  chicken_stew:      { name: 'Chicken Stew',     type: 'consumable', description: 'HP+40, DEF+5% 60s', healAmount: 40, buff: { stat: 'def', value: 0.05, duration: 60 }, price: 50, icon: { bg: 0xFFC107, fg: 0xFFFFFF, symbol: '~' } },
+  potion_small:      { name: 'Herb Potion',     type: 'consumable', description: 'Ramuan herbal sederhana dari Willowmere. Memulihkan 30 HP.',  healAmount: 30,  price: 50,  icon: { bg: 0xF44336, fg: 0xFFFFFF, symbol: '+' } },
+  potion_medium:     { name: 'Healing Tonic',    type: 'consumable', description: 'Tonik penyembuh dari resep Herbalist Sari. Memulihkan 80 HP.',  healAmount: 80,  price: 200, icon: { bg: 0xE53935, fg: 0xFFFFFF, symbol: '++' } },
+  mp_potion_small:   { name: 'Aether Dew',       type: 'consumable', description: 'Embun yang mengandung sedikit Aether. Memulihkan 20 MP.',  manaAmount: 20,  price: 60,  icon: { bg: 0x2196F3, fg: 0xFFFFFF, symbol: '+' } },
+  antidote:          { name: 'Antidote',         type: 'consumable', description: 'Obat racun dari campuran herbal. Menawarkan racun.',    curePoison: true, price: 40, icon: { bg: 0x4CAF50, fg: 0xFFFFFF, symbol: '!' } },
+  willow_rice:       { name: 'Willowmere Rice',  type: 'consumable', description: 'Nasi goreng khas Willowmere. HP+25, ATK+5% selama 60 detik.', healAmount: 25, buff: { stat: 'atk', value: 0.05, duration: 60 }, price: 30, icon: { bg: 0xFF9800, fg: 0xFFF9C4, symbol: '~' } },
+  chicken_stew:      { name: 'Chicken Stew',     type: 'consumable', description: 'Sup ayam hangat buatan Mrs Ningsih. HP+40, DEF+5% selama 60 detik.', healAmount: 40, buff: { stat: 'def', value: 0.05, duration: 60 }, price: 50, icon: { bg: 0xFFC107, fg: 0xFFFFFF, symbol: '~' } },
 
   // ═══════════════════════════════════════
   // MATERIALS
   // ═══════════════════════════════════════
-  moss_shell:      { name: 'Moss Shell',      type: 'material', description: 'Hard shell from Moss Beetle.',     price: 8,  icon: { bg: 0x4CAF50, fg: 0x81C784, symbol: '◆' } },
-  thorn:           { name: 'Thorn',            type: 'material', description: 'Sharp thorn from Thorn Lizard.',    price: 12, icon: { bg: 0x689F38, fg: 0xCDDC39, symbol: '▲' } },
-  dust_pouch:      { name: 'Dust Pouch',       type: 'material', description: 'Pouch of dust from Dust Mouse.',   price: 5,  icon: { bg: 0xBCAAA4, fg: 0xEFEBE9, symbol: '○' } },
-  frog_leg:        { name: 'Frog Leg',         type: 'material', description: 'Leg of a Puddle Frog.',            price: 10, icon: { bg: 0x00BCD4, fg: 0xE0F7FA, symbol: '▬' } },
-  wind_essence:    { name: 'Wind Essence',     type: 'material', description: 'Essence of wind from Wind Sprite.', price: 20, icon: { bg: 0x81D4FA, fg: 0xFFFFFF, symbol: '✦' } },
-  stone_fragment:  { name: 'Stone Fragment',   type: 'material', description: 'Fragment from Rock Crawler.',       price: 15, icon: { bg: 0x9E9E9E, fg: 0xE0E0E0, symbol: '■' } },
-  boar_tusk:       { name: 'Boar Tusk',        type: 'material', description: 'Large tusk from Bramble Boar.',     price: 30, icon: { bg: 0x5D4037, fg: 0xFFF9C4, symbol: '◄' } },
-  bramble_core:    { name: 'Bramble Core',     type: 'material', description: 'Rare core from Bramble Boar.',      price: 50, icon: { bg: 0x33691E, fg: 0x76FF03, symbol: '◆' } },
+  moss_shell:      { name: 'Moss Shell',      type: 'material', description: 'Cangkang keras dari Moss Beetle. Bisa dipakai buat crafting armor awal.',     price: 8,  icon: { bg: 0x4CAF50, fg: 0x81C784, symbol: '◆' } },
+  thorn:           { name: 'Thorn',            type: 'material', description: 'Duri tajam dari punggung Thorn Lizard. Bahan crafting weapon tier awal.',    price: 12, icon: { bg: 0x689F38, fg: 0xCDDC39, symbol: '▲' } },
+  dust_pouch:      { name: 'Dust Pouch',       type: 'material', description: 'Kantung debu dari Dust Mouse. Kadang meledak kalau dipegang kasar.',   price: 5,  icon: { bg: 0xBCAAA4, fg: 0xEFEBE9, symbol: '○' } },
+  frog_leg:        { name: 'Frog Leg',         type: 'material', description: 'Kaki Puddle Frog. Bisa dimasak jadi makanan buff.',            price: 10, icon: { bg: 0x00BCD4, fg: 0xE0F7FA, symbol: '▬' } },
+  wind_essence:    { name: 'Wind Essence',     type: 'material', description: 'Esensi angin dari Wind Sprite. Mengandung Aether terkristalisasi. Tidak bisa didapat dari serangan melee.', price: 20, icon: { bg: 0x81D4FA, fg: 0xFFFFFF, symbol: '✦' } },
+  stone_fragment:  { name: 'Stone Fragment',   type: 'material', description: 'Pecahan batu dari Rock Crawler. Mereka berpura-pura jadi batu tapi isinya mineral berharga.',       price: 15, icon: { bg: 0x9E9E9E, fg: 0xE0E0E0, symbol: '■' } },
+  boar_tusk:       { name: 'Boar Tusk',        type: 'material', description: 'Taring besar dari Bramble Boar. Cukup kuat buat jadi weapon.',     price: 30, icon: { bg: 0x5D4037, fg: 0xFFF9C4, symbol: '◄' } },
+  bramble_core:    { name: 'Bramble Core',     type: 'material', description: 'Inti langka dari Bramble Boar. Mengandung Aether yang sudah terkristalisasi.',      price: 50, icon: { bg: 0x33691E, fg: 0x76FF03, symbol: '◆' } },
+  turtle_shell:    { name: 'Turtle Shell',     type: 'material', description: 'Cangkang kura-kura raksasa dari Marsh Snapper. Sangat keras, cocok buat crafting shield.', price: 25, icon: { bg: 0x2E7D32, fg: 0xA5D6A7, symbol: '◎' } },
 
   // ═══════════════════════════════════════
   // WEAPONS — Per job, 3 tiers
@@ -94,8 +95,10 @@ const ITEMS = {
   void_legguards:     { name: 'Legguards of the Void Walker',     type: 'equipment', slot: 'pants', classReq: ['shadow'],       tier: 3, stats: { def: 4, spd: 5, crit: 0.05, atk: 3 }, price: 550, icon: { bg: 0x0D0D0D, fg: 0x4A148C, symbol: '▽' } },
 
   // ═══════════════════════════════════════
-  // BOOTS — Per job, 3 tiers
+  // BOOTS — Generic (all classes) + Per job, 3 tiers
   // ═══════════════════════════════════════
+  straw_sandals:     { name: 'Straw Sandals',    type: 'equipment', slot: 'boots', classReq: ['laborer','miner','gardener','herbalist','watchman'], tier: 1, stats: { spd: 1 },                          price: 15,  icon: { bg: 0x8D6E63, fg: 0xD7CCC8, symbol: '=' } },
+  leather_boots:     { name: 'Leather Boots',    type: 'equipment', slot: 'boots', classReq: ['laborer','miner','gardener','herbalist','watchman'], tier: 1, stats: { def: 1, spd: 1 },                    price: 30,  icon: { bg: 0x5D4037, fg: 0xBCAAA4, symbol: '=' } },
   guard_boots:        { name: 'Boots of the Valley Trek',        type: 'equipment', slot: 'boots', classReq: ['guardian'],     tier: 1, stats: { def: 1, spd: 1 },                price: 35,  icon: { bg: 0x5D4037, fg: 0xA1887F, symbol: '=' } },
   iron_sabatons:      { name: 'Sabatons of the Ironclad Guardian',      type: 'equipment', slot: 'boots', classReq: ['guardian'],     tier: 2, stats: { def: 3, spd: 1, hp: 10 },        price: 180, icon: { bg: 0x455A64, fg: 0xB0BEC5, symbol: '=' } },
   guardian_treads:    { name: 'Treads of the Last Guardian',    type: 'equipment', slot: 'boots', classReq: ['guardian'],     tier: 3, stats: { def: 5, spd: 2, hp: 20, atk: 1 }, price: 420, icon: { bg: 0x37474F, fg: 0xCFD8DC, symbol: '=' } },
