@@ -92,12 +92,12 @@ function initScene() {
   sun.position.set(30, 50, 30);
   sun.castShadow = true;
   sun.shadow.mapSize.set(2048, 2048);
-  sun.shadow.camera.left = -60;
-  sun.shadow.camera.right = 60;
-  sun.shadow.camera.top = 60;
-  sun.shadow.camera.bottom = -60;
+  sun.shadow.camera.left = -50;
+  sun.shadow.camera.right = 50;
+  sun.shadow.camera.top = 50;
+  sun.shadow.camera.bottom = -50;
   sun.shadow.camera.near = 0.5;
-  sun.shadow.camera.far = 250;
+  sun.shadow.camera.far = 200;
   sun.shadow.bias = -0.0005;
   state.scene.add(sun);
   state.sunLight = sun;
@@ -1441,10 +1441,15 @@ function updateDayNight(dt) {
   const sunY = Math.sin(sunAngle) * 80;
   const sunX = Math.cos(sunAngle) * 80;
 
-  // Sun light stays fixed for consistent illumination
-  // Only color/intensity changes with day/night
+  state.sunLight.position.set(sunX, Math.max(sunY, -10), 30);
 
-  // Update sun mesh position (follows virtual sun arc)
+  // DEBUG: log lighting values every 10 seconds
+  if (!state._lastLightLog || Date.now() - state._lastLightLog > 10000) {
+    console.log(`[LIGHT] t=${t.toFixed(3)} time=${(t*24).toFixed(1)}h sunPos=(${sunX.toFixed(0)},${Math.max(sunY,-10).toFixed(0)}) sunInt=${sunIntensity.toFixed(2)} ambInt=${ambientIntensity.toFixed(2)} sunColor=${sunColor}`);
+    state._lastLightLog = Date.now();
+  }
+
+  // Update sun mesh position (follows light)
   if (state.sunMesh) {
     state.sunMesh.position.set(sunX, Math.max(sunY, -10), 30);
     state.sunMesh.visible = sunY > -5; // hide when below horizon
