@@ -167,6 +167,13 @@ function getOrCreatePlayer(playerId, name, wallet, customization, persistentId) 
       existing.lastLogin = Date.now();
       existing.id = playerId; // rebind to current session
       if (persistentId && !existing.persistentId) existing.persistentId = persistentId; // backfill
+      // CRITICAL: if player was killed before server restart, HP is 0 on disk
+      // Restore to full so monster AI doesn't skip them
+      if ((existing.hp || 0) <= 0) {
+        existing.hp = existing.maxHp || CLASS_STATS[existing.class || 'laborer']?.hp || 120;
+        existing.mp = existing.maxMp || CLASS_STATS[existing.class || 'laborer']?.mp || 30;
+        console.log(`[RECOVER] ${existing.name} had hp=0, restored to ${existing.hp}`);
+      }
       world.players[playerId] = existing;
       // Remove old entry if different id
       Object.keys(world.players).forEach(k => {
@@ -182,6 +189,11 @@ function getOrCreatePlayer(playerId, name, wallet, customization, persistentId) 
       existing.lastLogin = Date.now();
       existing.id = playerId;
       if (persistentId && !existing.persistentId) existing.persistentId = persistentId; // backfill
+      if ((existing.hp || 0) <= 0) {
+        existing.hp = existing.maxHp || CLASS_STATS[existing.class || 'laborer']?.hp || 120;
+        existing.mp = existing.maxMp || CLASS_STATS[existing.class || 'laborer']?.mp || 30;
+        console.log(`[RECOVER] ${existing.name} had hp=0 (wallet), restored to ${existing.hp}`);
+      }
       world.players[playerId] = existing;
       Object.keys(world.players).forEach(k => {
         if (k !== playerId && world.players[k].wallet === wallet) delete world.players[k];
