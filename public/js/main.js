@@ -90,17 +90,23 @@ function initScene() {
   state.scene.add(state.ambientLight);
   const sun = new THREE.DirectionalLight(0xffffff, 1.0);
   sun.position.set(30, 50, 30);
-  sun.castShadow = true;
-  sun.shadow.mapSize.set(2048, 2048);
-  sun.shadow.camera.left = -100;
-  sun.shadow.camera.right = 100;
-  sun.shadow.camera.top = 100;
-  sun.shadow.camera.bottom = -100;
-  sun.shadow.camera.near = 0.5;
-  sun.shadow.camera.far = 300;
-  sun.shadow.bias = -0.0005;
   state.scene.add(sun);
   state.sunLight = sun;
+
+  // Separate fixed shadow light (doesn't move with sun)
+  const shadowLight = new THREE.DirectionalLight(0xffffff, 0);
+  shadowLight.position.set(30, 50, 30);
+  shadowLight.castShadow = true;
+  shadowLight.shadow.mapSize.set(2048, 2048);
+  shadowLight.shadow.camera.left = -50;
+  shadowLight.shadow.camera.right = 50;
+  shadowLight.shadow.camera.top = 50;
+  shadowLight.shadow.camera.bottom = -50;
+  shadowLight.shadow.camera.near = 0.5;
+  shadowLight.shadow.camera.far = 200;
+  shadowLight.shadow.bias = -0.0005;
+  state.scene.add(shadowLight);
+  state.shadowLight = shadowLight;
 
   // === SUN MESH (visual) ===
   const sunMeshGeo = new THREE.SphereGeometry(4, 16, 16);
@@ -1442,7 +1448,6 @@ function updateDayNight(dt) {
   const sunX = Math.cos(sunAngle) * 80;
 
   state.sunLight.position.set(sunX, Math.max(sunY, -10), 30);
-  state.sunLight.shadow.camera.updateProjectionMatrix();
 
   // Update sun mesh position (follows light)
   if (state.sunMesh) {
@@ -1534,6 +1539,11 @@ function updateDayNight(dt) {
   state.scene.fog.color = fogColor;
   state.sunLight.intensity = sunIntensity;
   state.sunLight.color = sunColor;
+  // Shadow light follows sun color but keeps fixed position
+  if (state.shadowLight) {
+    state.shadowLight.intensity = sunIntensity * 0.3;
+    state.shadowLight.color = sunColor;
+  }
   state.ambientLight.intensity = ambientIntensity;
   state.ambientLight.color = ambientColor;
 
