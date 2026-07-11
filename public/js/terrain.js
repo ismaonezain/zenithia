@@ -799,32 +799,38 @@ function addBuildings(group) {
   barnWall.castShadow = true;
   barnWall.receiveShadow = true;
   barnG.add(barnWall);
-  // Roof — gambrel (barn-style, 2 slopes)
+  // Roof — gambrel (barn-style): center UP, sides DOWN
   const barnRoofMat = new THREE.MeshLambertMaterial({ color: 0xB71C1C });
-  // Lower slope
-  const roofL = new THREE.Mesh(new THREE.BoxGeometry(5.4, 0.1, 2.5), barnRoofMat);
-  roofL.position.set(0, 3.8, 1.2);
-  roofL.rotation.x = -0.3;
-  roofL.castShadow = true;
-  barnG.add(roofL);
-  const roofR = roofL.clone();
-  roofR.position.z = -1.2;
-  roofR.rotation.x = 0.3;
-  barnG.add(roofR);
-  // Upper slope
-  const roofT = new THREE.Mesh(new THREE.BoxGeometry(5.4, 0.1, 1.2), barnRoofMat);
-  roofT.position.y = 4.3;
-  roofT.rotation.x = -0.15;
-  barnG.add(roofT);
-  const roofT2 = roofT.clone();
-  roofT2.rotation.x = 0.15;
-  barnG.add(roofT2);
-  // Ridge
+  // Front lower slope (steep) — eave at z=2, y=3 → break at z=1, y=4.2
+  const roofFL = new THREE.Mesh(new THREE.BoxGeometry(5.4, 0.1, 1.4), barnRoofMat);
+  roofFL.position.set(0, 3.6, 1.5);
+  roofFL.rotation.x = -0.6;
+  roofFL.castShadow = true;
+  barnG.add(roofFL);
+  // Front upper slope (gentle) — break at z=1, y=4.2 → ridge at z=0, y=4.8
+  const roofFU = new THREE.Mesh(new THREE.BoxGeometry(5.4, 0.1, 1.2), barnRoofMat);
+  roofFU.position.set(0, 4.5, 0.5);
+  roofFU.rotation.x = -0.25;
+  roofFU.castShadow = true;
+  barnG.add(roofFU);
+  // Back lower slope (steep) — mirror of front
+  const roofBL = new THREE.Mesh(new THREE.BoxGeometry(5.4, 0.1, 1.4), barnRoofMat);
+  roofBL.position.set(0, 3.6, -1.5);
+  roofBL.rotation.x = 0.6;
+  roofBL.castShadow = true;
+  barnG.add(roofBL);
+  // Back upper slope (gentle) — mirror of front
+  const roofBU = new THREE.Mesh(new THREE.BoxGeometry(5.4, 0.1, 1.2), barnRoofMat);
+  roofBU.position.set(0, 4.5, -0.5);
+  roofBU.rotation.x = 0.25;
+  roofBU.castShadow = true;
+  barnG.add(roofBU);
+  // Ridge cap
   const ridge = new THREE.Mesh(
-    new THREE.BoxGeometry(5.4, 0.15, 0.2),
+    new THREE.BoxGeometry(5.4, 0.15, 0.3),
     new THREE.MeshLambertMaterial({ color: 0x8B0000 })
   );
-  ridge.position.y = 4.5;
+  ridge.position.y = 4.9;
   barnG.add(ridge);
   // Big sliding door (front)
   const slideDoor = new THREE.Mesh(
