@@ -666,6 +666,7 @@ function handleServerMessage(msg) {
   switch (msg.type) {
     case 'welcome':
       state.playerId = msg.playerId;
+      if (msg.dayTime !== undefined) state.dayTime = msg.dayTime;
       wsSend(JSON.stringify({
         type: 'join',
         name: document.getElementById('name-input').value || 'Adventurer',
@@ -761,6 +762,10 @@ function handleServerMessage(msg) {
 
     case 'chat':
       addChatMessage(msg.name, msg.message);
+      break;
+
+    case 'time_sync':
+      if (msg.dayTime !== undefined) state.dayTime = msg.dayTime;
       break;
 
     case 'npc_dialogue':
@@ -1570,7 +1575,10 @@ function lerpColor(a, b, t) {
 }
 
 function updateDayNight(dt) {
-  state.dayTime = (state.dayTime + dt * state.daySpeed) % 1.0;
+  // Only auto-advance if not connected to server (single-player mode)
+  if (!state.connected) {
+    state.dayTime = (state.dayTime + dt * state.daySpeed) % 1.0;
+  }
   const t = state.dayTime;
 
   // Sun angle: t=0.25 → east (sunrise), t=0.5 → top (noon), t=0.75 → sunset

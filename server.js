@@ -481,7 +481,7 @@ wss.on('connection', (ws) => {
   console.log(`[CONNECT] ${playerId}`);
   ws.playerId = playerId;
 
-  ws.send(JSON.stringify({ type: 'welcome', playerId, world: { time: Date.now(), region: 'willowmere' } }));
+  ws.send(JSON.stringify({ type: 'welcome', playerId, world: { time: Date.now(), region: 'willowmere' }, dayTime: getGameTime() }));
 
   ws.on('message', (data) => {
     try { handleMessage(ws, playerId, JSON.parse(data)); }
@@ -811,6 +811,20 @@ function broadcast(data, exclude = null) {
   const payload = JSON.stringify(data);
   wss.clients.forEach(c => { if (c !== exclude && c.readyState === 1) c.send(payload); });
 }
+
+// --- Game Time (authoritative) ---
+// 20 min per full cycle. Epoch = fixed reference point.
+const DAY_CYCLE_SECONDS = 20 * 60; // 1200 seconds per cycle
+const GAME_EPOCH = 0;
+function getGameTime() {
+  const elapsed = (Date.now() / 1000 - GAME_EPOCH) % DAY_CYCLE_SECONDS;
+  return elapsed / DAY_CYCLE_SECONDS;
+}
+
+// Broadcast game time every 30s
+setInterval(() => {
+  broadcast({ type: 'time_sync', dayTime: getGameTime() });
+}, 30000);
 
 // Auto-save
 setInterval(() => { saveWorld(); console.log('[SAVE]'); }, 5 * 60 * 1000);
