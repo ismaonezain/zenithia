@@ -427,10 +427,10 @@ function addPaths(group) {
   group.add(housePath2);
   addPathLabel(group, 'JALAN RUMAH 2', -3, 14);
 
-  // [I] Main → Green House (5,10) — straight horizontal path
-  const housePath3 = new THREE.Mesh(new THREE.PlaneGeometry(5, 1.2), pathMat);
+  // [I] Main → Green House (5,10) — straight horizontal, nempel jalan utama
+  const housePath3 = new THREE.Mesh(new THREE.PlaneGeometry(6, 1.2), pathMat);
   housePath3.rotation.x = -Math.PI / 2;
-  housePath3.position.set(3.5, 0.02, 10);
+  housePath3.position.set(2.5, 0.02, 10);
   housePath3.receiveShadow = true;
   group.add(housePath3);
   addPathLabel(group, 'JALAN RUMAH 3', 1, 14);
@@ -1771,8 +1771,6 @@ function addStreetLamps(group) {
     { x: 3.5, z: -1 },
     // Village paths
     { x: 4, z: 11 },
-    // Green House area
-    { x: 7, z: 9 },
   ];
 
   const poleMat = new THREE.MeshLambertMaterial({ color: 0x5D4037 });
