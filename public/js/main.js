@@ -51,6 +51,13 @@ const state = {
   lastMouseY: 0,
   monsters: {},
   damageNumbers: [],
+  // Day/night cycle
+  dayTime: 0.25,         // 0-1, 0.25 = sunrise, 0.5 = noon, 0.75 = sunset, 0 = midnight
+  daySpeed: 1 / 300,     // full cycle = 300 seconds (5 min)
+  sunLight: null,
+  ambientLight: null,
+  moonMesh: null,
+  starField: null,
 };
 
 const canvas = document.getElementById('game-canvas');
@@ -79,7 +86,8 @@ function initScene() {
   state.renderer.shadowMap.enabled = true;
   state.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
-  state.scene.add(new THREE.AmbientLight(0xffffff, 0.4));
+  state.ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+  state.scene.add(state.ambientLight);
   const sun = new THREE.DirectionalLight(0xffffff, 1.0);
   sun.position.set(30, 50, 30);
   sun.castShadow = true;
@@ -92,6 +100,35 @@ function initScene() {
   sun.shadow.camera.far = 200;
   sun.shadow.bias = -0.0005;
   state.scene.add(sun);
+  state.sunLight = sun;
+
+  // === MOON ===
+  const moonGeo = new THREE.SphereGeometry(3, 16, 16);
+  const moonMat = new THREE.MeshBasicMaterial({ color: 0xeeeeff });
+  state.moonMesh = new THREE.Mesh(moonGeo, moonMat);
+  state.moonMesh.visible = false;
+  state.scene.add(state.moonMesh);
+
+  // === STARS ===
+  const starCount = 500;
+  const starGeo = new THREE.BufferGeometry();
+  const starPositions = new Float32Array(starCount * 3);
+  for (let i = 0; i < starCount; i++) {
+    // Scatter on a sphere of radius 250
+    const theta = Math.random() * Math.PI * 2;
+    const phi = Math.acos(2 * Math.random() - 1);
+    const r = 250;
+    starPositions[i * 3]     = r * Math.sin(phi) * Math.cos(theta);
+    starPositions[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
+    starPositions[i * 3 + 2] = r * Math.cos(phi);
+    // Only keep stars in the upper hemisphere
+    if (starPositions[i * 3 + 1] < 10) starPositions[i * 3 + 1] = Math.abs(starPositions[i * 3 + 1]) + 10;
+  }
+  starGeo.setAttribute('position', new THREE.BufferAttribute(starPositions, 3));
+  const starMat = new THREE.PointsMaterial({ color: 0xffffff, size: 1.5, sizeAttenuation: false });
+  state.starField = new THREE.Points(starGeo, starMat);
+  state.starField.visible = false;
+  state.scene.add(state.starField);
 
   buildTerrain(state.scene);
   state.clock = new THREE.Clock();
@@ -542,7 +579,6 @@ function handleServerMessage(msg) {
             sprite.position.y = 2.5;
             g.add(sprite);
             g.position.set(npc.x, 0, npc.z);
-            if (npc.rot) g.rotation.y = npc.rot;
             g.userData = { id: npc.id, name: npc.name, type: 'npc' };
             state.scene.add(g);
             state.npcs[npc.id] = g;
@@ -1370,8 +1406,164 @@ document.getElementById('start-game').addEventListener('click', () => {
 let lastBlinkTime = 0;
 let nextBlinkDelay = 3000 + Math.random() * 3000;
 
+// ============================
+// DAY / NIGHT CYCLE
+// ============================
+function lerpColor(a, b, t) {
+  const ca = new THREE.Color(a);
+  const cb = new THREE.Color(b);
+  ca.lerp(cb, t);
+  return ca;
+}
+
+function updateDayNight(dt) {
+  state.dayTime = (state.dayTime + dt * state.daySpeed) % 1.0;
+  const t = state.dayTime;
+
+  // Sun angle: t=0.25 → east (sunrise), t=0.5 → top (noon), t=0.75 → west (sunset)
+  const sunAngle = (t - 0.25) * Math.PI * 2;
+  const sunY = Math.sin(sunAngle) * 80;
+  const sunX = Math.cos(sunAngle) * 80;
+
+  state.sunLight.position.set(sunX, Math.max(sunY, -10), 30);
+
+  // Sky color phases: midnight=0, sunrise=0.25, noon=0.5, sunset=0.75
+  let skyColor;
+  let fogColor;
+  let sunIntensity;
+  let ambientIntensity;
+  let ambientColor;
+  let sunColor;
+
+  if (t < 0.2) {
+    // Night → pre-dawn (0 = midnight, 0.2 = approaching sunrise)
+    const p = t / 0.2;
+    skyColor = lerpColor(0x0a0a2a, 0x1a1a3a, p);
+    fogColor = lerpColor(0x0a0a2a, 0x1a1a3a, p);
+    sunIntensity = 0.05;
+    ambientIntensity = 0.08;
+    ambientColor = lerpColor(0x111133, 0x222244, p);
+    sunColor = lerpColor(0x334466, 0x665544, p);
+  } else if (t < 0.3) {
+    // Sunrise (0.2 → 0.3)
+    const p = (t - 0.2) / 0.1;
+    skyColor = lerpColor(0x1a1a3a, 0x87CEEB, p);
+    fogColor = lerpColor(0x1a1a3a, 0x87CEEB, p);
+    sunIntensity = 0.05 + p * 0.95;
+    ambientIntensity = 0.08 + p * 0.32;
+    ambientColor = lerpColor(0x222244, 0xffffff, p);
+    sunColor = lerpColor(0x665544, 0xfff5e0, p);
+  } else if (t < 0.5) {
+    // Morning → noon (0.3 → 0.5)
+    const p = (t - 0.3) / 0.2;
+    skyColor = lerpColor(0x87CEEB, 0x5eb8f5, p);
+    fogColor = lerpColor(0x87CEEB, 0x5eb8f5, p);
+    sunIntensity = 1.0;
+    ambientIntensity = 0.4;
+    ambientColor = 0xffffff;
+    sunColor = 0xfff5e0;
+  } else if (t < 0.7) {
+    // Noon → sunset approach (0.5 → 0.7)
+    const p = (t - 0.5) / 0.2;
+    skyColor = lerpColor(0x5eb8f5, 0xF4A460, p);
+    fogColor = lerpColor(0x5eb8f5, 0xF4A460, p);
+    sunIntensity = 1.0 - p * 0.3;
+    ambientIntensity = 0.4 - p * 0.15;
+    ambientColor = lerpColor(0xffffff, 0xffccaa, p);
+    sunColor = lerpColor(0xfff5e0, 0xff8844, p);
+  } else if (t < 0.8) {
+    // Sunset (0.7 → 0.8)
+    const p = (t - 0.7) / 0.1;
+    skyColor = lerpColor(0xF4A460, 0x1a1a3a, p);
+    fogColor = lerpColor(0xF4A460, 0x1a1a3a, p);
+    sunIntensity = 0.7 - p * 0.65;
+    ambientIntensity = 0.25 - p * 0.17;
+    ambientColor = lerpColor(0xffccaa, 0x222244, p);
+    sunColor = lerpColor(0xff8844, 0x334466, p);
+  } else {
+    // Night (0.8 → 1.0 / 0.0)
+    skyColor = new THREE.Color(0x0a0a2a);
+    fogColor = new THREE.Color(0x0a0a2a);
+    sunIntensity = 0.05;
+    ambientIntensity = 0.08;
+    ambientColor = new THREE.Color(0x111133);
+    sunColor = new THREE.Color(0x334466);
+  }
+
+  state.scene.background = skyColor;
+  state.scene.fog.color = fogColor;
+  state.sunLight.intensity = sunIntensity;
+  state.sunLight.color = sunColor;
+  state.ambientLight.intensity = ambientIntensity;
+  state.ambientLight.color = ambientColor;
+
+  // Moon: visible when sun is below horizon (t < 0.2 or t > 0.8)
+  const isNight = t < 0.2 || t > 0.8;
+  state.moonMesh.visible = isNight;
+  if (isNight) {
+    const moonAngle = (t < 0.2 ? t + 0.8 : t) - 0.75;
+    state.moonMesh.position.set(
+      Math.cos(moonAngle * Math.PI * 2) * 80,
+      Math.sin(moonAngle * Math.PI * 2) * 80,
+      -30
+    );
+    // Moon opacity fades near sunrise/sunset
+    let moonAlpha = 1;
+    if (t > 0.8) moonAlpha = 1 - (t - 0.8) / 0.2;
+    if (t < 0.2) moonAlpha = t / 0.2;
+    state.moonMesh.material.opacity = moonAlpha;
+    state.moonMesh.material.transparent = true;
+  }
+
+  // Stars
+  state.starField.visible = isNight;
+  if (isNight) {
+    let starAlpha = 1;
+    if (t > 0.8) starAlpha = 1 - (t - 0.8) / 0.2;
+    if (t < 0.2) starAlpha = t / 0.2;
+    state.starField.material.opacity = starAlpha;
+    state.starField.material.transparent = true;
+  }
+
+  // Update time display
+  updateDayTimeDisplay(t);
+}
+
+function updateDayTimeDisplay(t) {
+  const el = document.getElementById('time-display');
+  if (!el) return;
+  // Map t to 24h: t=0.25 → 6:00, t=0.5 → 12:00, t=0.75 → 18:00, t=0 → 0:00
+  const hours24 = ((t * 24 + 6) % 24);
+  const hours = Math.floor(hours24);
+  const mins = Math.floor((hours24 - hours) * 60);
+  const h = hours.toString().padStart(2, '0');
+  const m = mins.toString().padStart(2, '0');
+
+  let icon = '☀️';
+  if (t >= 0.2 && t < 0.3) icon = '🌅';
+  else if (t >= 0.3 && t < 0.7) icon = '☀️';
+  else if (t >= 0.7 && t < 0.8) icon = '🌇';
+  else icon = '🌙';
+
+  el.textContent = `${icon} ${h}:${m}`;
+}
+
+// ============================
+// COMPASS
+// ============================
+function updateCompass() {
+  const ring = document.getElementById('compass-ring');
+  if (!ring) return;
+  // cameraAngleX is 0 = +Z axis (south), increases counterclockwise
+  // compass: N is at angle PI (facing -Z)
+  // We want the ring to rotate opposite to camera so N always points to actual north
+  const degrees = -(state.cameraAngleX * 180 / Math.PI);
+  ring.style.transform = `rotate(${degrees}deg)`;
+}
+
 function gameLoop() {
   requestAnimationFrame(gameLoop);
+  const dt = state.clock ? state.clock.getDelta() : 0.016;
   updateMovement();
 
   const playerModel = state.players[state.playerId];
@@ -1435,6 +1627,10 @@ function gameLoop() {
 
   // Monster animation
   Object.values(state.monsters).forEach(m => animateMonster(m, time));
+
+  // Day/night cycle + compass
+  updateDayNight(dt);
+  updateCompass();
 
   if (state.scene && state.camera && state.renderer) {
     state.renderer.render(state.scene, state.camera);
