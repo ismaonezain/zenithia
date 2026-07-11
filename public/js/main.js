@@ -911,6 +911,13 @@ function handleServerMessage(msg) {
 
     case 'monster_attack': {
       showDamageNumber(null, msg.damage, false, msg.targetId);
+      // Handle damage directly (Cahaya v2 pattern — proven reliable)
+      if (msg.targetId === state.playerId) {
+        console.log('[COMBAT] monster_attack hit ME! damage:', msg.damage, 'hp:', msg.hp);
+        if (msg.hp !== undefined) {
+          updatePlayerHP(msg.hp, msg.maxHp);
+        }
+      }
       break;
     }
 
@@ -928,7 +935,7 @@ function handleServerMessage(msg) {
 
     case 'player_died': {
       if (msg.targetId && msg.targetId !== state.playerId) break;
-      updatePlayerHP(msg.hp, msg.maxHp);
+      if (msg.hp !== undefined) updatePlayerHP(msg.hp, msg.maxHp);
       if (msg.mp !== undefined) updatePlayerMP(msg.mp, msg.maxMp);
       addChatMessage('System', 'You died! Respawning at village...');
       cancelTarget();

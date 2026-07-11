@@ -365,15 +365,14 @@ setInterval(() => {
         m.lastAttack = now;
         const dmg = Math.max(1, m.atk - Math.floor(nearest.def * 0.6));
         nearest.hp = Math.max(0, nearest.hp - dmg);
-        // BROADCAST to all clients (proven reliable)
-        broadcast({ type: 'player_hit', targetId: nearest.id, damage: dmg, hp: nearest.hp, maxHp: nearest.maxHp });
-        broadcast({ type: 'monster_attack', monsterId: m.id, targetId: nearest.id, damage: dmg });
+        // BROADCAST monster_attack (same pattern as Cahaya v2 — proven reliable)
+        broadcast({ type: 'monster_attack', monsterId: m.id, targetId: nearest.id, damage: dmg, hp: nearest.hp, maxHp: nearest.maxHp });
         if (nearest.hp <= 0) {
           nearest.hp = nearest.maxHp;
           nearest.mp = nearest.maxMp;
           nearest.x = 0;
           nearest.z = 0;
-          broadcast({ type: 'player_died', hp: nearest.hp, maxHp: nearest.maxHp, mp: nearest.mp, maxMp: nearest.maxMp });
+          broadcast({ type: 'player_died', targetId: nearest.id, hp: nearest.hp, maxHp: nearest.maxHp, mp: nearest.mp, maxMp: nearest.maxMp });
           m.state = 'idle';
           m.target = null;
         }
