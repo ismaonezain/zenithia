@@ -699,6 +699,8 @@ function handleServerMessage(msg) {
       state.player = msg.player;
       state.dialogue.ws = state.ws;
       state.dialogue.playerState = state.player;
+      state.shopUI.ws = state.ws;
+      state.inventoryUI.ws = state.ws;
 
       // Reload from server — server data is the truth, full replace
       if (msg.player.customization && Object.keys(msg.player.customization).length > 0) {
