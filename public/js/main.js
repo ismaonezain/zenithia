@@ -1941,6 +1941,18 @@ function gameLoop() {
   if (isNaN(dt) || dt > 1) dt = 0.016; // safety clamp
   updateMovement();
 
+  // Sync HUD HP/MP from state.player (bulletproof fallback)
+  if (state.player && state.player.hp !== undefined) {
+    const hpText = document.getElementById('hp-text');
+    const hpFill = document.getElementById('hp-fill');
+    if (hpText) hpText.textContent = `${Math.round(state.player.hp)}/${state.player.maxHp}`;
+    if (hpFill) hpFill.style.width = `${(state.player.hp / state.player.maxHp) * 100}%`;
+    const mpText = document.getElementById('mp-text');
+    const mpFill = document.getElementById('mp-fill');
+    if (mpText) mpText.textContent = `${Math.round(state.player.mp)}/${state.player.maxMp}`;
+    if (mpFill) mpFill.style.width = `${(state.player.mp / state.player.maxMp) * 100}%`;
+  }
+
   const playerModel = state.players[state.playerId];
   const time = Date.now() * 0.001;
 
