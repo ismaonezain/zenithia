@@ -125,6 +125,8 @@ function saveWorld() {
   try {
     if (!fs.existsSync(SAVE_DIR)) fs.mkdirSync(SAVE_DIR, { recursive: true });
     fs.writeFileSync(SAVE_FILE, JSON.stringify(world, null, 2));
+    const size = fs.statSync(SAVE_FILE).size;
+    console.log(`[SAVE] OK (${size} bytes) players=${Object.keys(world.players).length}`);
   } catch (e) { console.error('[WARN] Save failed:', e.message); }
 }
 
@@ -145,6 +147,18 @@ function initNPCs() {
 
 let world = loadWorld();
 const connectedPlayers = {};
+
+// Startup diagnostics
+const playerCount = Object.keys(world.players).length;
+console.log(`[BOOT] World loaded: ${playerCount} players saved`);
+if (playerCount > 0) {
+  Object.values(world.players).forEach(p => {
+    console.log(`[BOOT]   - ${p.name} (Lv.${p.level}) inv=${(p.inventory||[]).length} equip=${Object.keys(p.equipment||{}).length} persistentId=${p.persistentId?.slice(0,12)||'none'}`);
+  });
+} else {
+  console.log('[BOOT] WARNING: No saved players found! Data may not persist across deploys.');
+  console.log('[BOOT] SAVE_DIR:', SAVE_DIR, 'SAVE_FILE exists:', fs.existsSync(SAVE_FILE));
+}
 
 // --- Player Management ---
 function recalcClassStats(customization) {
