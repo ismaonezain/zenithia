@@ -99,13 +99,30 @@ export function buildTerrain(scene) {
 
 // --- Water ---
 function addWater(group) {
-  // Main creek
+  // Main creek with depth effect
   const creekGeo = new THREE.PlaneGeometry(50, 3);
   const creekMat = new THREE.MeshLambertMaterial({ color: 0x42A5F5, transparent: true, opacity: 0.7 });
   const creek = new THREE.Mesh(creekGeo, creekMat);
   creek.rotation.x = -Math.PI / 2;
   creek.position.set(0, 0.05, 2);
   group.add(creek);
+
+  // Deeper center stripe
+  const deepGeo = new THREE.PlaneGeometry(50, 1.2);
+  const deepMat = new THREE.MeshLambertMaterial({ color: 0x1E88E5, transparent: true, opacity: 0.5 });
+  const deep = new THREE.Mesh(deepGeo, deepMat);
+  deep.rotation.x = -Math.PI / 2;
+  deep.position.set(0, 0.06, 2);
+  group.add(deep);
+
+  // Water edge highlights
+  const edgeMat = new THREE.MeshLambertMaterial({ color: 0xBBDEFB, transparent: true, opacity: 0.4 });
+  [3.5, 0.5].forEach(z => {
+    const edge = new THREE.Mesh(new THREE.PlaneGeometry(50, 0.3), edgeMat);
+    edge.rotation.x = -Math.PI / 2;
+    edge.position.set(0, 0.055, z);
+    group.add(edge);
+  });
 
   // Pond near big willow
   const pondGeo = new THREE.CircleGeometry(2, 16);
@@ -115,26 +132,115 @@ function addWater(group) {
   pond.position.set(-10, 0.05, 2);
   group.add(pond);
 
-  // Bridge (wooden planks) — rotated 90° to cross creek
-  const bridgeGeo = new THREE.BoxGeometry(2, 0.15, 4);
-  const bridgeMat = new THREE.MeshLambertMaterial({ color: 0x8D6E63 });
-  const bridge = new THREE.Mesh(bridgeGeo, bridgeMat);
-  bridge.position.set(0, 0.15, 2);
-  bridge.castShadow = true;
-  bridge.receiveShadow = true;
-  group.add(bridge);
+  // Pond deeper center
+  const pondDeep = new THREE.Mesh(
+    new THREE.CircleGeometry(1.2, 12),
+    new THREE.MeshLambertMaterial({ color: 0x1E88E5, transparent: true, opacity: 0.4 })
+  );
+  pondDeep.rotation.x = -Math.PI / 2;
+  pondDeep.position.set(-10, 0.06, 2);
+  group.add(pondDeep);
 
-  // Bridge railings
-  const railGeo = new THREE.BoxGeometry(0.1, 0.5, 4);
-  const railMat = new THREE.MeshLambertMaterial({ color: 0x6D4C41 });
-  const rail1 = new THREE.Mesh(railGeo, railMat);
-  rail1.position.set(-1, 0.4, 2);
-  rail1.castShadow = true;
-  group.add(rail1);
-  const rail2 = new THREE.Mesh(railGeo, railMat);
-  rail2.position.set(1, 0.4, 2);
-  rail2.castShadow = true;
-  group.add(rail2);
+  // Lily pads on pond
+  const lilyMat = new THREE.MeshLambertMaterial({ color: 0x2E7D32 });
+  [[-10.5, 2.3], [-9.5, 1.7], [-10.8, 1.5]].forEach(([lx, lz]) => {
+    const lily = new THREE.Mesh(
+      new THREE.CircleGeometry(0.15, 8),
+      lilyMat
+    );
+    lily.rotation.x = -Math.PI / 2;
+    lily.position.set(lx, 0.07, lz);
+    group.add(lily);
+    // Tiny flower on one lily
+    if (Math.random() > 0.5) {
+      const flower = new THREE.Mesh(
+        new THREE.SphereGeometry(0.05, 4, 3),
+        new THREE.MeshBasicMaterial({ color: 0xF48FB1 })
+      );
+      flower.position.set(lx, 0.1, lz);
+      group.add(flower);
+    }
+  });
+
+  // Lily pads on creek
+  const creekLilyMat = new THREE.MeshLambertMaterial({ color: 0x388E3C });
+  [[-5, 2.2], [3, 1.8], [-8, 2.5], [10, 2.1]].forEach(([lx, lz]) => {
+    const lily = new THREE.Mesh(
+      new THREE.CircleGeometry(0.18, 8),
+      creekLilyMat
+    );
+    lily.rotation.x = -Math.PI / 2;
+    lily.position.set(lx, 0.07, lz);
+    group.add(lily);
+  });
+
+  // Bridge (detailed wooden planks)
+  const bridgeGroup = new THREE.Group();
+  // Support beams
+  const beamMat = new THREE.MeshLambertMaterial({ color: 0x5D4037 });
+  [-0.8, 0.8].forEach(bx => {
+    const beam = new THREE.Mesh(
+      new THREE.BoxGeometry(0.15, 0.2, 4.5),
+      beamMat
+    );
+    beam.position.set(bx, 0.1, 2);
+    beam.castShadow = true;
+    bridgeGroup.add(beam);
+  });
+
+  // Planks (individual boards)
+  const plankMat = new THREE.MeshLambertMaterial({ color: 0x8D6E63 });
+  for (let z = 0; z < 4; z += 0.35) {
+    const plank = new THREE.Mesh(
+      new THREE.BoxGeometry(1.6, 0.08, 0.28),
+      plankMat
+    );
+    plank.position.set(0, 0.22, 0.3 + z);
+    plank.castShadow = true;
+    bridgeGroup.add(plank);
+  }
+
+  // Rope railings
+  const ropeMat = new THREE.MeshLambertMaterial({ color: 0xA1887F });
+  [-0.85, 0.85].forEach(rx => {
+    // Vertical posts
+    [0.3, 1.5, 2.5, 3.7].forEach(pz => {
+      const post = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.03, 0.03, 0.8, 5),
+        ropeMat
+      );
+      post.position.set(rx, 0.6, pz);
+      bridgeGroup.add(post);
+    });
+    // Horizontal rope
+    const rope = new THREE.Mesh(
+      new THREE.BoxGeometry(0.04, 0.04, 3.8),
+      new THREE.MeshLambertMaterial({ color: 0xBCAAA4 })
+    );
+    rope.position.set(rx, 0.95, 2);
+    bridgeGroup.add(rope);
+  });
+
+  // Rope curve (catenary shape approximation)
+  const curveMat = new THREE.MeshLambertMaterial({ color: 0xBCAAA4 });
+  [-0.85, 0.85].forEach(rx => {
+    for (let i = 0; i < 8; i++) {
+      const t = i / 7;
+      const ropeDot = new THREE.Mesh(
+        new THREE.SphereGeometry(0.025, 4, 3),
+        curveMat
+      );
+      ropeDot.position.set(
+        rx,
+        0.95 - Math.sin(t * Math.PI) * 0.15,
+        0.3 + t * 3.4
+      );
+      bridgeGroup.add(ropeDot);
+    }
+  });
+
+  bridgeGroup.position.set(0, 0, 0);
+  group.add(bridgeGroup);
 }
 
 // --- Paths ---
@@ -892,95 +998,243 @@ function addTrees(group) {
   function createWillow(x, z, scale = 1) {
     const g = new THREE.Group();
 
-    // Trunk
-    const trunkGeo = new THREE.CylinderGeometry(0.15 * scale, 0.25 * scale, 3 * scale, 6);
+    // Trunk with roots
+    const trunkGeo = new THREE.CylinderGeometry(0.15 * scale, 0.25 * scale, 3 * scale, 8);
     const trunkMat = new THREE.MeshLambertMaterial({ color: 0x6D4C41 });
     const trunk = new THREE.Mesh(trunkGeo, trunkMat);
     trunk.position.y = 1.5 * scale;
     trunk.castShadow = true;
     g.add(trunk);
 
-    // Canopy (layered drooping leaf cubes)
-    const leafMat = new THREE.MeshLambertMaterial({ color: 0x66BB6A });
-    for (let i = 0; i < 8; i++) {
-      const angle = (i / 8) * Math.PI * 2;
-      const leafGeo = new THREE.BoxGeometry(1.2 * scale, 0.3 * scale, 0.8 * scale);
-      const leaf = new THREE.Mesh(leafGeo, leafMat);
-      leaf.position.set(
-        Math.cos(angle) * 1.5 * scale,
-        2.5 * scale - Math.abs(Math.cos(angle)) * 0.5 * scale,
-        Math.sin(angle) * 1.5 * scale
+    // Roots (4 spreading from base)
+    const rootMat = new THREE.MeshLambertMaterial({ color: 0x5D4037 });
+    for (let i = 0; i < 4; i++) {
+      const angle = (i / 4) * Math.PI * 2 + 0.3;
+      const root = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.04 * scale, 0.08 * scale, 0.8 * scale, 5),
+        rootMat
       );
-      leaf.rotation.y = angle;
-      leaf.castShadow = true;
-      g.add(leaf);
+      root.position.set(
+        Math.cos(angle) * 0.3 * scale,
+        0.15 * scale,
+        Math.sin(angle) * 0.3 * scale
+      );
+      root.rotation.z = Math.cos(angle) * 0.4;
+      root.rotation.x = Math.sin(angle) * 0.4;
+      g.add(root);
     }
 
-    // Drooping vine-like leaves
+    // Canopy — layered leaf clusters (spheres, not boxes)
+    const leafColors = [0x66BB6A, 0x4CAF50, 0x81C784];
+    for (let layer = 0; layer < 3; layer++) {
+      const leafMat = new THREE.MeshLambertMaterial({ color: leafColors[layer] });
+      const count = 6 + layer * 2;
+      for (let i = 0; i < count; i++) {
+        const angle = (i / count) * Math.PI * 2 + layer * 0.3;
+        const r = (1.2 + layer * 0.4) * scale;
+        const leafGeo = new THREE.SphereGeometry((0.4 + layer * 0.1) * scale, 6, 5);
+        const leaf = new THREE.Mesh(leafGeo, leafMat);
+        leaf.position.set(
+          Math.cos(angle) * r,
+          (2.5 - layer * 0.3) * scale,
+          Math.sin(angle) * r
+        );
+        leaf.scale.y = 0.6;
+        leaf.castShadow = true;
+        g.add(leaf);
+      }
+    }
+
+    // Drooping vines (willow signature)
     const vineMat = new THREE.MeshLambertMaterial({ color: 0x81C784 });
-    for (let i = 0; i < 6; i++) {
-      const angle = (i / 6) * Math.PI * 2;
-      const vineGeo = new THREE.BoxGeometry(0.15 * scale, 2 * scale, 0.15 * scale);
-      const vine = new THREE.Mesh(vineGeo, vineMat);
+    for (let i = 0; i < 8; i++) {
+      const angle = (i / 8) * Math.PI * 2;
+      const vine = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.02 * scale, 0.04 * scale, 1.8 * scale, 4),
+        vineMat
+      );
       vine.position.set(
-        Math.cos(angle) * 2 * scale,
-        1.5 * scale,
-        Math.sin(angle) * 2 * scale
+        Math.cos(angle) * 1.8 * scale,
+        1.2 * scale,
+        Math.sin(angle) * 1.8 * scale
       );
       g.add(vine);
+      // Leaf clusters on vine tips
+      const tipLeaf = new THREE.Mesh(
+        new THREE.SphereGeometry(0.15 * scale, 4, 3),
+        new THREE.MeshLambertMaterial({ color: 0xA5D6A7 })
+      );
+      tipLeaf.position.set(
+        Math.cos(angle) * 1.8 * scale,
+        0.3 * scale,
+        Math.sin(angle) * 1.8 * scale
+      );
+      g.add(tipLeaf);
     }
 
     g.position.set(x, 0, z);
     group.add(g);
   }
 
-  // Oak tree (regular)
+  // Oak tree (layered canopy, textured trunk)
   function createOak(x, z, scale = 1) {
     const g = new THREE.Group();
 
-    const trunkGeo = new THREE.CylinderGeometry(0.1 * scale, 0.15 * scale, 2 * scale, 6);
+    // Trunk with slight curve
+    const trunkGeo = new THREE.CylinderGeometry(0.1 * scale, 0.18 * scale, 2.2 * scale, 8);
     const trunkMat = new THREE.MeshLambertMaterial({ color: 0x795548 });
     const trunk = new THREE.Mesh(trunkGeo, trunkMat);
+    trunk.position.y = 1.1 * scale;
+    trunk.castShadow = true;
+    g.add(trunk);
+
+    // Branches (2-3 splitting off)
+    const branchMat = new THREE.MeshLambertMaterial({ color: 0x6D4C41 });
+    [0.5, -0.7].forEach((offset, i) => {
+      const branch = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.03 * scale, 0.06 * scale, 0.8 * scale, 5),
+        branchMat
+      );
+      branch.position.set(offset * scale, 1.8 * scale, (i - 0.5) * 0.3 * scale);
+      branch.rotation.z = -offset * 0.8;
+      g.add(branch);
+    });
+
+    // Layered canopy (3 spheres for natural shape)
+    const leafColors = [0x388E3C, 0x43A047, 0x66BB6A];
+    const canopyParts = [
+      { y: 2.8, r: 0.9, s: 1.0 },
+      { y: 3.2, r: 0.7, s: 0.8 },
+      { y: 3.0, r: 0.6, s: 0.7 },
+    ];
+    canopyParts.forEach((p, i) => {
+      const leaf = new THREE.Mesh(
+        new THREE.SphereGeometry(p.r * scale, 8, 6),
+        new THREE.MeshLambertMaterial({ color: leafColors[i] })
+      );
+      leaf.position.y = p.y * scale;
+      leaf.scale.set(1, 0.7, 1);
+      leaf.castShadow = true;
+      g.add(leaf);
+    });
+
+    // Apple/fruits (small red spheres)
+    const fruitMat = new THREE.MeshLambertMaterial({ color: 0xD32F2F });
+    for (let i = 0; i < 3; i++) {
+      const angle = (i / 3) * Math.PI * 2 + 0.5;
+      const fruit = new THREE.Mesh(
+        new THREE.SphereGeometry(0.08 * scale, 5, 4),
+        fruitMat
+      );
+      fruit.position.set(
+        Math.cos(angle) * 0.8 * scale,
+        (2.6 + Math.random() * 0.4) * scale,
+        Math.sin(angle) * 0.8 * scale
+      );
+      g.add(fruit);
+    }
+
+    g.position.set(x, 0, z);
+    group.add(g);
+  }
+
+  // Bush (multiple spheres, berries)
+  function createBush(x, z, scale = 1, flower = false) {
+    const g = new THREE.Group();
+
+    // Multiple overlapping spheres for natural shape
+    const bushMat = new THREE.MeshLambertMaterial({ color: 0x388E3C });
+    const bushDark = new THREE.MeshLambertMaterial({ color: 0x2E7D32 });
+    const parts = [
+      { x: 0, y: 0.35, z: 0, r: 0.45 },
+      { x: 0.2, y: 0.3, z: 0.15, r: 0.35 },
+      { x: -0.2, y: 0.3, z: -0.1, r: 0.38 },
+      { x: 0.1, y: 0.45, z: -0.15, r: 0.3 },
+    ];
+    parts.forEach((p, i) => {
+      const bush = new THREE.Mesh(
+        new THREE.SphereGeometry(p.r * scale, 7, 5),
+        i % 2 === 0 ? bushMat : bushDark
+      );
+      bush.position.set(p.x * scale, p.y * scale, p.z * scale);
+      bush.castShadow = true;
+      g.add(bush);
+    });
+
+    // Flowers or berries
+    if (flower) {
+      const colors = [0xFF69B4, 0xFFD700, 0xFF5722, 0xE91E63];
+      for (let i = 0; i < 5; i++) {
+        const angle = (i / 5) * Math.PI * 2;
+        const r = 0.3 + Math.random() * 0.2;
+        // Flower petals (5 small spheres around center)
+        const center = new THREE.Mesh(
+          new THREE.SphereGeometry(0.04 * scale, 4, 3),
+          new THREE.MeshBasicMaterial({ color: 0xFFF176 })
+        );
+        center.position.set(
+          Math.cos(angle) * r * scale,
+          0.55 * scale,
+          Math.sin(angle) * r * scale
+        );
+        g.add(center);
+        for (let p = 0; p < 4; p++) {
+          const pa = (p / 4) * Math.PI * 2;
+          const petal = new THREE.Mesh(
+            new THREE.SphereGeometry(0.03 * scale, 4, 3),
+            new THREE.MeshBasicMaterial({ color: colors[i % colors.length] })
+          );
+          petal.position.set(
+            Math.cos(angle) * r * scale + Math.cos(pa) * 0.06 * scale,
+            0.55 * scale,
+            Math.sin(angle) * r * scale + Math.sin(pa) * 0.06 * scale
+          );
+          g.add(petal);
+        }
+      }
+    } else {
+      // Berries (blue/purple)
+      const berryMat = new THREE.MeshLambertMaterial({ color: 0x5C6BC0 });
+      for (let i = 0; i < 4; i++) {
+        const berry = new THREE.Mesh(
+          new THREE.SphereGeometry(0.05 * scale, 4, 3),
+          berryMat
+        );
+        berry.position.set(
+          (Math.random() - 0.5) * 0.5 * scale,
+          0.5 * scale,
+          (Math.random() - 0.5) * 0.5 * scale
+        );
+        g.add(berry);
+      }
+    }
+
+    g.position.set(x, 0, z);
+    group.add(g);
+  }
+
+  // Pine tree (cone layers)
+  function createPine(x, z, scale = 1) {
+    const g = new THREE.Group();
+    const trunk = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.08 * scale, 0.12 * scale, 2 * scale, 6),
+      new THREE.MeshLambertMaterial({ color: 0x5D4037 })
+    );
     trunk.position.y = 1 * scale;
     trunk.castShadow = true;
     g.add(trunk);
 
-    const leafGeo = new THREE.BoxGeometry(2 * scale, 1.5 * scale, 2 * scale);
-    const leafMat = new THREE.MeshLambertMaterial({ color: 0x43A047 });
-    const leaf = new THREE.Mesh(leafGeo, leafMat);
-    leaf.position.y = 2.5 * scale;
-    leaf.castShadow = true;
-    g.add(leaf);
-
-    g.position.set(x, 0, z);
-    group.add(g);
-  }
-
-  // Bush (with optional flowers)
-  function createBush(x, z, scale = 1, flower = false) {
-    const g = new THREE.Group();
-
-    const bushGeo = new THREE.BoxGeometry(1 * scale, 0.6 * scale, 1 * scale);
-    const bushMat = new THREE.MeshLambertMaterial({ color: 0x388E3C });
-    const bush = new THREE.Mesh(bushGeo, bushMat);
-    bush.position.y = 0.3 * scale;
-    bush.castShadow = true;
-    g.add(bush);
-
-    if (flower) {
-      const colors = [0xFF69B4, 0xFFD700, 0xFF5722, 0xE91E63];
-      for (let i = 0; i < 3; i++) {
-        const fGeo = new THREE.BoxGeometry(0.15, 0.15, 0.15);
-        const fMat = new THREE.MeshBasicMaterial({ color: colors[i % colors.length] });
-        const f = new THREE.Mesh(fGeo, fMat);
-        f.position.set(
-          (Math.random() - 0.5) * 0.6 * scale,
-          0.6 * scale,
-          (Math.random() - 0.5) * 0.6 * scale
-        );
-        g.add(f);
-      }
-    }
+    const pineMat = new THREE.MeshLambertMaterial({ color: 0x1B5E20 });
+    const pineLight = new THREE.MeshLambertMaterial({ color: 0x2E7D32 });
+    [0.8, 1.4, 2.0].forEach((y, i) => {
+      const cone = new THREE.Mesh(
+        new THREE.ConeGeometry((0.7 - i * 0.15) * scale, (0.8 - i * 0.1) * scale, 7),
+        i % 2 === 0 ? pineMat : pineLight
+      );
+      cone.position.y = y * scale;
+      cone.castShadow = true;
+      g.add(cone);
+    });
 
     g.position.set(x, 0, z);
     group.add(g);
@@ -1007,114 +1261,352 @@ function addTrees(group) {
     { type: 'oak', x: -10, z: 5, s: 0.7 },
     { type: 'oak', x: 15, z: 15, s: 0.9 },
 
+    // Pines (near forest edge)
+    { type: 'pine', x: -15, z: -18, s: 0.9 },
+    { type: 'pine', x: 8, z: -20, s: 1.1 },
+    { type: 'pine', x: -6, z: -22, s: 0.8 },
+
     // Bushes
     { type: 'bush', x: -20, z: -5, s: 0.6, flower: true },
     { type: 'bush', x: -22, z: 0, s: 0.5, flower: true },
     { type: 'bush', x: -18, z: -2, s: 0.7, flower: true },
+    { type: 'bush', x: 16, z: -6, s: 0.5 },
+    { type: 'bush', x: -8, z: 10, s: 0.4 },
   ];
 
   trees.forEach(t => {
     if (t.type === 'willow') createWillow(t.x, t.z, t.s);
     else if (t.type === 'oak') createOak(t.x, t.z, t.s);
+    else if (t.type === 'pine') createPine(t.x, t.z, t.s);
     else if (t.type === 'bush') createBush(t.x, t.z, t.s, t.flower);
   });
 }
 
 // --- Rocks ---
 function addRocks(group) {
-  const rocks = [
-    { x: -15, z: -8, s: 0.5 },
-    { x: 14, z: 10, s: 0.3 },
-    { x: -8, z: 18, s: 0.4 },
-    { x: 20, z: 5, s: 0.6 },
-  ];
+  // Rock cluster helper
+  function createRockCluster(x, z, count, baseSize) {
+    const g = new THREE.Group();
+    const rockMat = new THREE.MeshLambertMaterial({ color: 0x9E9E9E });
+    const rockDark = new THREE.MeshLambertMaterial({ color: 0x757575 });
+    const mossMat = new THREE.MeshLambertMaterial({ color: 0x689F38 });
 
-  const rockMat = new THREE.MeshLambertMaterial({ color: 0x9E9E9E });
+    for (let i = 0; i < count; i++) {
+      const angle = (i / count) * Math.PI * 2 + Math.random() * 0.5;
+      const dist = Math.random() * baseSize * 0.8;
+      const size = baseSize * (0.5 + Math.random() * 0.5);
 
-  rocks.forEach(r => {
-    const geo = new THREE.DodecahedronGeometry(r.s, 0);
-    const rock = new THREE.Mesh(geo, rockMat);
-    rock.position.set(r.x, r.s * 0.5, r.z);
-    rock.rotation.set(Math.random(), Math.random(), 0);
-    rock.castShadow = true;
-    group.add(rock);
-  });
+      const rock = new THREE.Mesh(
+        new THREE.DodecahedronGeometry(size, 0),
+        i % 2 === 0 ? rockMat : rockDark
+      );
+      rock.position.set(
+        Math.cos(angle) * dist,
+        size * 0.4,
+        Math.sin(angle) * dist
+      );
+      rock.rotation.set(Math.random(), Math.random(), Math.random() * 0.3);
+      rock.castShadow = true;
+      rock.receiveShadow = true;
+      g.add(rock);
+
+      // Moss on some rocks
+      if (Math.random() > 0.5) {
+        const moss = new THREE.Mesh(
+          new THREE.SphereGeometry(size * 0.4, 5, 4),
+          mossMat
+        );
+        moss.position.set(
+          rock.position.x,
+          rock.position.y + size * 0.3,
+          rock.position.z
+        );
+        moss.scale.y = 0.3;
+        g.add(moss);
+      }
+    }
+
+    // Ground pebbles
+    const pebbleMat = new THREE.MeshLambertMaterial({ color: 0xBDBDBD });
+    for (let i = 0; i < 5; i++) {
+      const pebble = new THREE.Mesh(
+        new THREE.SphereGeometry(0.08 + Math.random() * 0.08, 5, 4),
+        pebbleMat
+      );
+      pebble.position.set(
+        (Math.random() - 0.5) * baseSize * 2,
+        0.04,
+        (Math.random() - 0.5) * baseSize * 2
+      );
+      pebble.scale.y = 0.4;
+      g.add(pebble);
+    }
+
+    g.position.set(x, 0, z);
+    group.add(g);
+  }
+
+  createRockCluster(-15, -8, 3, 0.5);
+  createRockCluster(14, 10, 2, 0.3);
+  createRockCluster(-8, 18, 2, 0.4);
+  createRockCluster(20, 5, 4, 0.6);
 }
 
 // --- Flowers ---
 function addFlowers(group) {
-  const flowers = [
-    { x: -20, z: -8, color: 0xFF69B4 },
-    { x: -22, z: -6, color: 0xFFD700 },
-    { x: -19, z: -10, color: 0xFF69B4 },
-    { x: -21, z: -9, color: 0xFFD700 },
-    { x: -23, z: -7, color: 0xFF69B4 },
-    { x: -18, z: -7, color: 0xFFD700 },
-  ];
-
-  flowers.forEach(f => {
+  function createFlower(x, z, color, height) {
     const g = new THREE.Group();
 
-    // Stem
-    const stemGeo = new THREE.BoxGeometry(0.05, 0.4, 0.05);
-    const stemMat = new THREE.MeshLambertMaterial({ color: 0x388E3C });
-    const stem = new THREE.Mesh(stemGeo, stemMat);
-    stem.position.y = 0.2;
+    // Stem with slight curve
+    const stem = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.02, 0.03, height, 5),
+      new THREE.MeshLambertMaterial({ color: 0x388E3C })
+    );
+    stem.position.y = height / 2;
     g.add(stem);
 
-    // Flower head
-    const headGeo = new THREE.BoxGeometry(0.2, 0.2, 0.2);
-    const headMat = new THREE.MeshBasicMaterial({ color: f.color });
-    const head = new THREE.Mesh(headGeo, headMat);
-    head.position.y = 0.5;
-    g.add(head);
+    // Leaves on stem
+    const leafMat = new THREE.MeshLambertMaterial({ color: 0x4CAF50 });
+    [0.3, 0.6].forEach(h => {
+      const leaf = new THREE.Mesh(
+        new THREE.BoxGeometry(0.12, 0.06, 0.08),
+        leafMat
+      );
+      leaf.position.set(0.06, height * h, 0);
+      leaf.rotation.z = -0.3;
+      g.add(leaf);
+    });
 
-    g.position.set(f.x, 0, f.z);
+    // Flower head — petals around center
+    const centerMat = new THREE.MeshBasicMaterial({ color: 0xFFF176 });
+    const center = new THREE.Mesh(
+      new THREE.SphereGeometry(0.05, 5, 4),
+      centerMat
+    );
+    center.position.y = height + 0.05;
+    g.add(center);
+
+    const petalMat = new THREE.MeshBasicMaterial({ color });
+    for (let i = 0; i < 5; i++) {
+      const angle = (i / 5) * Math.PI * 2;
+      const petal = new THREE.Mesh(
+        new THREE.SphereGeometry(0.04, 4, 3),
+        petalMat
+      );
+      petal.position.set(
+        Math.cos(angle) * 0.08,
+        height + 0.05,
+        Math.sin(angle) * 0.08
+      );
+      petal.scale.set(1, 0.6, 1);
+      g.add(petal);
+    }
+
+    g.position.set(x, 0, z);
     group.add(g);
-  });
+  }
+
+  const flowerData = [
+    { x: -20, z: -8, color: 0xFF69B4, h: 0.5 },
+    { x: -22, z: -6, color: 0xFFD700, h: 0.45 },
+    { x: -19, z: -10, color: 0xFF69B4, h: 0.55 },
+    { x: -21, z: -9, color: 0xFFD700, h: 0.4 },
+    { x: -23, z: -7, color: 0xFF69B4, h: 0.5 },
+    { x: -18, z: -7, color: 0xFFD700, h: 0.48 },
+    { x: -20.5, z: -7.5, color: 0xE91E63, h: 0.42 },
+    { x: -21.5, z: -8.5, color: 0xFF5722, h: 0.52 },
+  ];
+
+  flowerData.forEach(f => createFlower(f.x, f.z, f.color, f.h));
 }
 
 // --- Farms ---
 function addFarms(group) {
-  // Wheat field
-  const wheatMat = new THREE.MeshLambertMaterial({ color: 0xF9A825 });
-  for (let x = -24; x < -16; x += 0.8) {
-    for (let z = 12; z < 18; z += 0.8) {
-      const geo = new THREE.BoxGeometry(0.3, 0.5, 0.3);
-      const wheat = new THREE.Mesh(geo, wheatMat);
-      wheat.position.set(x, 0.25, z);
-      group.add(wheat);
+  // Soil bed base
+  const soilMat = new THREE.MeshLambertMaterial({ color: 0x5D4037 });
+  const soilDark = new THREE.MeshLambertMaterial({ color: 0x4E342E });
+
+  // Wheat field (3 rows with soil beds)
+  for (let row = 0; row < 3; row++) {
+    const bed = new THREE.Mesh(
+      new THREE.BoxGeometry(7.5, 0.15, 1.5),
+      row % 2 === 0 ? soilMat : soilDark
+    );
+    bed.position.set(-20, 0.07, 13 + row * 2);
+    bed.receiveShadow = true;
+    group.add(bed);
+
+    // Wheat stalks
+    const wheatMat = new THREE.MeshLambertMaterial({ color: 0xF9A825 });
+    const wheatTop = new THREE.MeshLambertMaterial({ color: 0xFFD54F });
+    for (let x = -23.5; x < -16.5; x += 0.4) {
+      for (let z = 12.3 + row * 2; z < 13.7 + row * 2; z += 0.4) {
+        // Stalk
+        const stalk = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.01, 0.015, 0.5 + Math.random() * 0.2, 4),
+          wheatMat
+        );
+        stalk.position.set(x, 0.35, z);
+        stalk.rotation.x = (Math.random() - 0.5) * 0.1;
+        group.add(stalk);
+        // Wheat head
+        const head = new THREE.Mesh(
+          new THREE.BoxGeometry(0.06, 0.12, 0.06),
+          wheatTop
+        );
+        head.position.set(x, 0.65, z);
+        group.add(head);
+      }
     }
   }
 
-  // Carrot field (green tops)
-  const carrotMat = new THREE.MeshLambertMaterial({ color: 0x66BB6A });
-  for (let x = -24; x < -16; x += 0.8) {
-    for (let z = 19; z < 25; z += 0.8) {
-      const geo = new THREE.BoxGeometry(0.3, 0.4, 0.3);
-      const carrot = new THREE.Mesh(geo, carrotMat);
-      carrot.position.set(x, 0.2, z);
-      group.add(carrot);
+  // Carrot field (2 rows)
+  for (let row = 0; row < 2; row++) {
+    const bed = new THREE.Mesh(
+      new THREE.BoxGeometry(7.5, 0.15, 1.5),
+      soilDark
+    );
+    bed.position.set(-20, 0.07, 19 + row * 2);
+    bed.receiveShadow = true;
+    group.add(bed);
+
+    // Carrot tops
+    const carrotMat = new THREE.MeshLambertMaterial({ color: 0x66BB6A });
+    const carrotOrange = new THREE.MeshLambertMaterial({ color: 0xFF9800 });
+    for (let x = -23.5; x < -16.5; x += 0.5) {
+      for (let z = 18.3 + row * 2; z < 19.7 + row * 2; z += 0.5) {
+        // Green top
+        const top = new THREE.Mesh(
+          new THREE.ConeGeometry(0.06, 0.2, 5),
+          carrotMat
+        );
+        top.position.set(x, 0.25, z);
+        group.add(top);
+        // Orange carrot (partially visible)
+        const carrot = new THREE.Mesh(
+          new THREE.ConeGeometry(0.04, 0.15, 5),
+          carrotOrange
+        );
+        carrot.position.set(x, 0.08, z);
+        carrot.rotation.x = Math.PI;
+        group.add(carrot);
+      }
     }
   }
 
-  // Fence around farms
+  // Scarecrow
+  const scarecrow = new THREE.Group();
+  // Post
+  const post = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.05, 0.05, 2.5, 6),
+    new THREE.MeshLambertMaterial({ color: 0x795548 })
+  );
+  post.position.y = 1.25;
+  scarecrow.add(post);
+  // Crossbar
+  const bar = new THREE.Mesh(
+    new THREE.BoxGeometry(1.2, 0.06, 0.06),
+    new THREE.MeshLambertMaterial({ color: 0x6D4C41 })
+  );
+  bar.position.y = 2.0;
+  scarecrow.add(bar);
+  // Head (straw color)
+  const head = new THREE.Mesh(
+    new THREE.SphereGeometry(0.2, 6, 5),
+    new THREE.MeshLambertMaterial({ color: 0xFDD835 })
+  );
+  head.position.y = 2.6;
+  scarecrow.add(head);
+  // Hat
+  const hatBrim = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.3, 0.3, 0.05, 8),
+    new THREE.MeshLambertMaterial({ color: 0x5D4037 })
+  );
+  hatBrim.position.y = 2.75;
+  scarecrow.add(hatBrim);
+  const hatTop = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.15, 0.2, 0.25, 8),
+    new THREE.MeshLambertMaterial({ color: 0x5D4037 })
+  );
+  hatTop.position.y = 2.9;
+  scarecrow.add(hatTop);
+  // Shirt (torn cloth)
+  const shirt = new THREE.Mesh(
+    new THREE.BoxGeometry(0.5, 0.6, 0.15),
+    new THREE.MeshLambertMaterial({ color: 0x1565C0 })
+  );
+  shirt.position.y = 1.7;
+  scarecrow.add(shirt);
+  scarecrow.position.set(-16, 0, 15);
+  scarecrow.castShadow = true;
+  group.add(scarecrow);
+
+  // Fence around farms (with horizontal rails)
   const fenceMat = new THREE.MeshLambertMaterial({ color: 0x8D6E63 });
-  const fencePositions = [
-    // Top
-    ...Array.from({ length: 11 }, (_, i) => ({ x: -24 + i * 0.8, z: 11 })),
-    // Bottom
-    ...Array.from({ length: 11 }, (_, i) => ({ x: -24 + i * 0.8, z: 26 })),
-    // Left
-    ...Array.from({ length: 20 }, (_, i) => ({ x: -24.5, z: 11 + i * 0.8 })),
-    // Right
-    ...Array.from({ length: 20 }, (_, i) => ({ x: -15.5, z: 11 + i * 0.8 })),
-  ];
+  const railMat = new THREE.MeshLambertMaterial({ color: 0xA1887F });
 
-  fencePositions.forEach(p => {
-    const geo = new THREE.BoxGeometry(0.1, 0.6, 0.1);
-    const post = new THREE.Mesh(geo, fenceMat);
-    post.position.set(p.x, 0.3, p.z);
+  // Top fence (z=11)
+  for (let x = -24; x <= -16; x += 0.8) {
+    const post = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.7, 0.1), fenceMat);
+    post.position.set(x, 0.35, 11);
+    post.castShadow = true;
     group.add(post);
+  }
+  // Top rails
+  [0.25, 0.5].forEach(y => {
+    const rail = new THREE.Mesh(new THREE.BoxGeometry(8, 0.06, 0.06), railMat);
+    rail.position.set(-20, y, 11);
+    group.add(rail);
   });
+
+  // Bottom fence (z=26)
+  for (let x = -24; x <= -16; x += 0.8) {
+    const post = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.7, 0.1), fenceMat);
+    post.position.set(x, 0.35, 26);
+    post.castShadow = true;
+    group.add(post);
+  }
+  [0.25, 0.5].forEach(y => {
+    const rail = new THREE.Mesh(new THREE.BoxGeometry(8, 0.06, 0.06), railMat);
+    rail.position.set(-20, y, 26);
+    group.add(rail);
+  });
+
+  // Left fence (x=-24.5)
+  for (let z = 11; z <= 26; z += 0.8) {
+    const post = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.7, 0.1), fenceMat);
+    post.position.set(-24.5, 0.35, z);
+    post.castShadow = true;
+    group.add(post);
+  }
+  [0.25, 0.5].forEach(y => {
+    const rail = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.06, 15), railMat);
+    rail.position.set(-24.5, y, 18.5);
+    group.add(rail);
+  });
+
+  // Right fence (x=-15.5)
+  for (let z = 11; z <= 26; z += 0.8) {
+    const post = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.7, 0.1), fenceMat);
+    post.position.set(-15.5, 0.35, z);
+    post.castShadow = true;
+    group.add(post);
+  }
+  [0.25, 0.5].forEach(y => {
+    const rail = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.06, 15), railMat);
+    rail.position.set(-15.5, y, 18.5);
+    group.add(rail);
+  });
+
+  // Gate (front opening)
+  const gatePost1 = new THREE.Mesh(new THREE.BoxGeometry(0.12, 1.0, 0.12), fenceMat);
+  gatePost1.position.set(-17.5, 0.5, 11);
+  gatePost1.castShadow = true;
+  group.add(gatePost1);
+  const gatePost2 = gatePost1.clone();
+  gatePost2.position.x = -16.5;
+  group.add(gatePost2);
+  const gateTop = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.08, 0.08), railMat);
+  gateTop.position.set(-17, 0.9, 11);
+  group.add(gateTop);
 }
