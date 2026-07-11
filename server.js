@@ -171,17 +171,9 @@ function getOrCreatePlayer(playerId, name, wallet, customization, persistentId) 
         // Server is source of truth — only update cosmetic fields, keep class/stats from server
         const serverClass = existing.customization?.classType;
         const clientClass = customization.classType;
-        // Merge cosmetic fields only
-        existing.customization = { ...existing.customization, ...customization };
-        // If class changed, recalculate stats
-        if (clientClass && clientClass !== serverClass) {
-          const s = recalcClassStats(customization);
-          existing.hp = s.hp; existing.maxHp = s.hp;
-          existing.mp = s.mp; existing.maxMp = s.mp;
-          existing.atk = s.atk; existing.def = s.def;
-          existing.spd = s.spd; existing.crit = s.crit;
-          existing.class = clientClass;
-        }
+        // Merge cosmetic fields ONLY — classType/server is source of truth
+        const { classType, ...cosmeticFields } = customization || {};
+        existing.customization = { ...existing.customization, ...cosmeticFields };
       }
       world.players[playerId] = existing;
       // Remove old entry if different id
@@ -199,17 +191,9 @@ function getOrCreatePlayer(playerId, name, wallet, customization, persistentId) 
       existing.id = playerId;
       if (name && name !== 'Adventurer') existing.name = name;
       if (customization && Object.keys(customization).length > 0) {
-        const serverClass = existing.customization?.classType;
-        const clientClass = customization.classType;
-        existing.customization = { ...existing.customization, ...customization };
-        if (clientClass && clientClass !== serverClass) {
-          const s = recalcClassStats(customization);
-          existing.hp = s.hp; existing.maxHp = s.hp;
-          existing.mp = s.mp; existing.maxMp = s.mp;
-          existing.atk = s.atk; existing.def = s.def;
-          existing.spd = s.spd; existing.crit = s.crit;
-          existing.class = clientClass;
-        }
+        // Merge cosmetic fields ONLY — classType/server is source of truth
+        const { classType, ...cosmeticFields } = customization || {};
+        existing.customization = { ...existing.customization, ...cosmeticFields };
       }
       if (persistentId) existing.persistentId = persistentId; // backfill
       world.players[playerId] = existing;
