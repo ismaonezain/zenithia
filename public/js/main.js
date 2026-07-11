@@ -845,6 +845,8 @@ function handleServerMessage(msg) {
       state.player.inventory = msg.inventory;
       state.player.atk = msg.atk;
       state.player.def = msg.def;
+      if (msg.spd !== undefined) state.player.spd = msg.spd;
+      if (msg.crit !== undefined) state.player.crit = msg.crit;
       state.inventoryUI.player = state.player;
       break;
     }
@@ -1024,7 +1026,7 @@ function handleServerMessage(msg) {
     case 'shop_result':
     case 'shop_error': {
       if (state.shopUI) {
-        state.shopUI.player = state.player;
+        state.shopUI.playerState = state.player;
         state.shopUI.handleMsg(msg);
       }
       break;

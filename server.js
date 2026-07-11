@@ -484,6 +484,7 @@ function handleAttack(ws, playerId, msg) {
       mp: player.mp,
       maxMp: player.maxMp,
     });
+    broadcast({ type: 'monster_died', monsterId: monster.id });
   }
 }
 
@@ -630,14 +631,19 @@ function handleMessage(ws, playerId, msg) {
             const baseStats = recalcClassStats(player.customization);
             player.atk = baseStats.atk;
             player.def = baseStats.def;
-            // Sum all equipped items (including the one just equipped)
+            player.spd = baseStats.spd;
+            player.crit = baseStats.crit;
+            // Sum all equipped items (stats are in .stats sub-object)
             Object.values(player.equipment).forEach(e => {
-              if (e && ITEMS[e.id]) {
-                if (ITEMS[e.id].atk) player.atk += ITEMS[e.id].atk;
-                if (ITEMS[e.id].def) player.def += ITEMS[e.id].def;
+              if (e && ITEMS[e.id] && ITEMS[e.id].stats) {
+                const s = ITEMS[e.id].stats;
+                if (s.atk) player.atk += s.atk;
+                if (s.def) player.def += s.def;
+                if (s.spd) player.spd += s.spd;
+                if (s.crit) player.crit += s.crit;
               }
             });
-            ws.send(JSON.stringify({ type: 'item_equipped', equipment: player.equipment, inventory: player.inventory, atk: player.atk, def: player.def }));
+            ws.send(JSON.stringify({ type: 'item_equipped', equipment: player.equipment, inventory: player.inventory, atk: player.atk, def: player.def, spd: player.spd, crit: player.crit }));
           }
         }
       }
@@ -652,13 +658,18 @@ function handleMessage(ws, playerId, msg) {
         const baseStats = recalcClassStats(player.customization);
         player.atk = baseStats.atk;
         player.def = baseStats.def;
+        player.spd = baseStats.spd;
+        player.crit = baseStats.crit;
         Object.values(player.equipment).forEach(e => {
-          if (e && ITEMS[e.id]) {
-            if (ITEMS[e.id].atk) player.atk += ITEMS[e.id].atk;
-            if (ITEMS[e.id].def) player.def += ITEMS[e.id].def;
+          if (e && ITEMS[e.id] && ITEMS[e.id].stats) {
+            const s = ITEMS[e.id].stats;
+            if (s.atk) player.atk += s.atk;
+            if (s.def) player.def += s.def;
+            if (s.spd) player.spd += s.spd;
+            if (s.crit) player.crit += s.crit;
           }
         });
-        ws.send(JSON.stringify({ type: 'item_unequipped', equipment: player.equipment, inventory: player.inventory, atk: player.atk, def: player.def }));
+        ws.send(JSON.stringify({ type: 'item_unequipped', equipment: player.equipment, inventory: player.inventory, atk: player.atk, def: player.def, spd: player.spd, crit: player.crit }));
       }
       break;
     }

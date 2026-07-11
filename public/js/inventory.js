@@ -128,20 +128,22 @@ export class InventoryUI {
       const canEquip = item.type === 'equipment';
 
       html += `
-        <div class="inv-slot" style="
-          width:64px; height:64px; border:2px solid ${borderColor}; border-radius:8px;
-          background:rgba(255,255,255,0.05); cursor:pointer; position:relative;
-          display:flex; flex-direction:column; align-items:center; justify-content:center;
-        " title="${item.name}\n${item.description}">
-          <div style="font-size:1.2rem;">${item.icon?.symbol || '?'}</div>
-          ${item.quantity > 1 ? `<div style="position:absolute; bottom:2px; right:4px; font-size:0.65rem; color:#fff;">x${item.quantity}</div>` : ''}
+        <div style="display:flex; flex-direction:column; align-items:center;">
+          <div class="inv-slot" style="
+            width:64px; height:64px; border:2px solid ${borderColor}; border-radius:8px;
+            background:rgba(255,255,255,0.05); cursor:pointer; position:relative;
+            display:flex; flex-direction:column; align-items:center; justify-content:center;
+          " title="${item.name}\n${item.description}">
+            <div style="font-size:1.2rem;">${item.icon?.symbol || '?'}</div>
+            ${item.quantity > 1 ? `<div style="position:absolute; bottom:2px; right:4px; font-size:0.65rem; color:#fff;">x${item.quantity}</div>` : ''}
+          </div>
+          ${canUse ? `<button class="item-use" data-item-id="${item.id}" style="
+            margin-top:2px; padding:2px 6px; font-size:0.6rem; background:#4CAF50; border:none;
+            color:white; border-radius:4px; cursor:pointer;">Use</button>` : ''}
+          ${canEquip ? `<button class="item-equip" data-item-id="${item.id}" style="
+            margin-top:2px; padding:2px 6px; font-size:0.6rem; background:#2196F3; border:none;
+            color:white; border-radius:4px; cursor:pointer;">Equip</button>` : ''}
         </div>
-        ${canUse ? `<button class="item-use" data-item-id="${item.id}" style="
-          margin-top:2px; padding:2px 6px; font-size:0.6rem; background:#4CAF50; border:none;
-          color:white; border-radius:4px; cursor:pointer;">Use</button>` : ''}
-        ${canEquip ? `<button class="item-equip" data-item-id="${item.id}" style="
-          margin-top:2px; padding:2px 6px; font-size:0.6rem; background:#2196F3; border:none;
-          color:white; border-radius:4px; cursor:pointer;">Equip</button>` : ''}
       `;
     });
     // Fill empty slots
