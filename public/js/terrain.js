@@ -16,7 +16,7 @@ export const COLLISIONS = [
   // River House
   { x: -6, z: 14, hw: 2, hd: 2 },
   // Green House
-  { x: 3, z: 16, hw: 2, hd: 2 },
+  { x: 5, z: 10, hw: 2, hd: 2 },
   // Herbalist
   { x: 18, z: -8, hw: 2, hd: 2 },
   // Gate
