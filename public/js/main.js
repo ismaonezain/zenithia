@@ -1590,21 +1590,22 @@ function updateDayNight(dt) {
 
   // Street lamps — on at night, off during day
   const lamps = getStreetLamps();
-  const isNightTime = t < 0.2 || t > 0.8;
-  const isDusk = (t > 0.7 && t < 0.2) || (t > 0.8);
   let lampIntensity = 0;
   if (t > 0.75) lampIntensity = Math.min(1, (t - 0.75) / 0.1);
   else if (t < 0.25) lampIntensity = Math.max(0, 1 - (t - 0.1) / 0.15);
   else lampIntensity = 0;
 
   lamps.forEach(lamp => {
-    lamp.pointLight.intensity = lampIntensity * 1.5;
-    // Toggle lamp mesh color
-    if (lampIntensity > 0.3) {
-      lamp.light.material.color.setHex(0xFFF8E1);
+    // Point light intensity
+    lamp.pointLight.intensity = lampIntensity * 1.8;
+    // Bulb color: warm glow when on, dark when off
+    if (lampIntensity > 0.2) {
+      lamp.bulb.material.color.setHex(0xFFF3D4);
     } else {
-      lamp.light.material.color.setHex(0x8D6E63);
+      lamp.bulb.material.color.setHex(0x5D4037);
     }
+    // Glow sphere: fade in/out with lampIntensity
+    lamp.glowMat.opacity = lampIntensity * 0.35;
   });
 
   // Update time display

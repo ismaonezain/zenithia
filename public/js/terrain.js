@@ -1770,8 +1770,6 @@ function addStreetLamps(group) {
   ];
 
   const poleMat = new THREE.MeshLambertMaterial({ color: 0x5D4037 });
-  const lampMat = new THREE.MeshBasicMaterial({ color: 0xFFF8E1 });
-  const lampOffMat = new THREE.MeshBasicMaterial({ color: 0x8D6E63 });
 
   lampPositions.forEach(pos => {
     const lamp = new THREE.Group();
@@ -1785,30 +1783,45 @@ function addStreetLamps(group) {
     pole.castShadow = true;
     lamp.add(pole);
 
-    // Lamp housing (small box at top)
+    // Lamp housing — open-bottom box (visible bulb underneath)
     const housing = new THREE.Mesh(
-      new THREE.BoxGeometry(0.3, 0.25, 0.3),
-      new THREE.MeshLambertMaterial({ color: 0x795548 })
+      new THREE.BoxGeometry(0.35, 0.2, 0.35),
+      new THREE.MeshLambertMaterial({ color: 0x5D4037 })
     );
-    housing.position.y = 2.6;
+    housing.position.y = 2.65;
     lamp.add(housing);
 
-    // Lamp light (sphere inside housing)
-    const light = new THREE.Mesh(
-      new THREE.SphereGeometry(0.1, 6, 4),
-      lampMat.clone()
+    // Lamp bulb — hangs below housing, visible!
+    const bulb = new THREE.Mesh(
+      new THREE.SphereGeometry(0.08, 8, 6),
+      new THREE.MeshBasicMaterial({ color: 0x8D6E63 }) // OFF by default (dark)
     );
-    light.position.y = 2.6;
-    lamp.add(light);
+    bulb.position.y = 2.52;
+    lamp.add(bulb);
+
+    // Glow sphere — large, transparent, only visible at night
+    const glowMat = new THREE.MeshBasicMaterial({
+      color: 0xFFF3D4,
+      transparent: true,
+      opacity: 0,
+      depthWrite: false,
+      side: THREE.DoubleSide
+    });
+    const glow = new THREE.Mesh(
+      new THREE.SphereGeometry(0.6, 8, 6),
+      glowMat
+    );
+    glow.position.y = 2.55;
+    lamp.add(glow);
 
     // Point light (for night illumination)
     const pointLight = new THREE.PointLight(0xFFE0B2, 0, 8, 2);
-    pointLight.position.y = 2.7;
+    pointLight.position.y = 2.55;
     lamp.add(pointLight);
 
     lamp.position.set(pos.x, 0, pos.z);
     group.add(lamp);
 
-    streetLamps.push({ group: lamp, light, pointLight, lampMat, lampOffMat });
+    streetLamps.push({ group: lamp, bulb, glow, glowMat, pointLight });
   });
 }
