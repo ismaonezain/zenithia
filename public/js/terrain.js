@@ -250,94 +250,636 @@ function createDiagonalPath(x1, z1, x2, z2, width, material) {
 
 // --- Buildings ---
 function addBuildings(group) {
-  const buildings = [
-    // Elder's Hall — face south toward main path
-    { x: 0, z: -15, w: 6, h: 4, d: 5, color: 0x8D6E63, roof: 0x5D4037, label: 'Elder\'s Hall', rot: 0 },
+  // Helper: add label sprite
+  function addLabel(g, text, b, yOff) {
+    const c = document.createElement('canvas');
+    c.width = 256; c.height = 64;
+    const ctx = c.getContext('2d');
+    ctx.fillStyle = 'rgba(0,0,0,0.7)';
+    ctx.roundRect(0, 0, 256, 64, 8);
+    ctx.fill();
+    ctx.font = 'bold 28px Arial';
+    ctx.fillStyle = '#ffffff';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(text, 128, 32);
+    const tex = new THREE.CanvasTexture(c);
+    const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true }));
+    sprite.scale.set(4, 1, 1);
+    sprite.position.set(0, (yOff || b.h + 2.5), 0);
+    g.add(sprite);
+  }
 
-    // Market stalls — off the path, face south
-    { x: 4, z: -4, w: 2, h: 2, d: 2, color: 0xFFCC80, roof: 0xE65100, label: 'Stall', rot: 0 },
-    { x: 8, z: -4, w: 2, h: 2, d: 2, color: 0xFFCC80, roof: 0xE65100, label: 'Stall', rot: 0 },
-    { x: 12, z: -4, w: 2, h: 2, d: 2, color: 0xFFCC80, roof: 0xE65100, label: 'Stall', rot: 0 },
+  // Helper: window with frame
+  function addWindow(g, x, y, z, rotY) {
+    const wg = new THREE.Group();
+    // Glass
+    const glass = new THREE.Mesh(
+      new THREE.BoxGeometry(0.45, 0.45, 0.05),
+      new THREE.MeshBasicMaterial({ color: 0xFFF9C4 })
+    );
+    wg.add(glass);
+    // Frame (4 bars)
+    const frameMat = new THREE.MeshLambertMaterial({ color: 0x4E342E });
+    const hBar = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.06, 0.07), frameMat);
+    hBar.position.z = 0.01;
+    wg.add(hBar);
+    const hBar2 = hBar.clone();
+    hBar2.position.y = 0.22;
+    wg.add(hBar2);
+    const hBar3 = hBar.clone();
+    hBar3.position.y = -0.22;
+    wg.add(hBar3);
+    const vBar = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.55, 0.07), frameMat);
+    vBar.position.z = 0.01;
+    wg.add(vBar);
+    const vBar2 = vBar.clone();
+    vBar2.position.x = 0.22;
+    wg.add(vBar2);
+    // Shutters
+    const shutterMat = new THREE.MeshLambertMaterial({ color: 0x3E2723 });
+    const sL = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.5, 0.04), shutterMat);
+    sL.position.set(-0.36, 0, 0.02);
+    wg.add(sL);
+    const sR = sL.clone();
+    sR.position.x = 0.36;
+    wg.add(sR);
+    wg.position.set(x, y, z);
+    if (rotY) wg.rotation.y = rotY;
+    g.add(wg);
+  }
 
-    // Houses — face road
-    { x: -6, z: 8, w: 3, h: 2.5, d: 3, color: 0xD7CCC8, roof: 0x5D4037, rot: Math.PI / 2, label: 'Willow Cottage' },
-    { x: -6, z: 14, w: 3, h: 2.5, d: 3, color: 0xBCAAA4, roof: 0x795548, rot: Math.PI / 2, label: 'River House' },
-    { x: 3, z: 12, w: 3, h: 2.5, d: 3, color: 0xC5E1A5, roof: 0x33691E, rot: -Math.PI / 2, label: 'Green House' },
+  // Helper: door with frame and handle
+  function addDoor(g, x, y, z, rotY, w, h) {
+    w = w || 0.6; h = h || 1.2;
+    const dg = new THREE.Group();
+    // Door slab
+    const slab = new THREE.Mesh(
+      new THREE.BoxGeometry(w, h, 0.08),
+      new THREE.MeshLambertMaterial({ color: 0x3E2723 })
+    );
+    slab.position.y = h / 2;
+    dg.add(slab);
+    // Frame
+    const frameMat = new THREE.MeshLambertMaterial({ color: 0x2E1B0E });
+    const top = new THREE.Mesh(new THREE.BoxGeometry(w + 0.15, 0.1, 0.12), frameMat);
+    top.position.y = h + 0.05;
+    dg.add(top);
+    const left = new THREE.Mesh(new THREE.BoxGeometry(0.1, h + 0.1, 0.12), frameMat);
+    left.position.set(-w / 2 - 0.05, h / 2, 0);
+    dg.add(left);
+    const right = left.clone();
+    right.position.x = w / 2 + 0.05;
+    dg.add(right);
+    // Handle
+    const handle = new THREE.Mesh(
+      new THREE.SphereGeometry(0.04, 6, 4),
+      new THREE.MeshLambertMaterial({ color: 0xB8860B })
+    );
+    handle.position.set(w / 2 - 0.1, h * 0.45, 0.06);
+    dg.add(handle);
+    // Cross planks
+    const plankMat = new THREE.MeshLambertMaterial({ color: 0x4E342E });
+    const p1 = new THREE.Mesh(new THREE.BoxGeometry(w * 0.8, 0.04, 0.02), plankMat);
+    p1.position.set(0, h * 0.3, 0.05);
+    dg.add(p1);
+    const p2 = p1.clone();
+    p2.position.y = h * 0.7;
+    dg.add(p2);
+    dg.position.set(x, y, z);
+    if (rotY) dg.rotation.y = rotY;
+    g.add(dg);
+  }
 
-    // Herbalist's hut — face south
-    { x: 18, z: -8, w: 2.5, h: 2, d: 2.5, color: 0x6D4C41, roof: 0x33691E, label: 'Herbalist', rot: 0 },
+  // Helper: chimney
+  function addChimney(g, x, y, z) {
+    const ch = new THREE.Group();
+    const body = new THREE.Mesh(
+      new THREE.BoxGeometry(0.4, 1.0, 0.4),
+      new THREE.MeshLambertMaterial({ color: 0x795548 })
+    );
+    body.position.y = 0.5;
+    ch.add(body);
+    const top = new THREE.Mesh(
+      new THREE.BoxGeometry(0.5, 0.1, 0.5),
+      new THREE.MeshLambertMaterial({ color: 0x5D4037 })
+    );
+    top.position.y = 1.05;
+    ch.add(top);
+    ch.position.set(x, y, z);
+    g.add(ch);
+  }
 
-    // Guard post — face left (west)
-    { x: -2, z: 22, w: 2, h: 3, d: 2, color: 0x607D8B, roof: 0x455A64, label: 'Gate', rot: Math.PI / 2 },
+  // Helper: porch/overhang
+  function addPorch(g, x, z, width, depth, postH) {
+    const pg = new THREE.Group();
+    const postMat = new THREE.MeshLambertMaterial({ color: 0x6D4C41 });
+    // Posts
+    const postGeo = new THREE.CylinderGeometry(0.06, 0.06, postH, 6);
+    [-1, 1].forEach(side => {
+      const post = new THREE.Mesh(postGeo, postMat);
+      post.position.set(side * (width / 2 - 0.1), postH / 2, depth);
+      post.castShadow = true;
+      pg.add(post);
+    });
+    // Roof beam
+    const beam = new THREE.Mesh(
+      new THREE.BoxGeometry(width, 0.08, depth + 0.2),
+      new THREE.MeshLambertMaterial({ color: 0x795548 })
+    );
+    beam.position.set(0, postH + 0.04, depth / 2);
+    pg.add(beam);
+    // Planks
+    for (let i = 0; i < 4; i++) {
+      const plank = new THREE.Mesh(
+        new THREE.BoxGeometry(width * 0.8, 0.04, 0.2),
+        new THREE.MeshLambertMaterial({ color: 0x8D6E63 })
+      );
+      plank.position.set(0, 0.02, depth * (i / 3));
+      pg.add(plank);
+    }
+    pg.position.set(x, 0, z);
+    g.add(pg);
+  }
 
-    // Mr. Tani's barn — face east toward main path
-    { x: -18, z: 12, w: 5, h: 3, d: 4, color: 0xD32F2F, roof: 0xB71C1C, label: 'Barn', rot: 0 },
+  // =============================================
+  // ELDER'S HALL — grand, with columns + steps + torches
+  // =============================================
+  const elderHall = new THREE.Group();
+  // Foundation
+  const elderFound = new THREE.Mesh(
+    new THREE.BoxGeometry(6.4, 0.3, 5.4),
+    new THREE.MeshLambertMaterial({ color: 0x757575 })
+  );
+  elderFound.position.y = 0.15;
+  elderFound.castShadow = true;
+  elderFound.receiveShadow = true;
+  elderHall.add(elderFound);
+  // Walls
+  const elderWall = new THREE.Mesh(
+    new THREE.BoxGeometry(6, 4, 5),
+    new THREE.MeshLambertMaterial({ color: 0x8D6E63 })
+  );
+  elderWall.position.y = 2.3;
+  elderWall.castShadow = true;
+  elderWall.receiveShadow = true;
+  elderHall.add(elderWall);
+  // Roof — multi-layer (bigger)
+  const elderRoofMat = new THREE.MeshLambertMaterial({ color: 0x5D4037 });
+  const elderRoof = new THREE.Mesh(
+    new THREE.ConeGeometry(4.2, 2, 4),
+    elderRoofMat
+  );
+  elderRoof.position.y = 5.3;
+  elderRoof.rotation.y = Math.PI / 4;
+  elderRoof.castShadow = true;
+  elderHall.add(elderRoof);
+  // Smaller roof peak
+  const elderPeak = new THREE.Mesh(
+    new THREE.ConeGeometry(1.8, 1.2, 4),
+    new THREE.MeshLambertMaterial({ color: 0x4E342E })
+  );
+  elderPeak.position.y = 6.5;
+  elderPeak.rotation.y = Math.PI / 4;
+  elderHall.add(elderPeak);
+  // Columns (4)
+  const colMat = new THREE.MeshLambertMaterial({ color: 0xBDBDBD });
+  const colGeo = new THREE.CylinderGeometry(0.15, 0.18, 4, 8);
+  [-2.5, -0.8, 0.8, 2.5].forEach(xo => {
+    const col = new THREE.Mesh(colGeo, colMat);
+    col.position.set(xo, 2.3, 2.7);
+    col.castShadow = true;
+    elderHall.add(col);
+  });
+  // Steps (3)
+  const stepMat = new THREE.MeshLambertMaterial({ color: 0x9E9E9E });
+  [0, 1, 2].forEach(i => {
+    const step = new THREE.Mesh(
+      new THREE.BoxGeometry(2.5 - i * 0.1, 0.12, 0.35),
+      stepMat
+    );
+    step.position.set(0, 0.36 - i * 0.12, 2.85 + i * 0.35);
+    step.receiveShadow = true;
+    elderHall.add(step);
+  });
+  // Grand door
+  addDoor(elderHall, 0, 0.3, 2.56, 0, 1.2, 2.0);
+  // Windows (both sides)
+  addWindow(elderHall, -2.0, 2.5, 2.56, 0);
+  addWindow(elderHall, 2.0, 2.5, 2.56, 0);
+  // Torch lights
+  const torchMat = new THREE.MeshBasicMaterial({ color: 0xFF9800 });
+  [-3.2, 3.2].forEach(xo => {
+    const flame = new THREE.Mesh(new THREE.SphereGeometry(0.12, 6, 4), torchMat);
+    flame.position.set(xo, 3.2, 2.7);
+    elderHall.add(flame);
+    const pole = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.03, 0.03, 0.6, 4),
+      new THREE.MeshLambertMaterial({ color: 0x4E342E })
+    );
+    pole.position.set(xo, 2.9, 2.7);
+    elderHall.add(pole);
+    // Point light for glow
+    const pl = new THREE.PointLight(0xFF9800, 0.6, 8);
+    pl.position.set(xo, 3.4, 2.8);
+    elderHall.add(pl);
+  });
+  elderHall.position.set(0, 0, -15);
+  group.add(elderHall);
+  addLabel(elderHall, "Elder's Hall", { h: 4 }, 8);
+
+  // =============================================
+  // MARKET STALLS — wooden posts, awning, counter
+  // =============================================
+  [{ x: 4, label: 'Blacksmith' }, { x: 8, label: 'General' }, { x: 12, label: 'Food' }].forEach((st, idx) => {
+    const sg = new THREE.Group();
+    // Counter
+    const counter = new THREE.Mesh(
+      new THREE.BoxGeometry(1.8, 0.8, 1.2),
+      new THREE.MeshLambertMaterial({ color: 0x8D6E63 })
+    );
+    counter.position.set(0, 0.4, 0);
+    counter.castShadow = true;
+    sg.add(counter);
+    // Counter top
+    const cTop = new THREE.Mesh(
+      new THREE.BoxGeometry(2, 0.08, 1.4),
+      new THREE.MeshLambertMaterial({ color: 0x6D4C41 })
+    );
+    cTop.position.set(0, 0.84, 0);
+    sg.add(cTop);
+    // Back wall
+    const backWall = new THREE.Mesh(
+      new THREE.BoxGeometry(2, 2, 0.12),
+      new THREE.MeshLambertMaterial({ color: 0xFFCC80 })
+    );
+    backWall.position.set(0, 1.0, -0.65);
+    backWall.castShadow = true;
+    sg.add(backWall);
+    // Wooden posts (4)
+    const postMat = new THREE.MeshLambertMaterial({ color: 0x6D4C41 });
+    const postGeo = new THREE.CylinderGeometry(0.06, 0.06, 2.5, 6);
+    [[-0.9, 0.55], [0.9, 0.55], [-0.9, -0.55], [0.9, -0.55]].forEach(([px, pz]) => {
+      const post = new THREE.Mesh(postGeo, postMat);
+      post.position.set(px, 1.25, pz);
+      post.castShadow = true;
+      sg.add(post);
+    });
+    // Awning (cloth)
+    const awningMat = new THREE.MeshLambertMaterial({ color: [0xD32F2F, 0x1976D2, 0x388E3C][idx] });
+    const awning = new THREE.Mesh(
+      new THREE.BoxGeometry(2.4, 0.06, 1.4),
+      awningMat
+    );
+    awning.position.set(0, 2.5, 0.1);
+    sg.add(awning);
+    // Awning slope
+    const slope = new THREE.Mesh(
+      new THREE.BoxGeometry(2.4, 0.06, 0.6),
+      awningMat
+    );
+    slope.position.set(0, 2.3, 0.9);
+    slope.rotation.x = 0.3;
+    sg.add(slope);
+    // Some goods on counter (colored boxes = merchandise)
+    const goodsMat = [
+      new THREE.MeshLambertMaterial({ color: 0x90A4AE }),
+      new THREE.MeshLambertMaterial({ color: 0xFFF176 }),
+      new THREE.MeshLambertMaterial({ color: 0xEF9A9A })
+    ];
+    for (let i = 0; i < 3; i++) {
+      const item = new THREE.Mesh(
+        new THREE.BoxGeometry(0.25, 0.2, 0.25),
+        goodsMat[i]
+      );
+      item.position.set(-0.5 + i * 0.5, 0.98, 0);
+      sg.add(item);
+    }
+    sg.position.set(st.x, 0, -4);
+    group.add(sg);
+    addLabel(sg, st.label, { h: 2 }, 3.5);
+  });
+
+  // =============================================
+  // HOUSES — detailed with porch, chimney, shutters, flower box
+  // =============================================
+  const houseData = [
+    { x: -6, z: 8, color: 0xD7CCC8, roof: 0x5D4037, rot: Math.PI / 2, label: 'Willow Cottage' },
+    { x: -6, z: 14, color: 0xBCAAA4, roof: 0x795548, rot: Math.PI / 2, label: 'River House' },
+    { x: 3, z: 12, color: 0xC5E1A5, roof: 0x33691E, rot: -Math.PI / 2, label: 'Green House' },
   ];
-
-  buildings.forEach(b => {
-    const g = new THREE.Group();
-
+  houseData.forEach(hd => {
+    const hg = new THREE.Group();
+    const w = 3, d = 3, bh = 2.5;
+    // Foundation
+    const found = new THREE.Mesh(
+      new THREE.BoxGeometry(w + 0.2, 0.2, d + 0.2),
+      new THREE.MeshLambertMaterial({ color: 0x757575 })
+    );
+    found.position.y = 0.1;
+    hg.add(found);
     // Walls
-    const wallGeo = new THREE.BoxGeometry(b.w, b.h, b.d);
-    const wallMat = new THREE.MeshLambertMaterial({ color: b.color });
-    const wall = new THREE.Mesh(wallGeo, wallMat);
-    wall.position.y = b.h / 2;
+    const wall = new THREE.Mesh(
+      new THREE.BoxGeometry(w, bh, d),
+      new THREE.MeshLambertMaterial({ color: hd.color })
+    );
+    wall.position.y = bh / 2 + 0.2;
     wall.castShadow = true;
     wall.receiveShadow = true;
-    g.add(wall);
-
-    // Roof (triangular prism) — local rotation only, group handles building rot
-    const roofGeo = new THREE.ConeGeometry(Math.max(b.w, b.d) * 0.7, 1.5, 4);
-    const roofMat = new THREE.MeshLambertMaterial({ color: b.roof });
-    const roof = new THREE.Mesh(roofGeo, roofMat);
-    roof.position.y = b.h + 0.75;
+    hg.add(wall);
+    // Roof
+    const roof = new THREE.Mesh(
+      new THREE.ConeGeometry(2.5, 1.6, 4),
+      new THREE.MeshLambertMaterial({ color: hd.roof })
+    );
+    roof.position.y = bh + 1.0;
     roof.rotation.y = Math.PI / 4;
     roof.castShadow = true;
-    g.add(roof);
-
-    // Door (small dark box)
-    const doorGeo = new THREE.BoxGeometry(0.6, 1.2, 0.1);
-    const doorMat = new THREE.MeshLambertMaterial({ color: 0x3E2723 });
-    const door = new THREE.Mesh(doorGeo, doorMat);
-    door.position.set(0, 0.6, b.d / 2 + 0.05);
-    g.add(door);
-
-    // Window (small light box)
-    const winGeo = new THREE.BoxGeometry(0.5, 0.5, 0.1);
-    const winMat = new THREE.MeshBasicMaterial({ color: 0xFFF9C4 });
-    const win1 = new THREE.Mesh(winGeo, winMat);
-    win1.position.set(-b.w / 4, b.h * 0.6, b.d / 2 + 0.05);
-    g.add(win1);
-    const win2 = new THREE.Mesh(winGeo, winMat);
-    win2.position.set(b.w / 4, b.h * 0.6, b.d / 2 + 0.05);
-    g.add(win2);
-
-    g.position.set(b.x, 0, b.z);
-    g.rotation.y = b.rot || 0;
-    group.add(g);
-
-    // Label (text sprite above building)
-    if (b.label) {
-      const canvas2 = document.createElement('canvas');
-      canvas2.width = 256;
-      canvas2.height = 64;
-      const ctx = canvas2.getContext('2d');
-      ctx.fillStyle = 'rgba(0,0,0,0.7)';
-      ctx.roundRect(0, 0, 256, 64, 8);
-      ctx.fill();
-      ctx.font = 'bold 28px Arial';
-      ctx.fillStyle = '#ffffff';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(b.label, 128, 32);
-      const tex = new THREE.CanvasTexture(canvas2);
-      const spriteMat = new THREE.SpriteMaterial({ map: tex, transparent: true });
-      const sprite = new THREE.Sprite(spriteMat);
-      sprite.scale.set(4, 1, 1);
-      sprite.position.set(b.x, b.h + 2.5, b.z);
-      group.add(sprite);
-    }
+    hg.add(roof);
+    // Door
+    addDoor(hg, 0, 0.2, d / 2 + 0.06, 0, 0.55, 1.1);
+    // Windows (front)
+    addWindow(hg, -0.9, bh * 0.55 + 0.2, d / 2 + 0.06, 0);
+    addWindow(hg, 0.9, bh * 0.55 + 0.2, d / 2 + 0.06, 0);
+    // Side windows
+    addWindow(hg, w / 2 + 0.06, bh * 0.55 + 0.2, 0, Math.PI / 2);
+    addWindow(hg, -w / 2 - 0.06, bh * 0.55 + 0.2, 0, Math.PI / 2);
+    // Chimney
+    addChimney(hg, 0.8, bh + 0.2, -0.5);
+    // Porch (front)
+    addPorch(hg, 0, d / 2 + 0.1, 2, 1.2, 2.2);
+    // Flower boxes under front windows
+    const flowerColors = [0xE91E63, 0xFF9800, 0x9C27B0];
+    [-0.9, 0.9].forEach((fx, i) => {
+      const box = new THREE.Mesh(
+        new THREE.BoxGeometry(0.5, 0.15, 0.15),
+        new THREE.MeshLambertMaterial({ color: 0x5D4037 })
+      );
+      box.position.set(fx, bh * 0.42 + 0.2, d / 2 + 0.12);
+      hg.add(box);
+      // Flowers
+      for (let f = 0; f < 3; f++) {
+        const flower = new THREE.Mesh(
+          new THREE.SphereGeometry(0.06, 4, 3),
+          new THREE.MeshLambertMaterial({ color: flowerColors[(i + f) % 3] })
+        );
+        flower.position.set(fx - 0.15 + f * 0.15, bh * 0.48 + 0.2, d / 2 + 0.12);
+        hg.add(flower);
+      }
+    });
+    hg.position.set(hd.x, 0, hd.z);
+    hg.rotation.y = hd.rot;
+    group.add(hg);
+    addLabel(hg, hd.label, { h: bh }, bh + 3.2);
   });
+
+  // =============================================
+  // HERBALIST HUT — rustic, hanging herbs, barrel, sign
+  // =============================================
+  const herbG = new THREE.Group();
+  // Foundation
+  const herbFound = new THREE.Mesh(
+    new THREE.BoxGeometry(2.9, 0.2, 2.9),
+    new THREE.MeshLambertMaterial({ color: 0x6D4C41 })
+  );
+  herbFound.position.y = 0.1;
+  herbG.add(herbFound);
+  // Walls
+  const herbWall = new THREE.Mesh(
+    new THREE.BoxGeometry(2.5, 2, 2.5),
+    new THREE.MeshLambertMaterial({ color: 0x6D4C41 })
+  );
+  herbWall.position.y = 1.2;
+  herbWall.castShadow = true;
+  herbG.add(herbWall);
+  // Roof — thatched look (brown cone)
+  const herbRoof = new THREE.Mesh(
+    new THREE.ConeGeometry(2.0, 1.4, 6),
+    new THREE.MeshLambertMaterial({ color: 0x827717 })
+  );
+  herbRoof.position.y = 2.9;
+  herbRoof.castShadow = true;
+  herbG.add(herbRoof);
+  // Door
+  addDoor(herbG, 0, 0.2, 1.31, 0, 0.5, 0.9);
+  // Window
+  addWindow(herbG, 0.8, 1.3, 1.31, 0);
+  // Hanging herbs (green/yellow spheres above door)
+  const herbColors = [0x4CAF50, 0x66BB6A, 0xFDD835, 0x8BC34A, 0xCDDC39];
+  for (let i = 0; i < 5; i++) {
+    const h = new THREE.Mesh(
+      new THREE.SphereGeometry(0.1, 4, 3),
+      new THREE.MeshLambertMaterial({ color: herbColors[i] })
+    );
+    h.position.set(-0.6 + i * 0.3, 2.0, 1.4);
+    herbG.add(h);
+    // String
+    const str = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.01, 0.01, 0.3, 3),
+      new THREE.MeshLambertMaterial({ color: 0x795548 })
+    );
+    str.position.set(-0.6 + i * 0.3, 2.15, 1.4);
+    herbG.add(str);
+  }
+  // Barrel
+  const barrel = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.25, 0.3, 0.6, 8),
+    new THREE.MeshLambertMaterial({ color: 0x5D4037 })
+  );
+  barrel.position.set(1.0, 0.3, 1.0);
+  herbG.add(barrel);
+  // Barrel rings
+  const ringMat = new THREE.MeshLambertMaterial({ color: 0x9E9E9E });
+  [-0.15, 0.15].forEach(ry => {
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.28, 0.02, 4, 8), ringMat);
+    ring.position.set(1.0, 0.3 + ry, 1.0);
+    ring.rotation.x = Math.PI / 2;
+    herbG.add(ring);
+  });
+  // Mushroom patch nearby
+  const mushMat = new THREE.MeshLambertMaterial({ color: 0xF5F5DC });
+  const mushCap = new THREE.MeshLambertMaterial({ color: 0xD32F2F });
+  [[1.6, 0.7], [1.8, 0.9], [1.5, 1.0]].forEach(([mx, mz]) => {
+    const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.04, 0.15, 5), mushMat);
+    stem.position.set(mx, 0.08, mz);
+    herbG.add(stem);
+    const cap = new THREE.Mesh(new THREE.SphereGeometry(0.08, 6, 4, 0, Math.PI * 2, 0, Math.PI / 2), mushCap);
+    cap.position.set(mx, 0.16, mz);
+    herbG.add(cap);
+  });
+  herbG.position.set(18, 0, -8);
+  group.add(herbG);
+  addLabel(herbG, 'Herbalist', { h: 2 }, 5);
+
+  // =============================================
+  // GUARD POST — tall, with lookout platform + flag
+  // =============================================
+  const guardG = new THREE.Group();
+  // Base walls
+  const guardWall = new THREE.Mesh(
+    new THREE.BoxGeometry(2, 3, 2),
+    new THREE.MeshLambertMaterial({ color: 0x607D8B })
+  );
+  guardWall.position.y = 1.5;
+  guardWall.castShadow = true;
+  guardG.add(guardWall);
+  // Lookout platform (extends above)
+  const platform = new THREE.Mesh(
+    new THREE.BoxGeometry(2.4, 0.12, 2.4),
+    new THREE.MeshLambertMaterial({ color: 0x5D4037 })
+  );
+  platform.position.y = 3.06;
+  guardG.add(platform);
+  // Railing
+  const railMat = new THREE.MeshLambertMaterial({ color: 0x6D4C41 });
+  [-1, 1].forEach(s => {
+    const rail = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.4, 0.06), railMat);
+    rail.position.set(0, 3.35, s * 1.15);
+    guardG.add(rail);
+    const rail2 = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.4, 2.4), railMat);
+    rail2.position.set(s * 1.15, 3.35, 0);
+    guardG.add(rail2);
+  });
+  // Roof
+  const guardRoof = new THREE.Mesh(
+    new THREE.ConeGeometry(1.6, 1.2, 4),
+    new THREE.MeshLambertMaterial({ color: 0x455A64 })
+  );
+  guardRoof.position.y = 4.1;
+  guardRoof.rotation.y = Math.PI / 4;
+  guardRoof.castShadow = true;
+  guardG.add(guardRoof);
+  // Door
+  addDoor(guardG, 0, 0.2, 1.06, 0, 0.5, 0.9);
+  // Window
+  addWindow(guardG, 0, 2.2, 1.06, 0);
+  // Flag
+  const flagPole = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.02, 0.02, 2.5, 4),
+    new THREE.MeshLambertMaterial({ color: 0x9E9E9E })
+  );
+  flagPole.position.set(0.8, 4.5, 0);
+  guardG.add(flagPole);
+  // Flag cloth
+  const flagCloth = new THREE.Mesh(
+    new THREE.BoxGeometry(0.6, 0.4, 0.03),
+    new THREE.MeshLambertMaterial({ color: 0x1565C0 })
+  );
+  flagCloth.position.set(1.1, 5.4, 0);
+  guardG.add(flagCloth);
+  // Flag emblem (small yellow circle)
+  const emblem = new THREE.Mesh(
+    new THREE.CircleGeometry(0.1, 6),
+    new THREE.MeshBasicMaterial({ color: 0xFDD835 })
+  );
+  emblem.position.set(1.1, 5.4, 0.02);
+  guardG.add(emblem);
+  guardG.position.set(-2, 0, 22);
+  guardG.rotation.y = Math.PI / 2;
+  group.add(guardG);
+  addLabel(guardG, 'Gate', { h: 3 }, 6.5);
+
+  // =============================================
+  // BARN — large, with sliding door, hay bales, silo
+  // =============================================
+  const barnG = new THREE.Group();
+  // Foundation
+  const barnFound = new THREE.Mesh(
+    new THREE.BoxGeometry(5.4, 0.2, 4.4),
+    new THREE.MeshLambertMaterial({ color: 0x757575 })
+  );
+  barnFound.position.y = 0.1;
+  barnG.add(barnFound);
+  // Main walls
+  const barnWall = new THREE.Mesh(
+    new THREE.BoxGeometry(5, 3, 4),
+    new THREE.MeshLambertMaterial({ color: 0xD32F2F })
+  );
+  barnWall.position.y = 1.7;
+  barnWall.castShadow = true;
+  barnWall.receiveShadow = true;
+  barnG.add(barnWall);
+  // Roof — gambrel (barn-style, 2 slopes)
+  const barnRoofMat = new THREE.MeshLambertMaterial({ color: 0xB71C1C });
+  // Lower slope
+  const roofL = new THREE.Mesh(new THREE.BoxGeometry(5.4, 0.1, 2.5), barnRoofMat);
+  roofL.position.set(0, 3.8, 1.2);
+  roofL.rotation.x = -0.3;
+  roofL.castShadow = true;
+  barnG.add(roofL);
+  const roofR = roofL.clone();
+  roofR.position.z = -1.2;
+  roofR.rotation.x = 0.3;
+  barnG.add(roofR);
+  // Upper slope
+  const roofT = new THREE.Mesh(new THREE.BoxGeometry(5.4, 0.1, 1.2), barnRoofMat);
+  roofT.position.y = 4.3;
+  roofT.rotation.x = -0.15;
+  barnG.add(roofT);
+  const roofT2 = roofT.clone();
+  roofT2.rotation.x = 0.15;
+  barnG.add(roofT2);
+  // Ridge
+  const ridge = new THREE.Mesh(
+    new THREE.BoxGeometry(5.4, 0.15, 0.2),
+    new THREE.MeshLambertMaterial({ color: 0x8B0000 })
+  );
+  ridge.position.y = 4.5;
+  barnG.add(ridge);
+  // Big sliding door (front)
+  const slideDoor = new THREE.Mesh(
+    new THREE.BoxGeometry(2.5, 2.2, 0.12),
+    new THREE.MeshLambertMaterial({ color: 0x5D4037 })
+  );
+  slideDoor.position.set(0, 1.3, 2.06);
+  barnG.add(slideDoor);
+  // Door cross planks
+  const crossMat = new THREE.MeshLambertMaterial({ color: 0x4E342E });
+  const crossH = new THREE.Mesh(new THREE.BoxGeometry(2.3, 0.06, 0.03), crossMat);
+  crossH.position.set(0, 1.3, 2.13);
+  barnG.add(crossH);
+  const crossV = new THREE.Mesh(new THREE.BoxGeometry(0.06, 2.0, 0.03), crossMat);
+  crossV.position.set(0, 1.3, 2.13);
+  barnG.add(crossV);
+  // Door rail (top bar)
+  const rail = new THREE.Mesh(
+    new THREE.BoxGeometry(3, 0.1, 0.1),
+    new THREE.MeshLambertMaterial({ color: 0x9E9E9E })
+  );
+  rail.position.set(0, 2.55, 2.1);
+  barnG.add(rail);
+  // Hay bales (near barn)
+  const hayMat = new THREE.MeshLambertMaterial({ color: 0xF9A825 });
+  [[-2, 0.8, 2.5], [-2, 0.8, 1.8], [-2, 1.4, 2.15]].forEach(([hx, hy, hz]) => {
+    const bale = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.35, 0.35, 0.5, 8),
+      hayMat
+    );
+    bale.rotation.z = Math.PI / 2;
+    bale.position.set(hx, hy, hz);
+    bale.castShadow = true;
+    barnG.add(bale);
+  });
+  // Silo (cylinder next to barn)
+  const silo = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.8, 0.8, 3.5, 10),
+    new THREE.MeshLambertMaterial({ color: 0x9E9E9E })
+  );
+  silo.position.set(-3.2, 1.75, 0);
+  silo.castShadow = true;
+  barnG.add(silo);
+  const siloRoof = new THREE.Mesh(
+    new THREE.ConeGeometry(0.9, 0.8, 10),
+    new THREE.MeshLambertMaterial({ color: 0x757575 })
+  );
+  siloRoof.position.set(-3.2, 3.9, 0);
+  barnG.add(siloRoof);
+  // Side windows (small)
+  addWindow(barnG, 2.06, 2, 0, Math.PI / 2);
+  addWindow(barnG, -2.06, 2, 0, Math.PI / 2);
+  barnG.position.set(-18, 0, 12);
+  group.add(barnG);
+  addLabel(barnG, 'Barn', { h: 3 }, 6);
 }
 
 // --- Trees ---
