@@ -148,7 +148,7 @@ let world = loadWorld();
 const connectedPlayers = {};
 
 // --- Player Management ---
-function getOrCreatePlayer(playerId, name, wallet) {
+function getOrCreatePlayer(playerId, name, wallet, customization) {
   // Try to load existing player by wallet
   if (wallet) {
     const existing = Object.values(world.players).find(p => p.wallet === wallet);
@@ -164,12 +164,22 @@ function getOrCreatePlayer(playerId, name, wallet) {
     }
   }
   // Create new
+  // Class base stats
+  const CLASS_STATS = {
+    laborer:  { hp: 120, mp: 30, atk: 8,  def: 7,  spd: 6,  crit: 0.05 },
+    miner:    { hp: 90,  mp: 40, atk: 12, def: 4,  spd: 10, crit: 0.10 },
+    gardener: { hp: 100, mp: 50, atk: 6,  def: 6,  spd: 8,  crit: 0.08 },
+    herbalist:{ hp: 85,  mp: 70, atk: 5,  def: 5,  spd: 7,  crit: 0.05 },
+    watchman: { hp: 110, mp: 35, atk: 10, def: 8,  spd: 7,  crit: 0.07 },
+  };
+  const cls = (customization && customization.classType) || 'laborer';
+  const s = CLASS_STATS[cls] || CLASS_STATS.laborer;
   const player = {
     id: playerId, name: name || 'Adventurer', wallet: wallet || null,
-    x: 0, y: 0, z: 0, class: null, className: null, level: 1, xp: 0,
-    hp: 100, maxHp: 100, mp: 50, maxMp: 50, atk: 10, def: 5, spd: 10, crit: 0.05,
+    x: 0, y: 0, z: 0, class: cls, className: null, level: 1, xp: 0,
+    hp: s.hp, maxHp: s.hp, mp: s.mp, maxMp: s.mp, atk: s.atk, def: s.def, spd: s.spd, crit: s.crit,
     zen: 50, inventory: [], quests: {}, reputation: {}, region: 'willowmere',
-    customization: {}, equipment: {},
+    customization: customization || {}, equipment: {},
     createdAt: Date.now(), lastLogin: Date.now(),
   };
   world.players[playerId] = player;
@@ -490,7 +500,7 @@ function handleMessage(ws, playerId, msg) {
   switch (msg.type) {
     case 'join': {
       const isNew = !world.players[Object.keys(world.players).find(k => world.players[k].wallet === msg.wallet)] && msg.wallet;
-      const player = getOrCreatePlayer(playerId, msg.name, msg.wallet);
+      const player = getOrCreatePlayer(playerId, msg.name, msg.wallet, msg.customization);
       if (msg.customization && !player.customization?.skinIdx) player.customization = msg.customization;
       connectedPlayers[ws] = player;
       ws.playerId = playerId;

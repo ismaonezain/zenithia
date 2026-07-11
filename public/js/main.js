@@ -272,12 +272,12 @@ function initPreview() {
   state.previewScene = new THREE.Scene();
   state.previewScene.background = new THREE.Color(0x2a2a3e);
 
-  state.previewCamera = new THREE.PerspectiveCamera(50, 200 / 250, 0.1, 10);
+  state.previewCamera = new THREE.PerspectiveCamera(50, 220 / 300, 0.1, 10);
   state.previewCamera.position.set(0, 1.2, 3);
   state.previewCamera.lookAt(0, 0.8, 0);
 
   state.previewRenderer = new THREE.WebGLRenderer({ canvas: pCanvas, antialias: true });
-  state.previewRenderer.setSize(200, 250);
+  state.previewRenderer.setSize(220, 300);
 
   state.previewScene.add(new THREE.AmbientLight(0xffffff, 0.8));
   const dir = new THREE.DirectionalLight(0xffffff, 0.6);
@@ -289,6 +289,24 @@ function initPreview() {
 
 const PANTS_COLORS = [0x5D4037, 0x37474F, 0x1B5E20, 0x4E342E, 0x212121, 0x0D47A1, 0xBF360C, 0x880E4F];
 const CLASS_TRIM = { laborer: 0x8D6E63, miner: 0x78909C, gardener: 0x66BB6A, herbalist: 0xAB47BC, watchman: 0x455A64 };
+
+// Class base stats — different playstyles
+const CLASS_STATS = {
+  laborer:  { hp: 120, mp: 30, atk: 8,  def: 7,  spd: 6,  crit: 0.05 },
+  miner:    { hp: 90,  mp: 40, atk: 12, def: 4,  spd: 10, crit: 0.10 },
+  gardener: { hp: 100, mp: 50, atk: 6,  def: 6,  spd: 8,  crit: 0.08 },
+  herbalist:{ hp: 85,  mp: 70, atk: 5,  def: 5,  spd: 7,  crit: 0.05 },
+  watchman: { hp: 110, mp: 35, atk: 10, def: 8,  spd: 7,  crit: 0.07 },
+};
+
+// Class descriptions — lore + gameplay role
+const CLASS_INFO = {
+  laborer:  { title: 'Guardian', desc: 'Tangguh dan kuat. Melindungi desa dengan pertahanan kokoh.', role: 'Tank', icon: '🛡️' },
+  miner:    { title: 'Blade Dancer', desc: 'Cepat dan mematikan. Mengandalkan kecepatan serangan.', role: 'DPS', icon: '⚔️' },
+  gardener: { title: 'Ranger', desc: 'Seimbang antara serangan dan pertahanan.', role: 'All-Rounder', icon: '🌿' },
+  herbalist:{ title: 'Sage', desc: 'Ahli ramuan dan sihir. Lemah tapi paling berbakat.', role: 'Support', icon: '✨' },
+  watchman: { title: 'Sentinel', desc: 'Waspada dan akurat. Keseimbangan kekuatan dan ketangkasan.', role: 'Bruiser', icon: '👁️' },
+};
 
 function updatePreviewModel() {
   if (state.previewModel) state.previewScene.remove(state.previewModel);
@@ -328,18 +346,41 @@ function initCustomization() {
 
   // Class picker
   const classPicker = document.getElementById('class-picker');
+  function showClassInfo(cls) {
+    const info = CLASS_INFO[cls];
+    const stats = CLASS_STATS[cls];
+    if (!info) return;
+    document.getElementById('class-info').style.display = 'flex';
+    document.getElementById('class-info-icon').textContent = info.icon;
+    document.getElementById('class-info-title').textContent = info.title;
+    document.getElementById('class-info-role').textContent = info.role;
+    document.getElementById('class-info-desc').textContent = info.desc;
+    const statsEl = document.getElementById('class-info-stats');
+    statsEl.innerHTML = [
+      `<span class="stat-badge">HP <span class="stat-val">${stats.hp}</span></span>`,
+      `<span class="stat-badge">MP <span class="stat-val">${stats.mp}</span></span>`,
+      `<span class="stat-badge">ATK <span class="stat-val">${stats.atk}</span></span>`,
+      `<span class="stat-badge">DEF <span class="stat-val">${stats.def}</span></span>`,
+      `<span class="stat-badge">SPD <span class="stat-val">${stats.spd}</span></span>`,
+      `<span class="stat-badge">CRIT <span class="stat-val">${(stats.crit*100).toFixed(0)}%</span></span>`,
+    ].join('');
+    document.getElementById('class-badge').textContent = `${info.icon} ${info.title}`;
+  }
   ['laborer', 'miner', 'gardener', 'herbalist', 'watchman'].forEach((cls, i) => {
     const o = document.createElement('div');
     o.className = 'option' + (i === 0 ? ' selected' : '');
-    o.textContent = cls;
+    o.textContent = `${CLASS_INFO[cls]?.icon || ''} ${cls}`;
     o.onclick = () => {
       classPicker.querySelectorAll('.option').forEach(x => x.classList.remove('selected'));
       o.classList.add('selected');
       state.customization.classType = cls;
+      showClassInfo(cls);
       updatePreviewModel();
     };
     classPicker.appendChild(o);
   });
+  // Show default class info
+  showClassInfo('laborer');
 
   // Skin picker
   const skinPicker = document.getElementById('skin-picker');
@@ -495,15 +536,17 @@ function connectWebSocket(playerName, wallet) {
 
 function enterSinglePlayer(playerName, wallet) {
   state.connected = true; // allow gameplay
+  const cls = state.customization.classType || 'laborer';
+  const stats = CLASS_STATS[cls] || CLASS_STATS.laborer;
   state.player = {
     id: 'sp_' + Date.now(),
     name: playerName || 'Adventurer',
     wallet: wallet,
-    hp: 100, maxHp: 100,
-    mp: 50, maxMp: 50,
+    hp: stats.hp, maxHp: stats.hp,
+    mp: stats.mp, maxMp: stats.mp,
     level: 1, xp: 0,
-    class: 'laborer',
-    attack: 5, defense: 2,
+    class: cls,
+    atk: stats.atk, def: stats.def, spd: stats.spd, crit: stats.crit,
     x: 0, z: 0,
     inventory: [],
     equipment: {},

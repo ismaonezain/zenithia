@@ -64,60 +64,77 @@
 
   <!-- Login Screen -->
   <div id="login-screen" style="display:none;">
-    <h2>Welcome to Zenithia</h2>
-    <div id="customize-panel">
-      <div class="row">
-        <label>Name</label>
-        <input id="name-input" type="text" placeholder="Enter your name" maxlength="20">
+    <h2>⚔️ Zenithia</h2>
+    <p id="subtitle">Create Your Character</p>
+    <div id="customize-layout">
+      <!-- Left: Options -->
+      <div id="customize-panel">
+        <div class="row">
+          <label>Name</label>
+          <input id="name-input" type="text" placeholder="Enter your name" maxlength="20">
+        </div>
+        <div class="row">
+          <label>Gender</label>
+          <div id="gender-picker" class="picker"></div>
+        </div>
+        <div class="row">
+          <label>Class</label>
+          <div id="class-picker" class="picker"></div>
+        </div>
+        <!-- Class info card -->
+        <div id="class-info" style="display:none;">
+          <div id="class-info-icon"></div>
+          <div id="class-info-body">
+            <div id="class-info-title"></div>
+            <div id="class-info-role"></div>
+            <div id="class-info-desc"></div>
+            <div id="class-info-stats"></div>
+          </div>
+        </div>
+        <div class="row">
+          <label>Skin</label>
+          <div id="skin-picker" class="picker"></div>
+        </div>
+        <div class="row">
+          <label>Hair</label>
+          <div id="hair-color-picker" class="picker"></div>
+        </div>
+        <div class="row">
+          <label>Style</label>
+          <div id="hair-style-picker" class="picker"></div>
+        </div>
+        <div class="row">
+          <label>Top</label>
+          <div id="top-picker" class="picker"></div>
+        </div>
+        <div class="row">
+          <label>Bottom</label>
+          <div id="bottom-picker" class="picker"></div>
+        </div>
+        <div class="row">
+          <label>Eyes</label>
+          <div id="eye-picker" class="picker"></div>
+        </div>
       </div>
-      <div class="row">
-        <label>Gender</label>
-        <div id="gender-picker" class="picker"></div>
-      </div>
-      <div class="row">
-        <label>Class</label>
-        <div id="class-picker" class="picker"></div>
-      </div>
-      <div class="row">
-        <label>Skin</label>
-        <div id="skin-picker" class="picker"></div>
-      </div>
-      <div class="row">
-        <label>Hair</label>
-        <div id="hair-color-picker" class="picker"></div>
-      </div>
-      <div class="row">
-        <label>Style</label>
-        <div id="hair-style-picker" class="picker"></div>
-      </div>
-      <div class="row">
-        <label>Top</label>
-        <div id="top-picker" class="picker"></div>
-      </div>
-      <div class="row">
-        <label>Bottom</label>
-        <div id="bottom-picker" class="picker"></div>
-      </div>
-      <div class="row">
-        <label>Eyes</label>
-        <div id="eye-picker" class="picker"></div>
-      </div>
-      <!-- Preview -->
+      <!-- Right: Preview -->
       <div id="char-preview">
-        <canvas id="preview-canvas" width="200" height="250"></canvas>
+        <canvas id="preview-canvas" width="220" height="300"></canvas>
+        <div id="class-badge"></div>
       </div>
     </div>
-    <button id="connect-wallet">Connect Phantom Wallet</button>
-    <!-- CAPTCHA + SIGN (shown after wallet connect) -->
-    <div id="captcha-section" style="display:none;">
-      <div class="row">
-        <label id="captcha-question"></label>
-        <input id="captcha-input" type="text" placeholder="Your answer" maxlength="10">
+    <div id="login-actions">
+      <button id="connect-wallet">🔗 Connect Wallet</button>
+      <!-- CAPTCHA + SIGN (shown after wallet connect) -->
+      <div id="captcha-section" style="display:none;">
+        <div class="row">
+          <label id="captcha-question"></label>
+          <input id="captcha-input" type="text" placeholder="Your answer" maxlength="10">
+        </div>
+        <button id="sign-wallet">Sign & Login</button>
+        <p id="captcha-status" style="color:#ccc;font-size:12px;"></p>
       </div>
-      <button id="sign-wallet">Sign & Login</button>
-      <p id="captcha-status" style="color:#ccc;font-size:12px;"></p>
+      <button id="start-game">⚔️ Enter World</button>
     </div>
-    <button id="start-game">Start Game</button>
   </div>
 
   <script type="importmap">
