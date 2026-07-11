@@ -1443,18 +1443,6 @@ function updateDayNight(dt) {
 
   state.sunLight.position.set(sunX, Math.max(sunY, -10), 30);
 
-  // DEBUG: log lighting values every 10 seconds
-  if (!state._lastLightLog || Date.now() - state._lastLightLog > 10000) {
-    console.log(`[LIGHT] t=${t.toFixed(3)} time=${(t*24).toFixed(1)}h sunPos=(${sunX.toFixed(0)},${Math.max(sunY,-10).toFixed(0)}) sunInt=${sunIntensity.toFixed(2)} ambInt=${ambientIntensity.toFixed(2)} sunColor=${sunColor}`);
-    state._lastLightLog = Date.now();
-  }
-
-  // Update sun mesh position (follows light)
-  if (state.sunMesh) {
-    state.sunMesh.position.set(sunX, Math.max(sunY, -10), 30);
-    state.sunMesh.visible = sunY > -5; // hide when below horizon
-  }
-
   // Sky color phases — smoother transitions
   let skyColor;
   let fogColor;
@@ -1541,6 +1529,12 @@ function updateDayNight(dt) {
   state.sunLight.color = sunColor;
   state.ambientLight.intensity = ambientIntensity;
   state.ambientLight.color = ambientColor;
+
+  // Update sun mesh position (follows light)
+  if (state.sunMesh) {
+    state.sunMesh.position.set(sunX, Math.max(sunY, -10), 30);
+    state.sunMesh.visible = sunY > -5;
+  }
 
   // Moon: visible during night, fade in/out at edges
   const moonVisible = t < 0.25 || t > 0.75;
