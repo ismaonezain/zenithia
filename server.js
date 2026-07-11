@@ -314,7 +314,11 @@ setInterval(() => {
 
 // --- Monster AI (server-side) ---
 setInterval(() => {
+  try {
   const now = Date.now();
+  const playerCount = Object.keys(connectedPlayers).length;
+  const monsterCount = Object.keys(world.monsters).length;
+  if (Math.random() < 0.01) console.log(`[AI-HEARTBEAT] players=${playerCount} monsters=${monsterCount}`);
   Object.values(world.monsters).forEach(m => {
     if (!m.alive) return;
     const data = MONSTERS[m.type];
@@ -334,11 +338,6 @@ setInterval(() => {
     });
 
     if (!nearest) { m.state = 'idle'; return; }
-
-    // Debug: log AI state periodically
-    if (Math.random() < 0.02) {
-      console.log(`[AI] ${m.id}(${m.type}) state=${m.state} dist=${nearestDist.toFixed(1)} target=${m.target} hp=${m.hp}/${data.hp}`);
-    }
 
     // Behavior logic
     switch (data.behavior) {
@@ -421,6 +420,7 @@ setInterval(() => {
       broadcast({ type: 'monster_move', monsterId: m.id, x: m.x, z: m.z });
     }
   });
+  } catch (e) { console.error('[AI-ERROR]', e.message); }
 }, 200);
 
 // --- Combat Handler ---
