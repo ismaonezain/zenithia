@@ -915,6 +915,7 @@ function handleServerMessage(msg) {
     }
 
     case 'player_hit': {
+      console.log('[COMBAT] player_hit received! damage:', msg.damage, 'hp:', msg.hp, '/', msg.maxHp);
       updatePlayerHP(msg.hp, msg.maxHp);
       // Show damage number on self
       const selfModel = state.players[state.playerId];

@@ -475,6 +475,7 @@ function handleAttack(ws, playerId, msg) {
   if (monster.state === 'idle') {
     monster.state = 'chase';
     monster.target = playerId;
+    console.log(`[COMBAT] Monster ${monster.id} aggro → chasing ${playerId}`);
   }
 
   // Monster died
