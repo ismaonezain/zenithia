@@ -427,12 +427,19 @@ function addPaths(group) {
   group.add(housePath2);
   addPathLabel(group, 'JALAN RUMAH 2', -3, 14);
 
-  // [I] Main → House (3,16) (horizontal ke kanan, Green House)
-  const housePath3 = new THREE.Mesh(new THREE.PlaneGeometry(2, 5), pathMat);
-  housePath3.rotation.x = -Math.PI / 2;
-  housePath3.position.set(1, 0.02, 14);
-  housePath3.receiveShadow = true;
-  group.add(housePath3);
+  // [I] Main → Green House (5,19) — L-shaped path: horizontal + north
+  // Horizontal segment from main path
+  const housePath3a = new THREE.Mesh(new THREE.PlaneGeometry(4, 2), pathMat);
+  housePath3a.rotation.x = -Math.PI / 2;
+  housePath3a.position.set(3, 0.02, 14.5);
+  housePath3a.receiveShadow = true;
+  group.add(housePath3a);
+  // Vertical segment going north to Green House
+  const housePath3b = new THREE.Mesh(new THREE.PlaneGeometry(2, 6), pathMat);
+  housePath3b.rotation.x = -Math.PI / 2;
+  housePath3b.position.set(5, 0.02, 17.5);
+  housePath3b.receiveShadow = true;
+  group.add(housePath3b);
   addPathLabel(group, 'JALAN RUMAH 3', 1, 14);
 }
 
@@ -769,7 +776,7 @@ function addBuildings(group) {
   const houseData = [
     { x: -6, z: 8, color: 0xD7CCC8, roof: 0x5D4037, rot: Math.PI / 2, label: 'Willow Cottage' },
     { x: -6, z: 14, color: 0xBCAAA4, roof: 0x795548, rot: Math.PI / 2, label: 'River House' },
-    { x: 3, z: 16, color: 0xC5E1A5, roof: 0x33691E, rot: -Math.PI / 2, label: 'Green House' },
+    { x: 5, z: 19, color: 0xC5E1A5, roof: 0x33691E, rot: -Math.PI / 2, label: 'Green House' },
   ];
   houseData.forEach(hd => {
     const hg = new THREE.Group();
@@ -830,6 +837,12 @@ function addBuildings(group) {
         hg.add(flower);
       }
     });
+    // Window glow — warm point light inside house (visible through windows at night)
+    const windowLight = new THREE.PointLight(0xFFE0B2, 0, 6, 2);
+    windowLight.position.y = bh * 0.5 + 0.2;
+    hg.add(windowLight);
+    houseLights.push(windowLight);
+
     hg.position.set(hd.x, 0, hd.z);
     hg.rotation.y = hd.rot;
     group.add(hg);
@@ -1745,6 +1758,8 @@ function addFarms(group) {
 // --- Street Lamps ---
 let streetLamps = []; // for night lighting
 export function getStreetLamps() { return streetLamps; }
+let houseLights = []; // window glow at night
+export function getHouseLights() { return houseLights; }
 
 function addStreetLamps(group) {
   streetLamps = [];
@@ -1763,10 +1778,10 @@ function addStreetLamps(group) {
     { x: 2, z: -1 },
     { x: -2, z: 5 },
     // Village paths
-    { x: -4, z: 7 },
-    { x: -4, z: 13 },
+    { x: -3, z: 5.5 },
+    { x: -2.5, z: 12 },
     { x: 4, z: 11 },
-    { x: 4, z: 17 },
+    { x: 7, z: 20 },
   ];
 
   const poleMat = new THREE.MeshLambertMaterial({ color: 0x5D4037 });

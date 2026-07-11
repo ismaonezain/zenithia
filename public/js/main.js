@@ -1,6 +1,6 @@
 // Zenithia — Client Entry Point
 import * as THREE from 'three';
-import { buildTerrain, isWalkable, getWaterMeshes, getStreetLamps } from './terrain.js';
+import { buildTerrain, isWalkable, getWaterMeshes, getStreetLamps, getHouseLights } from './terrain.js';
 import { createPlayerModel, createNPCModel, PALETTES, animateWalk, stopWalk, applyEquipment, blinkEyes, waveHand, idleArms, animateIdle } from './character.js';
 import { DialogueSystem } from './dialogue_ui.js';
 import { InventoryUI } from './inventory.js';
@@ -558,12 +558,14 @@ function handleServerMessage(msg) {
       }
 
       if (msg.npcs) {
+        state._npcRots = {}; // store default rotations
         console.log('[NPC] Received', Object.keys(msg.npcs).length, 'NPCs:', Object.keys(msg.npcs));
         Object.values(msg.npcs).forEach(npc => {
           try {
             const model = createNPCModel(npc);
             state.scene.add(model);
             state.npcs[npc.id] = model;
+            state._npcRots[npc.id] = npc.rot || 0;
             console.log('[NPC] Added', npc.id, 'at', npc.x, npc.z);
           } catch(e) {
             console.error('[NPC] Failed to create', npc.id, e);
@@ -636,6 +638,14 @@ function handleServerMessage(msg) {
 
     case 'npc_dialogue':
       state.dialogue.open(msg.npcId, msg.name, msg.title);
+      // NPC faces player when talking
+      { const npcModel = state.npcs[msg.npcId];
+        const playerModel = state.players[state.playerId];
+        if (npcModel && playerModel) {
+          const dir = playerModel.position.clone().sub(npcModel.position);
+          npcModel.rotation.y = Math.atan2(dir.x, dir.z);
+        } }
+      break;
       // Don't auto-open shop — let dialogue add Buy/Sell button for merchants
       break;
 
@@ -1608,6 +1618,11 @@ function updateDayNight(dt) {
     lamp.glowMat.opacity = lampIntensity * 0.35;
   });
 
+  // House window glow — on at night, off during day
+  const houseLightsArr = getHouseLights();
+  const windowGlow = lampIntensity * 1.2; // same timing as street lamps
+  houseLightsArr.forEach(hl => { hl.intensity = windowGlow; });
+
   // Update time display
   updateDayTimeDisplay(t);
 }
@@ -1727,6 +1742,17 @@ async function boot() {
   initScene();
   initPreview();
   initCustomization();
+
+  // Restore NPC default rotation when dialogue closes
+  document.addEventListener('dialogue-closed', (e) => {
+    const npcId = e.detail.npcId;
+    if (!npcId) return;
+    // Find NPC data from server to get default rot
+    const npcModel = state.npcs[npcId];
+    if (npcModel && state._npcRots && state._npcRots[npcId] !== undefined) {
+      npcModel.rotation.y = state._npcRots[npcId];
+    }
+  });
   gameLoop();
 
   // Check localStorage for saved wallet

@@ -203,9 +203,12 @@ export class DialogueSystem {
 
   // Close dialogue
   close() {
+    const npcId = this.currentNPC?.id;
     this.container.style.display = 'none';
     this.currentNPC = null;
     this.currentDialogue = null;
+    // Dispatch event so main.js can restore NPC rotation
+    document.dispatchEvent(new CustomEvent('dialogue-closed', { detail: { npcId } }));
   }
 
   // Get all reputation data (for saving)

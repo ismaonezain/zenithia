@@ -732,6 +732,7 @@ export function createNPCModel(npc) {
   });
 
   model.position.set(npc.x, npc.y || 0, npc.z);
+  if (npc.rot) model.rotation.y = npc.rot;
   model.userData = { id: npc.id, name: npc.name, type: 'npc' };
 
   // Name tag — always visible text sprite

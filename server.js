@@ -131,15 +131,16 @@ function saveWorld() {
 
 function initNPCs() {
   // NPC positions: placed IN FRONT of their buildings (outside, visible)
+  // rot: rotation in radians. 0 = north (-Z), PI = south, PI/2 = west, -PI/2 = east
   return {
-    elder_maren:     { id: 'elder_maren', name: 'Elder Maren', title: 'Village Elder', x: 0, z: -11 },
-    sir_gendut:      { id: 'sir_gendut', name: 'Sir Gendut', title: 'Merchant', x: 6, z: -2 },
-    miss_lira:       { id: 'miss_lira', name: 'Miss Lira', title: 'Aspiring Adventurer', x: -4, z: 5 },
-    mr_tani:         { id: 'mr_tani', name: 'Mr. Tani', title: 'Farmer', x: -15, z: 14 },
-    mrs_ningsih:     { id: 'mrs_ningsih', name: 'Mrs. Ningsih', title: 'Cook', x: 5, z: 12 },
-    kris:            { id: 'kris', name: 'Kris', title: 'Troublemaker', x: -2, z: -7 },
-    guard_ren:       { id: 'guard_ren', name: 'Guard Ren', title: 'Gate Guard', x: -2, z: 19 },
-    herbalist_sari:  { id: 'herbalist_sari', name: 'Herbalist Sari', title: 'Herbalist', x: 16, z: -5 },
+    elder_maren:     { id: 'elder_maren', name: 'Elder Maren', title: 'Village Elder', x: 0, z: -11, rot: Math.PI },
+    sir_gendut:      { id: 'sir_gendut', name: 'Sir Gendut', title: 'Merchant', x: 6, z: -2, rot: Math.PI / 2 },
+    miss_lira:       { id: 'miss_lira', name: 'Miss Lira', title: 'Aspiring Adventurer', x: -4, z: 5, rot: -Math.PI / 2 },
+    mr_tani:         { id: 'mr_tani', name: 'Mr. Tani', title: 'Farmer', x: -15, z: 14, rot: -Math.PI / 2 },
+    mrs_ningsih:     { id: 'mrs_ningsih', name: 'Mrs. Ningsih', title: 'Cook', x: 5, z: 12, rot: Math.PI },
+    kris:            { id: 'kris', name: 'Kris', title: 'Troublemaker', x: -2, z: -7, rot: -Math.PI / 2 },
+    guard_ren:       { id: 'guard_ren', name: 'Guard Ren', title: 'Gate Guard', x: -2, z: 19, rot: Math.PI },
+    herbalist_sari:  { id: 'herbalist_sari', name: 'Herbalist Sari', title: 'Herbalist', x: 16, z: -5, rot: Math.PI / 2 },
   };
 }
 
