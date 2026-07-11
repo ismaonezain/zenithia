@@ -449,6 +449,7 @@ function handleAttack(ws, playerId, msg) {
   monster.hp -= dmg;
 
   // Broadcast damage
+  console.log(`[COMBAT] monster_hit ${monster.id} dmg=${dmg} hp=${monster.hp}/${monster.maxHp} clients=${wss.clients.size}`);
   broadcast({
     type: 'monster_hit',
     monsterId: monster.id,

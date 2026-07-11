@@ -870,6 +870,7 @@ function handleServerMessage(msg) {
 
     case 'monster_hit': {
       const mob = state.monsters[msg.monsterId];
+      console.log('[COMBAT] monster_hit', msg.monsterId, 'hp:', msg.hp, '/', msg.maxHp, 'mob exists:', !!mob, 'hpBar:', !!mob?.userData?.hpBar);
       if (mob) {
         updateMonsterHPBar(mob, msg.hp, msg.maxHp);
         mob.userData.hp = msg.hp;
@@ -881,6 +882,7 @@ function handleServerMessage(msg) {
 
     case 'monster_died': {
       const mob = state.monsters[msg.monsterId];
+      console.log('[COMBAT] monster_died', msg.monsterId, 'mob exists:', !!mob);
       if (mob) {
         state.scene.remove(mob);
         delete state.monsters[msg.monsterId];
