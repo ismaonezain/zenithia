@@ -102,33 +102,49 @@ function initScene() {
   state.scene.add(sun);
   state.sunLight = sun;
 
+  // === SUN MESH (visual) ===
+  const sunMeshGeo = new THREE.SphereGeometry(4, 16, 16);
+  const sunMeshMat = new THREE.MeshBasicMaterial({ color: 0xFFD700 });
+  state.sunMesh = new THREE.Mesh(sunMeshGeo, sunMeshMat);
+  state.scene.add(state.sunMesh);
+
   // === MOON ===
-  const moonGeo = new THREE.SphereGeometry(3, 16, 16);
+  const moonGeo = new THREE.SphereGeometry(5, 20, 20);
   const moonMat = new THREE.MeshBasicMaterial({ color: 0xeeeeff });
   state.moonMesh = new THREE.Mesh(moonGeo, moonMat);
   state.moonMesh.visible = false;
   state.scene.add(state.moonMesh);
+
+  // Moon glow
+  const moonGlowGeo = new THREE.SphereGeometry(7, 16, 16);
+  const moonGlowMat = new THREE.MeshBasicMaterial({ color: 0xaaaacc, transparent: true, opacity: 0.15 });
+  state.moonGlow = new THREE.Mesh(moonGlowGeo, moonGlowMat);
+  state.moonGlow.visible = false;
+  state.scene.add(state.moonGlow);
 
   // === STARS ===
   const starCount = 500;
   const starGeo = new THREE.BufferGeometry();
   const starPositions = new Float32Array(starCount * 3);
   for (let i = 0; i < starCount; i++) {
-    // Scatter on a sphere of radius 250
     const theta = Math.random() * Math.PI * 2;
     const phi = Math.acos(2 * Math.random() - 1);
-    const r = 250;
+    const r = 200;
     starPositions[i * 3]     = r * Math.sin(phi) * Math.cos(theta);
     starPositions[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
     starPositions[i * 3 + 2] = r * Math.cos(phi);
-    // Only keep stars in the upper hemisphere
-    if (starPositions[i * 3 + 1] < 10) starPositions[i * 3 + 1] = Math.abs(starPositions[i * 3 + 1]) + 10;
+    if (starPositions[i * 3 + 1] < 20) starPositions[i * 3 + 1] = Math.abs(starPositions[i * 3 + 1]) + 20;
   }
   starGeo.setAttribute('position', new THREE.BufferAttribute(starPositions, 3));
-  const starMat = new THREE.PointsMaterial({ color: 0xffffff, size: 1.5, sizeAttenuation: false });
+  const starMat = new THREE.PointsMaterial({ color: 0xffffff, size: 2, sizeAttenuation: false });
   state.starField = new THREE.Points(starGeo, starMat);
   state.starField.visible = false;
   state.scene.add(state.starField);
+
+  // === MOON LIGHT (dim light at night) ===
+  state.moonLight = new THREE.DirectionalLight(0x6666aa, 0);
+  state.moonLight.position.set(0, 50, -30);
+  state.scene.add(state.moonLight);
 
   buildTerrain(state.scene);
   state.clock = new THREE.Clock();
@@ -1427,6 +1443,12 @@ function updateDayNight(dt) {
 
   state.sunLight.position.set(sunX, Math.max(sunY, -10), 30);
 
+  // Update sun mesh position (follows light)
+  if (state.sunMesh) {
+    state.sunMesh.position.set(sunX, Math.max(sunY, -10), 30);
+    state.sunMesh.visible = sunY > -5; // hide when below horizon
+  }
+
   // Sky color phases — smoother transitions
   let skyColor;
   let fogColor;
@@ -1517,21 +1539,33 @@ function updateDayNight(dt) {
   // Moon: visible during night, fade in/out at edges
   const moonVisible = t < 0.25 || t > 0.75;
   state.moonMesh.visible = moonVisible;
+  if (state.moonGlow) state.moonGlow.visible = moonVisible;
   if (moonVisible) {
     const moonAngle = (t < 0.25 ? t + 0.75 : t - 0.75);
-    state.moonMesh.position.set(
-      Math.cos(moonAngle * Math.PI * 2) * 80,
-      Math.sin(moonAngle * Math.PI * 2) * 80,
-      -30
-    );
+    const moonX = Math.cos(moonAngle * Math.PI * 2) * 80;
+    const moonY = Math.sin(moonAngle * Math.PI * 2) * 80;
+    state.moonMesh.position.set(moonX, moonY, -30);
+    if (state.moonGlow) state.moonGlow.position.set(moonX, moonY, -30);
     // Smooth fade
     let moonAlpha = 1;
     if (t > 0.75 && t < 0.9) moonAlpha = (t - 0.75) / 0.15;
     else if (t > 0.9) moonAlpha = 1;
     else if (t < 0.25 && t > 0.1) moonAlpha = 1 - (t - 0.1) / 0.15;
     else if (t <= 0.1) moonAlpha = 1;
-    state.moonMesh.material.opacity = Math.max(0, Math.min(1, moonAlpha));
+    const alpha = Math.max(0, Math.min(1, moonAlpha));
+    state.moonMesh.material.opacity = alpha;
     state.moonMesh.material.transparent = true;
+    if (state.moonGlow) {
+      state.moonGlow.material.opacity = alpha * 0.15;
+      state.moonGlow.material.transparent = true;
+    }
+    // Moon light at night
+    if (state.moonLight) {
+      state.moonLight.intensity = alpha * 0.3;
+      state.moonLight.position.set(moonX, moonY, -30);
+    }
+  } else {
+    if (state.moonLight) state.moonLight.intensity = 0;
   }
 
   // Stars — fade with moon
