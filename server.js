@@ -339,6 +339,7 @@ setInterval(() => {
         m.state = 'attack';
         const dmg = Math.max(1, m.atk - (closestPlayer.def || 0));
         closestPlayer.hp = Math.max(0, closestPlayer.hp - dmg);
+        console.log(`[COMBAT] Monster ${m.id} HIT player ${closestPlayer.id} dmg=${dmg} hp=${closestPlayer.hp}/${closestPlayer.maxHp}`);
         broadcast({ type: 'monster_attack', monsterId: m.id, targetId: closestPlayer.id, damage: dmg });
         if (closestPlayer.hp <= 0) {
           broadcast({ type: 'player_died', targetId: closestPlayer.id });
@@ -504,7 +505,7 @@ wss.on('connection', (ws) => {
   console.log(`[CONNECT] ${playerId}`);
   ws.playerId = playerId;
 
-  ws.send(JSON.stringify({ type: 'welcome', playerId, world: { time: Date.now(), region: 'willowmere' }, dayTime: getGameTime() }));
+  ws.send(JSON.stringify({ type: 'welcome', playerId, version: 'v3-combat-rebuild', world: { time: Date.now(), region: 'willowmere' }, dayTime: getGameTime() }));
 
   ws.on('message', (data) => {
     try { handleMessage(ws, playerId, JSON.parse(data)); }

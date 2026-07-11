@@ -684,6 +684,7 @@ function handleServerMessage(msg) {
   switch (msg.type) {
     case 'welcome':
       state.playerId = msg.playerId;
+      console.log('[WS] Welcome! version:', msg.version, 'playerId:', msg.playerId);
       if (msg.dayTime !== undefined) state.dayTime = msg.dayTime;
       wsSend(JSON.stringify({
         type: 'join',
@@ -893,6 +894,7 @@ function handleServerMessage(msg) {
     }
 
     case 'monster_attack': {
+      console.log('[COMBAT] monster_attack received! targetId:', msg.targetId, 'myId:', state.playerId, 'damage:', msg.damage);
       if (msg.targetId === state.playerId) {
         state.player.hp = Math.max(0, (state.player.hp || 0) - msg.damage);
         updatePlayerHP(state.player.hp, state.player.maxHp);
