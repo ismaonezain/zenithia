@@ -167,6 +167,11 @@ function getOrCreatePlayer(playerId, name, wallet, customization, persistentId) 
       existing.lastLogin = Date.now();
       existing.id = playerId; // rebind to current session
       if (persistentId && !existing.persistentId) existing.persistentId = persistentId; // backfill
+      // Update name if player provided a new one
+      if (name && name !== 'Adventurer' && name !== existing.name) {
+        console.log(`[RENAME] ${existing.name} → ${name}`);
+        existing.name = name;
+      }
       // CRITICAL: if player was killed before server restart, HP is 0 on disk
       // Restore to full so monster AI doesn't skip them
       if ((existing.hp || 0) <= 0) {
@@ -189,6 +194,11 @@ function getOrCreatePlayer(playerId, name, wallet, customization, persistentId) 
       existing.lastLogin = Date.now();
       existing.id = playerId;
       if (persistentId && !existing.persistentId) existing.persistentId = persistentId; // backfill
+      // Update name if player provided a new one
+      if (name && name !== 'Adventurer' && name !== existing.name) {
+        console.log(`[RENAME] ${existing.name} → ${name} (wallet)`);
+        existing.name = name;
+      }
       if ((existing.hp || 0) <= 0) {
         existing.hp = existing.maxHp || CLASS_STATS[existing.class || 'laborer']?.hp || 120;
         existing.mp = existing.maxMp || CLASS_STATS[existing.class || 'laborer']?.mp || 30;
