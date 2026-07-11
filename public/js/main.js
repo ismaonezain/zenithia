@@ -1756,7 +1756,7 @@ function performAttack() {
   const mobId = state.targetedMonster;
   if (!mobId) return;
   const mob = state.monsters[mobId];
-  if (!mob || (mob.userData.hp !== undefined && mob.userData.hp <= 0)) { cancelTarget(); return; }
+  if (!mob) { cancelTarget(); return; }
 
   const model = state.players[state.playerId];
   if (!model) return;
@@ -1777,10 +1777,8 @@ function performAttack() {
     model.lookAt(state.lastFacing);
     // Attack swing animation
     attackSwing(model);
-    // Client-side HP prediction: immediately update 3D bar
-    const predictedHp = Math.max(0, (mob.userData.hp || mob.userData.maxHp || 30) - Math.floor(state.player?.atk || 10));
-    mob.userData.hp = predictedHp;
-    updateMonsterHPBar(mob, predictedHp, mob.userData.maxHp || 30);
+    // NO client-side HP prediction — server is authoritative
+    // HP bar updates only when server sends monster_hit response
     // Send attack to server
     wsSend(JSON.stringify({ type: 'attack', monsterId: mobId }));
   } else {

@@ -447,15 +447,17 @@ function handleAttack(ws, playerId, msg) {
   if (isCrit) dmg = Math.floor(dmg * 1.5);
 
   monster.hp -= dmg;
+  // Clamp HP to 0 before broadcast so client never sees negative HP
+  const displayHp = Math.max(0, monster.hp);
 
   // Broadcast damage
-  console.log(`[COMBAT] monster_hit ${monster.id} dmg=${dmg} hp=${monster.hp}/${monster.maxHp} clients=${wss.clients.size}`);
+  console.log(`[COMBAT] monster_hit ${monster.id} dmg=${dmg} hp=${displayHp}/${monster.maxHp} clients=${wss.clients.size}`);
   broadcast({
     type: 'monster_hit',
     monsterId: monster.id,
     damage: dmg,
     isCrit,
-    hp: monster.hp,
+    hp: displayHp,
     maxHp: monster.maxHp,
   });
 
@@ -944,9 +946,10 @@ function handleMessage(ws, playerId, msg) {
       if (isCrit) dmg = Math.floor(dmg * 1.5);
 
       monster.hp -= dmg;
+      const skillDisplayHp = Math.max(0, monster.hp);
       if (monster.state === 'idle') { monster.state = 'chase'; monster.target = playerId; }
 
-      broadcast({ type: 'monster_hit', monsterId: monster.id, damage: dmg, isCrit, hp: monster.hp, maxHp: monster.maxHp });
+      broadcast({ type: 'monster_hit', monsterId: monster.id, damage: dmg, isCrit, hp: skillDisplayHp, maxHp: monster.maxHp });
       ws.send(JSON.stringify({ type: 'skill_used', skillId: msg.skillId, mp: player.mp }));
 
       if (monster.hp <= 0) {
