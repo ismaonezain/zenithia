@@ -127,6 +127,9 @@ export function buildTerrain(scene) {
   // === FARMS ===
   addFarms(group);
 
+  // === STREET LAMPS ===
+  addStreetLamps(group);
+
   scene.add(group);
   return group;
 }
@@ -1737,4 +1740,75 @@ function addFarms(group) {
   const gateTop = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.08, 0.08), railMat);
   gateTop.position.set(-17, 0.9, 11);
   group.add(gateTop);
+}
+
+// --- Street Lamps ---
+let streetLamps = []; // for night lighting
+export function getStreetLamps() { return streetLamps; }
+
+function addStreetLamps(group) {
+  streetLamps = [];
+  const lampPositions = [
+    // Main path (north-south)
+    { x: 1.5, z: -10 },
+    { x: -1.5, z: -5 },
+    { x: 1.5, z: 0 },
+    { x: -1.5, z: 5 },
+    { x: 1.5, z: 10 },
+    { x: -1.5, z: 15 },
+    // Market area
+    { x: 3, z: -6 },
+    { x: 13, z: -6 },
+    // Bridge approaches
+    { x: 2, z: -1 },
+    { x: -2, z: 5 },
+    // Village paths
+    { x: -4, z: 7 },
+    { x: -4, z: 13 },
+    { x: 4, z: 11 },
+    { x: 4, z: 17 },
+  ];
+
+  const poleMat = new THREE.MeshLambertMaterial({ color: 0x5D4037 });
+  const lampMat = new THREE.MeshBasicMaterial({ color: 0xFFF8E1 });
+  const lampOffMat = new THREE.MeshBasicMaterial({ color: 0x8D6E63 });
+
+  lampPositions.forEach(pos => {
+    const lamp = new THREE.Group();
+
+    // Wooden pole
+    const pole = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.05, 0.07, 2.5, 6),
+      poleMat
+    );
+    pole.position.y = 1.25;
+    pole.castShadow = true;
+    lamp.add(pole);
+
+    // Lamp housing (small box at top)
+    const housing = new THREE.Mesh(
+      new THREE.BoxGeometry(0.3, 0.25, 0.3),
+      new THREE.MeshLambertMaterial({ color: 0x795548 })
+    );
+    housing.position.y = 2.6;
+    lamp.add(housing);
+
+    // Lamp light (sphere inside housing)
+    const light = new THREE.Mesh(
+      new THREE.SphereGeometry(0.1, 6, 4),
+      lampMat.clone()
+    );
+    light.position.y = 2.6;
+    lamp.add(light);
+
+    // Point light (for night illumination)
+    const pointLight = new THREE.PointLight(0xFFE0B2, 0, 8, 2);
+    pointLight.position.y = 2.7;
+    lamp.add(pointLight);
+
+    lamp.position.set(pos.x, 0, pos.z);
+    group.add(lamp);
+
+    streetLamps.push({ group: lamp, light, pointLight, lampMat, lampOffMat });
+  });
 }

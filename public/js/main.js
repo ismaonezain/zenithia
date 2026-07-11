@@ -1,6 +1,6 @@
 // Zenithia — Client Entry Point
 import * as THREE from 'three';
-import { buildTerrain, isWalkable, getWaterMeshes } from './terrain.js';
+import { buildTerrain, isWalkable, getWaterMeshes, getStreetLamps } from './terrain.js';
 import { createPlayerModel, createNPCModel, PALETTES, animateWalk, stopWalk, applyEquipment, blinkEyes, waveHand, idleArms, animateIdle } from './character.js';
 import { DialogueSystem } from './dialogue_ui.js';
 import { InventoryUI } from './inventory.js';
@@ -1580,6 +1580,25 @@ function updateDayNight(dt) {
     state.starField.material.transparent = true;
   }
 
+  // Street lamps — on at night, off during day
+  const lamps = getStreetLamps();
+  const isNightTime = t < 0.2 || t > 0.8;
+  const isDusk = (t > 0.7 && t < 0.2) || (t > 0.8);
+  let lampIntensity = 0;
+  if (t > 0.75) lampIntensity = Math.min(1, (t - 0.75) / 0.1);
+  else if (t < 0.25) lampIntensity = Math.max(0, 1 - (t - 0.1) / 0.15);
+  else lampIntensity = 0;
+
+  lamps.forEach(lamp => {
+    lamp.pointLight.intensity = lampIntensity * 1.5;
+    // Toggle lamp mesh color
+    if (lampIntensity > 0.3) {
+      lamp.light.material.color.setHex(0xFFF8E1);
+    } else {
+      lamp.light.material.color.setHex(0x8D6E63);
+    }
+  });
+
   // Update time display
   updateDayTimeDisplay(t);
 }
@@ -1587,8 +1606,8 @@ function updateDayNight(dt) {
 function updateDayTimeDisplay(t) {
   const el = document.getElementById('time-display');
   if (!el) return;
-  // Map t to 24h: t=0.25 → 6:00, t=0.5 → 12:00, t=0.75 → 18:00, t=0 → 0:00
-  const hours24 = ((t * 24 + 6) % 24);
+  // Map t to 24h: t=0 → 0:00, t=0.25 → 6:00, t=0.5 → 12:00, t=0.75 → 18:00
+  const hours24 = (t * 24) % 24;
   const hours = Math.floor(hours24);
   const mins = Math.floor((hours24 - hours) * 60);
   const h = hours.toString().padStart(2, '0');
