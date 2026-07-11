@@ -609,7 +609,11 @@ function connectWebSocket(playerName, wallet) {
     state.connected = true;
   };
   state.ws.onmessage = (event) => {
-    handleServerMessage(JSON.parse(event.data));
+    try {
+      handleServerMessage(JSON.parse(event.data));
+    } catch (e) {
+      console.error('[WS ERROR]', e, 'data:', event.data?.substring?.(0, 200));
+    }
   };
   state.ws.onclose = () => {
     console.log('[WS] Disconnected — single-player mode');
@@ -1763,6 +1767,10 @@ function performAttack() {
     model.lookAt(state.lastFacing);
     // Attack swing animation
     attackSwing(model);
+    // Client-side HP prediction: immediately update 3D bar
+    const predictedHp = Math.max(0, (mob.userData.hp || mob.userData.maxHp || 30) - Math.floor(state.player?.atk || 10));
+    mob.userData.hp = predictedHp;
+    updateMonsterHPBar(mob, predictedHp, mob.userData.maxHp || 30);
     // Send attack to server
     wsSend(JSON.stringify({ type: 'attack', monsterId: mobId }));
   } else {
