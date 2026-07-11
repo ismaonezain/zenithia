@@ -33,13 +33,6 @@ const state = {
   })() || {
     gender: 'male', classType: 'laborer', skinIdx: 0, hairColorIdx: 0, hairStyle: 'undercut', topColorIdx: 0, bottomColorIdx: 0, eyeColorIdx: 0,
   },
-    skinIdx: 0,
-    hairColorIdx: 0,
-    hairStyle: 'undercut',
-    topColorIdx: 0,
-    bottomColorIdx: 0,
-    eyeColorIdx: 0,
-  },
   walletAddress: null,
   previewScene: null,
   previewCamera: null,
