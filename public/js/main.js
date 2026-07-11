@@ -699,9 +699,17 @@ function handleServerMessage(msg) {
       state.dialogue.ws = state.ws;
       state.dialogue.playerState = state.player;
 
-      // Restore saved customization
+      // Restore saved customization from server (source of truth)
       if (msg.player.customization && Object.keys(msg.player.customization).length > 0) {
         Object.assign(state.customization, msg.player.customization);
+      }
+      // Save to localStorage so next load on any device uses correct data
+      try { localStorage.setItem('zenithia_customization', JSON.stringify(state.customization)); } catch(e) {}
+      // Also save name
+      if (msg.player.name) {
+        try { localStorage.setItem('zenithia_name', msg.player.name); } catch(e) {}
+        const nameInput = document.getElementById('name-input');
+        if (nameInput) nameInput.value = msg.player.name;
       }
 
       if (msg.npcs) {
