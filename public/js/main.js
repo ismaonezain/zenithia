@@ -1016,9 +1016,10 @@ function createNameHPBar(name, hp, maxHp, mp, maxMp) {
   barCanvas.width = 256; barCanvas.height = 64;
   const barTex = new THREE.CanvasTexture(barCanvas);
   barTex.minFilter = THREE.LinearFilter;
-  const barSprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: barTex, transparent: true, depthWrite: false }));
+  const barSprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: barTex, transparent: true, depthWrite: false, depthTest: false }));
   barSprite.scale.set(3, 0.8, 1);
-  barSprite.position.y = 0.15;
+  barSprite.position.y = 0.4;
+  barSprite.renderOrder = 999;
 
   function render() {
     // Name
