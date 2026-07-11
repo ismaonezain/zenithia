@@ -104,12 +104,67 @@ export function getWaterMeshes() { return waterMeshes; }
 function addWater(group) {
   waterMeshes = [];
 
+  // Riverbed (brown dirt under water — hides green ground)
+  const bedGeo = new THREE.PlaneGeometry(120, 5);
+  const bedMat = new THREE.MeshLambertMaterial({ color: 0x5D4037 });
+  const bed = new THREE.Mesh(bedGeo, bedMat);
+  bed.rotation.x = -Math.PI / 2;
+  bed.position.set(0, -0.1, 2);
+  group.add(bed);
+
+  // Riverbed darker center
+  const bedDark = new THREE.Mesh(
+    new THREE.PlaneGeometry(120, 2.5),
+    new THREE.MeshLambertMaterial({ color: 0x4E342E })
+  );
+  bedDark.rotation.x = -Math.PI / 2;
+  bedDark.position.set(0, -0.08, 2);
+  group.add(bedDark);
+
+  // Riverbank slopes (both sides) — brown dirt tapering to green
+  const bankMat = new THREE.MeshLambertMaterial({ color: 0x795548 });
+  const bankGreen = new THREE.MeshLambertMaterial({ color: 0x558B2F });
+  // Front bank (z=4 to z=5)
+  for (let i = 0; i < 3; i++) {
+    const bankGeo = new THREE.PlaneGeometry(120, 0.6);
+    const bMat = i < 2 ? bankMat : bankGreen;
+    const bank = new THREE.Mesh(bankGeo, bMat);
+    bank.rotation.x = -Math.PI / 2;
+    bank.position.set(0, -0.05 + i * 0.03, 4.3 + i * 0.5);
+    group.add(bank);
+  }
+  // Back bank (z=0 to z=-1)
+  for (let i = 0; i < 3; i++) {
+    const bankGeo = new THREE.PlaneGeometry(120, 0.6);
+    const bMat = i < 2 ? bankMat : bankGreen;
+    const bank = new THREE.Mesh(bankGeo, bMat);
+    bank.rotation.x = -Math.PI / 2;
+    bank.position.set(0, -0.05 + i * 0.03, -0.3 - i * 0.5);
+    group.add(bank);
+  }
+
+  // Small stones on riverbed (visible through shallow water)
+  const stoneMat = new THREE.MeshLambertMaterial({ color: 0x8D6E63 });
+  for (let i = 0; i < 20; i++) {
+    const stone = new THREE.Mesh(
+      new THREE.SphereGeometry(0.08 + Math.random() * 0.1, 5, 4),
+      stoneMat
+    );
+    stone.position.set(
+      (Math.random() - 0.5) * 100,
+      -0.02,
+      2 + (Math.random() - 0.5) * 3
+    );
+    stone.scale.y = 0.3;
+    group.add(stone);
+  }
+
   // Main creek — spans full map width
   const creekGeo = new THREE.PlaneGeometry(120, 4);
-  const creekMat = new THREE.MeshLambertMaterial({ color: 0x42A5F5, transparent: true, opacity: 0.7 });
+  const creekMat = new THREE.MeshLambertMaterial({ color: 0x42A5F5, transparent: true, opacity: 0.75 });
   const creek = new THREE.Mesh(creekGeo, creekMat);
   creek.rotation.x = -Math.PI / 2;
-  creek.position.set(0, 0.05, 2);
+  creek.position.set(0, 0.02, 2);
   group.add(creek);
   waterMeshes.push(creek);
 
@@ -118,7 +173,7 @@ function addWater(group) {
   const deepMat = new THREE.MeshLambertMaterial({ color: 0x1E88E5, transparent: true, opacity: 0.5 });
   const deep = new THREE.Mesh(deepGeo, deepMat);
   deep.rotation.x = -Math.PI / 2;
-  deep.position.set(0, 0.06, 2);
+  deep.position.set(0, 0.03, 2);
   group.add(deep);
   waterMeshes.push(deep);
 
@@ -128,7 +183,7 @@ function addWater(group) {
     const rippleMat = new THREE.MeshLambertMaterial({ color: 0x90CAF9, transparent: true, opacity: 0.3 });
     const ripple = new THREE.Mesh(rippleGeo, rippleMat);
     ripple.rotation.x = -Math.PI / 2;
-    ripple.position.set(-30 + i * 20, 0.07, 2 + (Math.random() - 0.5) * 2);
+    ripple.position.set(-30 + i * 20, 0.04, 2 + (Math.random() - 0.5) * 2);
     group.add(ripple);
     waterMeshes.push({ mesh: ripple, baseX: -30 + i * 20, speed: 0.3 + Math.random() * 0.2, amp: 0.5 + Math.random() * 0.5 });
   }
@@ -138,7 +193,7 @@ function addWater(group) {
   [4.1, -0.1].forEach(z => {
     const edge = new THREE.Mesh(new THREE.PlaneGeometry(120, 0.4), edgeMat);
     edge.rotation.x = -Math.PI / 2;
-    edge.position.set(0, 0.055, z);
+    edge.position.set(0, 0.025, z);
     group.add(edge);
     waterMeshes.push(edge);
   });
@@ -148,16 +203,24 @@ function addWater(group) {
   const foamMat = new THREE.MeshBasicMaterial({ color: 0xFFFFFF, transparent: true, opacity: 0.25 });
   const foam = new THREE.Mesh(foamGeo, foamMat);
   foam.rotation.x = -Math.PI / 2;
-  foam.position.set(0, 0.075, 4.2);
+  foam.position.set(0, 0.045, 4.2);
   group.add(foam);
   waterMeshes.push({ mesh: foam, baseX: 0, speed: 0.5, amp: 0.3 });
 
-  // Pond near big willow
+  // Pond near big willow — with riverbed
+  const pondBed = new THREE.Mesh(
+    new THREE.CircleGeometry(2.8, 20),
+    new THREE.MeshLambertMaterial({ color: 0x5D4037 })
+  );
+  pondBed.rotation.x = -Math.PI / 2;
+  pondBed.position.set(-10, -0.1, 2);
+  group.add(pondBed);
+
   const pondGeo = new THREE.CircleGeometry(2.5, 20);
-  const pondMat = new THREE.MeshLambertMaterial({ color: 0x42A5F5, transparent: true, opacity: 0.7 });
+  const pondMat = new THREE.MeshLambertMaterial({ color: 0x42A5F5, transparent: true, opacity: 0.75 });
   const pond = new THREE.Mesh(pondGeo, pondMat);
   pond.rotation.x = -Math.PI / 2;
-  pond.position.set(-10, 0.05, 2);
+  pond.position.set(-10, 0.02, 2);
   group.add(pond);
   waterMeshes.push(pond);
 
@@ -167,7 +230,7 @@ function addWater(group) {
     new THREE.MeshLambertMaterial({ color: 0x1E88E5, transparent: true, opacity: 0.4 })
   );
   pondDeep.rotation.x = -Math.PI / 2;
-  pondDeep.position.set(-10, 0.06, 2);
+  pondDeep.position.set(-10, 0.03, 2);
   group.add(pondDeep);
 
   // Pond ripple rings (animated)
@@ -177,7 +240,7 @@ function addWater(group) {
       new THREE.MeshBasicMaterial({ color: 0xBBDEFB, transparent: true, opacity: 0.2 })
     );
     ring.rotation.x = -Math.PI / 2;
-    ring.position.set(-10, 0.065, 2);
+    ring.position.set(-10, 0.035, 2);
     group.add(ring);
     waterMeshes.push({ mesh: ring, type: 'ripple', baseR: 0.5 + i * 0.5, speed: 0.4 + i * 0.1 });
   }
@@ -190,18 +253,18 @@ function addWater(group) {
       lilyMat
     );
     lily.rotation.x = -Math.PI / 2;
-    lily.position.set(lx, 0.07, lz);
+    lily.position.set(lx, 0.04, lz);
     group.add(lily);
-    waterMeshes.push({ mesh: lily, type: 'bob', baseY: 0.07 });
+    waterMeshes.push({ mesh: lily, type: 'bob', baseY: 0.04 });
     // Tiny flower on some lilies
     if (Math.random() > 0.4) {
       const flower = new THREE.Mesh(
         new THREE.SphereGeometry(0.06, 5, 4),
         new THREE.MeshBasicMaterial({ color: 0xF48FB1 })
       );
-      flower.position.set(lx, 0.12, lz);
+      flower.position.set(lx, 0.09, lz);
       group.add(flower);
-      waterMeshes.push({ mesh: flower, type: 'bob', baseY: 0.12 });
+      waterMeshes.push({ mesh: flower, type: 'bob', baseY: 0.09 });
     }
   });
 
@@ -213,9 +276,9 @@ function addWater(group) {
       creekLilyMat
     );
     lily.rotation.x = -Math.PI / 2;
-    lily.position.set(lx, 0.07, lz);
+    lily.position.set(lx, 0.04, lz);
     group.add(lily);
-    waterMeshes.push({ mesh: lily, type: 'bob', baseY: 0.07 });
+    waterMeshes.push({ mesh: lily, type: 'bob', baseY: 0.04 });
   });
 
   // Bridge (detailed wooden planks)
