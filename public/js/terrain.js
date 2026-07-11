@@ -1113,8 +1113,9 @@ function addTrees(group) {
         0.15 * scale,
         Math.sin(angle) * 0.3 * scale
       );
-      root.rotation.z = Math.cos(angle) * 0.4;
-      root.rotation.x = Math.sin(angle) * 0.4;
+      // Tilt root outward from trunk center
+      root.rotation.z = -Math.cos(angle) * 0.5;
+      root.rotation.x = Math.sin(angle) * 0.5;
       g.add(root);
     }
 
