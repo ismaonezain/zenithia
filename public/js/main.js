@@ -1046,7 +1046,7 @@ function createNameHPBar(name, hp, maxHp, mp, maxMp) {
     ctx.fillStyle = hpPct > 0.3 ? '#4CAF50' : hpPct > 0.15 ? '#FF9800' : '#F44336';
     ctx.fillRect(50, 9, 156 * hpPct, 14);
     ctx.fillStyle = '#FFF'; ctx.font = '11px Arial'; ctx.textAlign = 'center';
-    ctx.fillText('HP ' + Math.ceil(hp) + '/' + maxHp, 128, 20);
+    ctx.fillText('HP ' + Math.round(hp) + '/' + maxHp, 128, 20);
     // MP bar
     const mpPct = maxMp > 0 ? Math.max(0, Math.min(1, mp / maxMp)) : 0;
     ctx.fillStyle = 'rgba(0,0,0,0.6)';
@@ -1054,7 +1054,7 @@ function createNameHPBar(name, hp, maxHp, mp, maxMp) {
     ctx.fillStyle = '#42A5F5';
     ctx.fillRect(50, 31, 156 * mpPct, 12);
     ctx.fillStyle = '#FFF'; ctx.font = '10px Arial';
-    ctx.fillText('MP ' + Math.ceil(mp) + '/' + maxMp, 128, 42);
+    ctx.fillText('MP ' + Math.round(mp) + '/' + maxMp, 128, 42);
     barTex.needsUpdate = true;
   }
   render();
