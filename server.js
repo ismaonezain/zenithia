@@ -382,23 +382,33 @@ setInterval(() => {
         m.state = 'attack';
         m.lastAttack = now;
         const playerWs = nearest._ws;
-        console.log(`[AI] Monster ${m.id}(${m.type}) attacking ${nearest.id} dist=${nearestDist.toFixed(1)} ws=${!!playerWs} ready=${playerWs?.readyState} monsterState=${m.state}`);
-        if (playerWs && playerWs.readyState === 1) {
-          const dmg = Math.max(1, m.atk - Math.floor(nearest.def * 0.6));
-          nearest.hp = Math.max(0, nearest.hp - dmg);
-          playerWs.send(JSON.stringify({ type: 'player_hit', damage: dmg, hp: nearest.hp, maxHp: nearest.maxHp }));
-          broadcast({ type: 'monster_attack', monsterId: m.id, targetId: nearest.id, damage: dmg });
-          if (nearest.hp <= 0) {
-            // Player died — respawn at village
-            nearest.hp = nearest.maxHp;
-            nearest.x = 0;
-            nearest.z = 0;
-            playerWs.send(JSON.stringify({ type: 'player_died', hp: nearest.hp, maxHp: nearest.maxHp }));
-            m.state = 'idle';
-            m.target = null;
+        const dmg = Math.max(1, m.atk - Math.floor(nearest.def * 0.6));
+        nearest.hp = Math.max(0, nearest.hp - dmg);
+        console.log(`[AI] Monster ${m.id}(${m.type}) → HIT ${nearest.id} dmg=${dmg} hp=${nearest.hp}/${nearest.maxHp} ws=${!!playerWs} ready=${playerWs?.readyState}`);
+        // Send player_hit directly to victim
+        try {
+          if (playerWs && playerWs.readyState === 1) {
+            playerWs.send(JSON.stringify({ type: 'player_hit', damage: dmg, hp: nearest.hp, maxHp: nearest.maxHp }));
           }
-        } else {
-          console.log(`[AI] SKIP attack — ws unavailable`);
+        } catch (e) {
+          console.error('[AI] player_hit send failed:', e.message);
+        }
+        // Also broadcast so client definitely receives it
+        broadcast({ type: 'player_hit', damage: dmg, hp: nearest.hp, maxHp: nearest.maxHp });
+        broadcast({ type: 'monster_attack', monsterId: m.id, targetId: nearest.id, damage: dmg });
+        if (nearest.hp <= 0) {
+          // Player died — respawn at village
+          nearest.hp = nearest.maxHp;
+          nearest.x = 0;
+          nearest.z = 0;
+          try {
+            if (playerWs && playerWs.readyState === 1) {
+              playerWs.send(JSON.stringify({ type: 'player_died', hp: nearest.hp, maxHp: nearest.maxHp }));
+            }
+          } catch (e) {}
+          broadcast({ type: 'player_died', hp: nearest.hp, maxHp: nearest.maxHp });
+          m.state = 'idle';
+          m.target = null;
         }
         m.state = 'chase';
       }
