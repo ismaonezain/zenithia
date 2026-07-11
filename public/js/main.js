@@ -845,7 +845,7 @@ function handleServerMessage(msg) {
       state.player.hp = msg.hp;
       state.player.mp = msg.mp;
       state.player.inventory = msg.inventory;
-      state.inventoryUI.player = state.player;
+      state.inventoryUI.updatePlayer(state.player);
       updatePlayerHP(msg.hp, msg.maxHp);
       updatePlayerMP(msg.mp, msg.maxMp);
       break;
@@ -859,7 +859,7 @@ function handleServerMessage(msg) {
       state.player.def = msg.def;
       if (msg.spd !== undefined) state.player.spd = msg.spd;
       if (msg.crit !== undefined) state.player.crit = msg.crit;
-      state.inventoryUI.player = state.player;
+      state.inventoryUI.updatePlayer(state.player);
       break;
     }
 
@@ -991,7 +991,7 @@ function handleServerMessage(msg) {
           if (existing) existing.quantity = (existing.quantity || 1) + (l.quantity || 1);
           else state.player.inventory.push({ ...l });
         });
-        state.inventoryUI.player = state.player;
+        state.inventoryUI.updatePlayer(state.player);
       }
       state.player.hp = msg.hp;
       state.player.maxHp = msg.maxHp;
@@ -1035,7 +1035,7 @@ function handleServerMessage(msg) {
     }
     case 'inventory_update': {
       state.player.inventory = msg.inventory;
-      state.inventoryUI.player = state.player;
+      state.inventoryUI.updatePlayer(state.player);
       break;
     }
     case 'shop_catalog':

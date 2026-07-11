@@ -158,50 +158,60 @@ export class InventoryUI {
   }
 
   renderEquipment(equip) {
+    const rarityColors = { common: '#9E9E9E', uncommon: '#4CAF50', rare: '#2196F3', epic: '#9C27B0', legendary: '#FF9800' };
     const slots = [
-      { key: 'weapon', label: 'Weapon', x: '50%', y: '25%' },
-      { key: 'armor', label: 'Armor', x: '50%', y: '50%' },
-      { key: 'helmet', label: 'Helmet', x: '50%', y: '10%' },
-      { key: 'shield', label: 'Shield', x: '25%', y: '50%' },
-      { key: 'accessory', label: 'Accessory', x: '75%', y: '75%' },
+      { key: 'weapon', label: '⚔️ Weapon', icon: '⚔️' },
+      { key: 'armor', label: '🛡️ Armor', icon: '🛡️' },
+      { key: 'helmet', label: '⛑️ Helmet', icon: '⛑️' },
+      { key: 'shield', label: '🔰 Shield', icon: '🔰' },
+      { key: 'pants', label: '👖 Pants', icon: '👖' },
+      { key: 'boots', label: '👢 Boots', icon: '👢' },
+      { key: 'ring', label: '💍 Ring', icon: '💍' },
+      { key: 'accessory', label: '🎒 Accessory', icon: '🎒' },
     ];
 
-    let html = '<div style="position:relative; height:280px;">';
+    let html = '<div style="display:flex; flex-direction:column; gap:4px;">';
 
-    // Character silhouette
-    html += `<div style="position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
-      width:70px; height:160px; border:2px dashed #333; border-radius:8px;"></div>`;
-
+    // Equipment slots as compact rows
     slots.forEach(slot => {
       const item = equip[slot.key];
-      const rarityColors = { common: '#9E9E9E', uncommon: '#4CAF50', rare: '#2196F3', epic: '#9C27B0', legendary: '#FF9800' };
       const borderColor = item ? (rarityColors[item.rarity] || '#666') : '#333';
 
       html += `
-        <div style="position:absolute; left:${slot.x}; top:${slot.y}; transform:translate(-50%,-50%); text-align:center;">
-          <div style="
-            width:56px; height:56px; border:2px solid ${borderColor}; border-radius:8px;
-            background:rgba(255,255,255,0.05); display:flex; align-items:center; justify-content:center;
-            font-size:1.2rem; margin:0 auto;
-          " title="${item ? item.name : slot.label}">
+        <div style="display:flex; align-items:center; gap:10px; padding:6px 10px; border-radius:8px; background:rgba(255,255,255,0.03); border:1px solid ${item ? borderColor : '#222'};">
+          <div style="width:40px; height:40px; border:2px solid ${borderColor}; border-radius:6px; background:rgba(255,255,255,0.05); display:flex; align-items:center; justify-content:center; font-size:1rem; flex-shrink:0;">
             ${item ? (item.icon?.symbol || '?') : ''}
           </div>
-          <div style="font-size:0.65rem; color:#888; margin-top:4px;">${slot.label}</div>
+          <div style="flex:1; min-width:0;">
+            <div style="font-size:0.7rem; color:#666;">${slot.label}</div>
+            ${item ? `
+              <div style="font-size:0.8rem; font-weight:bold; color:${borderColor}; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${item.name}</div>
+              <div style="font-size:0.65rem; color:#999;">${item.description || ''}</div>
+            ` : '<div style="font-size:0.75rem; color:#444;">Empty</div>'}
+          </div>
           ${item ? `<button class="item-unequip" data-slot="${slot.key}" style="
-            margin-top:2px; padding:2px 6px; font-size:0.6rem; background:#F44336; border:none;
-            color:white; border-radius:4px; cursor:pointer;">Remove</button>` : ''}
+            padding:4px 8px; font-size:0.65rem; background:rgba(244,67,54,0.2); border:1px solid #F44336;
+            color:#F44336; border-radius:4px; cursor:pointer; flex-shrink:0;">Remove</button>` : ''}
         </div>
       `;
     });
 
     // Stats summary
+    const stats = [
+      { label: 'ATK', value: this.player.atk || 10, color: '#F44336' },
+      { label: 'DEF', value: this.player.def || 5, color: '#2196F3' },
+      { label: 'SPD', value: this.player.spd || 10, color: '#4CAF50' },
+      { label: 'CRIT', value: Math.round((this.player.crit || 0.05) * 100) + '%', color: '#FF9800' },
+    ];
+
     html += `
-      <div style="position:absolute; bottom:0; left:0; right:0; display:flex; justify-content:center; gap:16px;
-        font-size:0.75rem; color:#aaa; padding:8px; border-top:1px solid #333;">
-        <span>ATK: ${this.player.atk || 10}</span>
-        <span>DEF: ${this.player.def || 5}</span>
-        <span>SPD: ${this.player.spd || 10}</span>
-        <span>CRIT: ${Math.round((this.player.crit || 0.05) * 100)}%</span>
+      <div style="margin-top:8px; padding:8px 10px; border-top:1px solid #333; display:flex; justify-content:space-between;">
+        ${stats.map(s => `
+          <div style="text-align:center;">
+            <div style="font-size:0.6rem; color:#666;">${s.label}</div>
+            <div style="font-size:0.9rem; font-weight:bold; color:${s.color};">${s.value}</div>
+          </div>
+        `).join('')}
       </div>
     `;
 
