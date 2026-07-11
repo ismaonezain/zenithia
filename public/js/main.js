@@ -542,6 +542,7 @@ function handleServerMessage(msg) {
             sprite.position.y = 2.5;
             g.add(sprite);
             g.position.set(npc.x, 0, npc.z);
+            if (npc.rot) g.rotation.y = npc.rot;
             g.userData = { id: npc.id, name: npc.name, type: 'npc' };
             state.scene.add(g);
             state.npcs[npc.id] = g;

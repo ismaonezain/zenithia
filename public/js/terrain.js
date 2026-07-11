@@ -16,7 +16,7 @@ export const COLLISIONS = [
   // River House
   { x: -6, z: 14, hw: 2, hd: 2 },
   // Green House
-  { x: 3, z: 12, hw: 2, hd: 2 },
+  { x: 3, z: 16, hw: 2, hd: 2 },
   // Herbalist
   { x: 18, z: -8, hw: 2, hd: 2 },
   // Gate
@@ -424,13 +424,13 @@ function addPaths(group) {
   group.add(housePath2);
   addPathLabel(group, 'JALAN RUMAH 2', -3, 14);
 
-  // [I] Main → House (2,12) (horizontal ke kanan)
-  const housePath3 = new THREE.Mesh(new THREE.PlaneGeometry(2, 1.2), pathMat);
+  // [I] Main → House (3,16) (horizontal ke kanan, Green House)
+  const housePath3 = new THREE.Mesh(new THREE.PlaneGeometry(2, 5), pathMat);
   housePath3.rotation.x = -Math.PI / 2;
-  housePath3.position.set(1, 0.02, 12);
+  housePath3.position.set(1, 0.02, 14);
   housePath3.receiveShadow = true;
   group.add(housePath3);
-  addPathLabel(group, 'JALAN RUMAH 3', 1, 12);
+  addPathLabel(group, 'JALAN RUMAH 3', 1, 14);
 }
 
 function createDiagonalPath(x1, z1, x2, z2, width, material) {
@@ -766,7 +766,7 @@ function addBuildings(group) {
   const houseData = [
     { x: -6, z: 8, color: 0xD7CCC8, roof: 0x5D4037, rot: Math.PI / 2, label: 'Willow Cottage' },
     { x: -6, z: 14, color: 0xBCAAA4, roof: 0x795548, rot: Math.PI / 2, label: 'River House' },
-    { x: 3, z: 12, color: 0xC5E1A5, roof: 0x33691E, rot: -Math.PI / 2, label: 'Green House' },
+    { x: 3, z: 16, color: 0xC5E1A5, roof: 0x33691E, rot: -Math.PI / 2, label: 'Green House' },
   ];
   houseData.forEach(hd => {
     const hg = new THREE.Group();
