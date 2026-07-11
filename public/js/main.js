@@ -52,8 +52,8 @@ const state = {
   monsters: {},
   damageNumbers: [],
   // Day/night cycle
-  dayTime: 0.35,         // 0-1, 0 = midnight, 0.25 = sunrise, 0.5 = noon, 0.75 = sunset
-  daySpeed: 1 / 1200,    // full cycle = 1200 seconds (20 min)
+  dayTime: 0.25,         // 0-1, 0 = midnight, 0.25 = sunrise, 0.5 = noon, 0.75 = sunset
+  daySpeed: 1 / 300,     // full cycle = 300 seconds (5 min)
   sunLight: null,
   ambientLight: null,
   moonMesh: null,
@@ -92,12 +92,12 @@ function initScene() {
   sun.position.set(30, 50, 30);
   sun.castShadow = true;
   sun.shadow.mapSize.set(2048, 2048);
-  sun.shadow.camera.left = -50;
-  sun.shadow.camera.right = 50;
-  sun.shadow.camera.top = 50;
-  sun.shadow.camera.bottom = -50;
+  sun.shadow.camera.left = -100;
+  sun.shadow.camera.right = 100;
+  sun.shadow.camera.top = 100;
+  sun.shadow.camera.bottom = -100;
   sun.shadow.camera.near = 0.5;
-  sun.shadow.camera.far = 200;
+  sun.shadow.camera.far = 300;
   sun.shadow.bias = -0.0005;
   state.scene.add(sun);
   state.sunLight = sun;
@@ -1442,6 +1442,7 @@ function updateDayNight(dt) {
   const sunX = Math.cos(sunAngle) * 80;
 
   state.sunLight.position.set(sunX, Math.max(sunY, -10), 30);
+  state.sunLight.shadow.camera.updateProjectionMatrix();
 
   // Update sun mesh position (follows light)
   if (state.sunMesh) {
