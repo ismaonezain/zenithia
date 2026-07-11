@@ -1530,6 +1530,12 @@ function updateDayNight(dt) {
   state.ambientLight.intensity = ambientIntensity;
   state.ambientLight.color = ambientColor;
 
+  // DEBUG: log lighting values every 5 seconds
+  if (!state._lastLightLog || Date.now() - state._lastLightLog > 5000) {
+    console.log(`[LIGHT] t=${t.toFixed(3)} h=${(t*24).toFixed(1)} sunInt=${state.sunLight.intensity.toFixed(3)} ambInt=${state.ambientLight.intensity.toFixed(3)} sunColor=${state.sunLight.color.getHexString()} bg=${state.scene.background?.getHexString()}`);
+    state._lastLightLog = Date.now();
+  }
+
   // Update sun mesh position (follows light)
   if (state.sunMesh) {
     state.sunMesh.position.set(sunX, Math.max(sunY, -10), 30);
@@ -1637,7 +1643,8 @@ function updateCompass() {
 
 function gameLoop() {
   requestAnimationFrame(gameLoop);
-  const dt = state.clock ? Math.min(state.clock.getDelta(), 0.1) : 0.016;
+  let dt = state.clock ? state.clock.getDelta() : 0.016;
+  if (isNaN(dt) || dt > 1) dt = 0.016; // safety clamp
   updateMovement();
 
   const playerModel = state.players[state.playerId];
