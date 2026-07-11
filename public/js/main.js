@@ -1862,8 +1862,8 @@ function showLootPopup(loot) {
     const diffLabel = { easy: 'Common', medium: 'Uncommon', hard: 'Rare' }[difficulty];
 
     const div = document.createElement('div');
-    div.className = `loot-item loot-tier-${tier}`;
-    const iconBg = { 0: '#555', 1: '#666', 2: '#2E7D32', 3: '#1565C0' }[tier] || '#555';
+    div.className = 'loot-item';
+    const iconBg = '#555';
 
     // Stats text for equipment
     let statsText = '';
