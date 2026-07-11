@@ -138,23 +138,6 @@ export function getWaterMeshes() { return waterMeshes; }
 function addWater(group) {
   waterMeshes = [];
 
-  // Riverbed (brown dirt at bottom of channel)
-  const bedGeo = new THREE.PlaneGeometry(120, 4.5);
-  const bedMat = new THREE.MeshLambertMaterial({ color: 0x5D4037 });
-  const bed = new THREE.Mesh(bedGeo, bedMat);
-  bed.rotation.x = -Math.PI / 2;
-  bed.position.set(0, -0.28, 2);
-  group.add(bed);
-
-  // Riverbed darker center
-  const bedDark = new THREE.Mesh(
-    new THREE.PlaneGeometry(120, 2),
-    new THREE.MeshLambertMaterial({ color: 0x4E342E })
-  );
-  bedDark.rotation.x = -Math.PI / 2;
-  bedDark.position.set(0, -0.27, 2);
-  group.add(bedDark);
-
   // Small stones on riverbed
   const stoneMat = new THREE.MeshLambertMaterial({ color: 0x8D6E63 });
   for (let i = 0; i < 25; i++) {
@@ -173,10 +156,10 @@ function addWater(group) {
 
   // Main creek — sits in channel
   const creekGeo = new THREE.PlaneGeometry(120, 4);
-  const creekMat = new THREE.MeshLambertMaterial({ color: 0x42A5F5, transparent: true, opacity: 0.75 });
+  const creekMat = new THREE.MeshLambertMaterial({ color: 0x42A5F5, transparent: true, opacity: 0.85 });
   const creek = new THREE.Mesh(creekGeo, creekMat);
   creek.rotation.x = -Math.PI / 2;
-  creek.position.set(0, -0.15, 2);
+  creek.position.set(0, -0.12, 2);
   group.add(creek);
   waterMeshes.push(creek);
 
@@ -219,20 +202,12 @@ function addWater(group) {
   group.add(foam);
   waterMeshes.push({ mesh: foam, baseX: 0, speed: 0.5, amp: 0.3 });
 
-  // Pond near big willow — with riverbed
-  const pondBed = new THREE.Mesh(
-    new THREE.CircleGeometry(2.8, 20),
-    new THREE.MeshLambertMaterial({ color: 0x5D4037 })
-  );
-  pondBed.rotation.x = -Math.PI / 2;
-  pondBed.position.set(-10, -0.28, 2);
-  group.add(pondBed);
-
+  // Pond near big willow
   const pondGeo = new THREE.CircleGeometry(2.5, 20);
-  const pondMat = new THREE.MeshLambertMaterial({ color: 0x42A5F5, transparent: true, opacity: 0.75 });
+  const pondMat = new THREE.MeshLambertMaterial({ color: 0x42A5F5, transparent: true, opacity: 0.85 });
   const pond = new THREE.Mesh(pondGeo, pondMat);
   pond.rotation.x = -Math.PI / 2;
-  pond.position.set(-10, -0.15, 2);
+  pond.position.set(-10, -0.12, 2);
   group.add(pond);
   waterMeshes.push(pond);
 
