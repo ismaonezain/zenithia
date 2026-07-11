@@ -1244,7 +1244,12 @@ function spawnMonsterClient(m) {
   const data = MONSTER_DATA[m.type] || { name: m.name, color: 0x999999, size: 0.5 };
   const model = createMonsterModel(m.type, { ...data, name: m.name, size: data.size });
   model.position.set(m.x, 0, m.z);
-  model.userData = { id: m.id, type: 'monster', monsterType: m.type, hp: m.hp, maxHp: m.maxHp, monsterName: m.name };
+  // Preserve hpBar reference from createMonsterModel, add our fields
+  const hpBarRef = model.userData.hpBar;
+  const hpBarWidthRef = model.userData.hpBarWidth;
+  Object.assign(model.userData, { id: m.id, type: 'monster', monsterType: m.type, hp: m.hp, maxHp: m.maxHp, monsterName: m.name });
+  model.userData.hpBar = hpBarRef;
+  model.userData.hpBarWidth = hpBarWidthRef;
   state.scene.add(model);
   state.monsters[m.id] = model;
 }
