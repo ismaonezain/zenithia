@@ -1420,14 +1420,14 @@ function updateDayNight(dt) {
   state.dayTime = (state.dayTime + dt * state.daySpeed) % 1.0;
   const t = state.dayTime;
 
-  // Sun angle: t=0.25 → east (sunrise), t=0.5 → top (noon), t=0.75 → west (sunset)
+  // Sun angle: t=0.25 → east (sunrise), t=0.5 → top (noon), t=0.75 → sunset
   const sunAngle = (t - 0.25) * Math.PI * 2;
   const sunY = Math.sin(sunAngle) * 80;
   const sunX = Math.cos(sunAngle) * 80;
 
   state.sunLight.position.set(sunX, Math.max(sunY, -10), 30);
 
-  // Sky color phases: midnight=0, sunrise=0.25, noon=0.5, sunset=0.75
+  // Sky color phases — smoother transitions
   let skyColor;
   let fogColor;
   let sunIntensity;
@@ -1435,53 +1435,70 @@ function updateDayNight(dt) {
   let ambientColor;
   let sunColor;
 
-  if (t < 0.2) {
-    // Night → pre-dawn (0 = midnight, 0.2 = approaching sunrise)
-    const p = t / 0.2;
-    skyColor = lerpColor(0x0a0a2a, 0x1a1a3a, p);
-    fogColor = lerpColor(0x0a0a2a, 0x1a1a3a, p);
+  if (t < 0.15) {
+    // Deep night (0 → 0.15)
+    skyColor = new THREE.Color(0x0a0a2a);
+    fogColor = new THREE.Color(0x0a0a2a);
     sunIntensity = 0.05;
     ambientIntensity = 0.08;
+    ambientColor = new THREE.Color(0x111133);
+    sunColor = new THREE.Color(0x334466);
+  } else if (t < 0.25) {
+    // Pre-dawn (0.15 → 0.25) — sky lightens slowly
+    const p = (t - 0.15) / 0.1;
+    skyColor = lerpColor(0x0a0a2a, 0x1a1a3a, p);
+    fogColor = lerpColor(0x0a0a2a, 0x1a1a3a, p);
+    sunIntensity = 0.05 + p * 0.1;
+    ambientIntensity = 0.08 + p * 0.07;
     ambientColor = lerpColor(0x111133, 0x222244, p);
     sunColor = lerpColor(0x334466, 0x665544, p);
-  } else if (t < 0.3) {
-    // Sunrise (0.2 → 0.3)
-    const p = (t - 0.2) / 0.1;
+  } else if (t < 0.35) {
+    // Sunrise (0.25 → 0.35) — orange/pink horizon, gradual blue
+    const p = (t - 0.25) / 0.1;
     skyColor = lerpColor(0x1a1a3a, 0x87CEEB, p);
-    fogColor = lerpColor(0x1a1a3a, 0x87CEEB, p);
-    sunIntensity = 0.05 + p * 0.95;
-    ambientIntensity = 0.08 + p * 0.32;
-    ambientColor = lerpColor(0x222244, 0xffffff, p);
-    sunColor = lerpColor(0x665544, 0xfff5e0, p);
+    fogColor = lerpColor(0x2a1a2a, 0x87CEEB, p);
+    sunIntensity = 0.15 + p * 0.85;
+    ambientIntensity = 0.15 + p * 0.25;
+    ambientColor = lerpColor(0x332233, 0xffffff, p);
+    sunColor = lerpColor(0xff8866, 0xfff5e0, p);
   } else if (t < 0.5) {
-    // Morning → noon (0.3 → 0.5)
-    const p = (t - 0.3) / 0.2;
+    // Morning → noon (0.35 → 0.5) — bright day
+    const p = (t - 0.35) / 0.15;
     skyColor = lerpColor(0x87CEEB, 0x5eb8f5, p);
     fogColor = lerpColor(0x87CEEB, 0x5eb8f5, p);
     sunIntensity = 1.0;
     ambientIntensity = 0.4;
     ambientColor = 0xffffff;
     sunColor = 0xfff5e0;
-  } else if (t < 0.7) {
-    // Noon → sunset approach (0.5 → 0.7)
-    const p = (t - 0.5) / 0.2;
-    skyColor = lerpColor(0x5eb8f5, 0xF4A460, p);
-    fogColor = lerpColor(0x5eb8f5, 0xF4A460, p);
-    sunIntensity = 1.0 - p * 0.3;
-    ambientIntensity = 0.4 - p * 0.15;
+  } else if (t < 0.65) {
+    // Noon → golden hour (0.5 → 0.65) — warm light
+    const p = (t - 0.5) / 0.15;
+    skyColor = lerpColor(0x5eb8f5, 0xFFB347, p);
+    fogColor = lerpColor(0x5eb8f5, 0xFFB347, p);
+    sunIntensity = 1.0 - p * 0.2;
+    ambientIntensity = 0.4 - p * 0.1;
     ambientColor = lerpColor(0xffffff, 0xffccaa, p);
-    sunColor = lerpColor(0xfff5e0, 0xff8844, p);
+    sunColor = lerpColor(0xfff5e0, 0xffaa44, p);
   } else if (t < 0.8) {
-    // Sunset (0.7 → 0.8)
-    const p = (t - 0.7) / 0.1;
-    skyColor = lerpColor(0xF4A460, 0x1a1a3a, p);
-    fogColor = lerpColor(0xF4A460, 0x1a1a3a, p);
-    sunIntensity = 0.7 - p * 0.65;
-    ambientIntensity = 0.25 - p * 0.17;
-    ambientColor = lerpColor(0xffccaa, 0x222244, p);
-    sunColor = lerpColor(0xff8844, 0x334466, p);
+    // Sunset (0.65 → 0.8) — slow transition to dusk
+    const p = (t - 0.65) / 0.15;
+    skyColor = lerpColor(0xFFB347, 0x2a1a3a, p);
+    fogColor = lerpColor(0xFFB347, 0x2a1a3a, p);
+    sunIntensity = 0.8 - p * 0.7;
+    ambientIntensity = 0.3 - p * 0.2;
+    ambientColor = lerpColor(0xffccaa, 0x332244, p);
+    sunColor = lerpColor(0xffaa44, 0x443355, p);
+  } else if (t < 0.9) {
+    // Dusk → night (0.8 → 0.9) — last light fades
+    const p = (t - 0.8) / 0.1;
+    skyColor = lerpColor(0x2a1a3a, 0x0a0a2a, p);
+    fogColor = lerpColor(0x2a1a3a, 0x0a0a2a, p);
+    sunIntensity = 0.1 - p * 0.05;
+    ambientIntensity = 0.1 - p * 0.02;
+    ambientColor = lerpColor(0x332244, 0x111133, p);
+    sunColor = lerpColor(0x443355, 0x334466, p);
   } else {
-    // Night (0.8 → 1.0 / 0.0)
+    // Night (0.9 → 1.0)
     skyColor = new THREE.Color(0x0a0a2a);
     fogColor = new THREE.Color(0x0a0a2a);
     sunIntensity = 0.05;
@@ -1497,31 +1514,35 @@ function updateDayNight(dt) {
   state.ambientLight.intensity = ambientIntensity;
   state.ambientLight.color = ambientColor;
 
-  // Moon: visible when sun is below horizon (t < 0.2 or t > 0.8)
-  const isNight = t < 0.2 || t > 0.8;
-  state.moonMesh.visible = isNight;
-  if (isNight) {
-    const moonAngle = (t < 0.2 ? t + 0.8 : t) - 0.75;
+  // Moon: visible during night, fade in/out at edges
+  const moonVisible = t < 0.25 || t > 0.75;
+  state.moonMesh.visible = moonVisible;
+  if (moonVisible) {
+    const moonAngle = (t < 0.25 ? t + 0.75 : t - 0.75);
     state.moonMesh.position.set(
       Math.cos(moonAngle * Math.PI * 2) * 80,
       Math.sin(moonAngle * Math.PI * 2) * 80,
       -30
     );
-    // Moon opacity fades near sunrise/sunset
+    // Smooth fade
     let moonAlpha = 1;
-    if (t > 0.8) moonAlpha = 1 - (t - 0.8) / 0.2;
-    if (t < 0.2) moonAlpha = t / 0.2;
-    state.moonMesh.material.opacity = moonAlpha;
+    if (t > 0.75 && t < 0.9) moonAlpha = (t - 0.75) / 0.15;
+    else if (t > 0.9) moonAlpha = 1;
+    else if (t < 0.25 && t > 0.1) moonAlpha = 1 - (t - 0.1) / 0.15;
+    else if (t <= 0.1) moonAlpha = 1;
+    state.moonMesh.material.opacity = Math.max(0, Math.min(1, moonAlpha));
     state.moonMesh.material.transparent = true;
   }
 
-  // Stars
-  state.starField.visible = isNight;
-  if (isNight) {
+  // Stars — fade with moon
+  state.starField.visible = moonVisible;
+  if (moonVisible) {
     let starAlpha = 1;
-    if (t > 0.8) starAlpha = 1 - (t - 0.8) / 0.2;
-    if (t < 0.2) starAlpha = t / 0.2;
-    state.starField.material.opacity = starAlpha;
+    if (t > 0.75 && t < 0.9) starAlpha = (t - 0.75) / 0.15;
+    else if (t > 0.9) starAlpha = 1;
+    else if (t < 0.25 && t > 0.1) starAlpha = 1 - (t - 0.1) / 0.15;
+    else if (t <= 0.1) starAlpha = 1;
+    state.starField.material.opacity = Math.max(0, Math.min(1, starAlpha));
     state.starField.material.transparent = true;
   }
 
