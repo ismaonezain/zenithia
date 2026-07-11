@@ -1024,26 +1024,35 @@ function addTrees(group) {
       g.add(root);
     }
 
-    // Canopy — layered leaf clusters (spheres, not boxes)
+    // Canopy — layered leaf clusters (spheres, clustered high to cover trunk)
     const leafColors = [0x66BB6A, 0x4CAF50, 0x81C784];
     for (let layer = 0; layer < 3; layer++) {
       const leafMat = new THREE.MeshLambertMaterial({ color: leafColors[layer] });
-      const count = 6 + layer * 2;
+      const count = 5 + layer * 2;
       for (let i = 0; i < count; i++) {
-        const angle = (i / count) * Math.PI * 2 + layer * 0.3;
-        const r = (1.2 + layer * 0.4) * scale;
-        const leafGeo = new THREE.SphereGeometry((0.4 + layer * 0.1) * scale, 6, 5);
+        const angle = (i / count) * Math.PI * 2 + layer * 0.4;
+        const r = (0.4 + layer * 0.3) * scale;
+        const leafGeo = new THREE.SphereGeometry((0.5 + layer * 0.1) * scale, 6, 5);
         const leaf = new THREE.Mesh(leafGeo, leafMat);
         leaf.position.set(
           Math.cos(angle) * r,
-          (2.5 - layer * 0.3) * scale,
+          (2.6 + layer * 0.15) * scale,
           Math.sin(angle) * r
         );
-        leaf.scale.y = 0.6;
+        leaf.scale.y = 0.55;
         leaf.castShadow = true;
         g.add(leaf);
       }
     }
+    // Central top cluster (covers trunk top)
+    const topLeaf = new THREE.Mesh(
+      new THREE.SphereGeometry(0.6 * scale, 7, 5),
+      new THREE.MeshLambertMaterial({ color: 0x4CAF50 })
+    );
+    topLeaf.position.y = 2.9 * scale;
+    topLeaf.scale.y = 0.6;
+    topLeaf.castShadow = true;
+    g.add(topLeaf);
 
     // Drooping vines (willow signature)
     const vineMat = new THREE.MeshLambertMaterial({ color: 0x81C784 });
