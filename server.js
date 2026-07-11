@@ -166,19 +166,21 @@ function getOrCreatePlayer(playerId, name, wallet, customization, persistentId) 
     if (existing) {
       existing.lastLogin = Date.now();
       existing.id = playerId; // rebind to current session
-      if (name) existing.name = name; // always update name from client
+      if (name && name !== 'Adventurer') existing.name = name; // only update if real name
       if (customization && Object.keys(customization).length > 0) {
-        // Recalculate stats if class changed
-        const oldClass = existing.customization?.classType;
-        const newClass = customization.classType;
-        existing.customization = customization;
-        if (newClass && newClass !== oldClass) {
+        // Server is source of truth — only update cosmetic fields, keep class/stats from server
+        const serverClass = existing.customization?.classType;
+        const clientClass = customization.classType;
+        // Merge cosmetic fields only
+        existing.customization = { ...existing.customization, ...customization };
+        // If class changed, recalculate stats
+        if (clientClass && clientClass !== serverClass) {
           const s = recalcClassStats(customization);
           existing.hp = s.hp; existing.maxHp = s.hp;
           existing.mp = s.mp; existing.maxMp = s.mp;
           existing.atk = s.atk; existing.def = s.def;
           existing.spd = s.spd; existing.crit = s.crit;
-          existing.class = newClass;
+          existing.class = clientClass;
         }
       }
       world.players[playerId] = existing;
@@ -195,18 +197,18 @@ function getOrCreatePlayer(playerId, name, wallet, customization, persistentId) 
     if (existing) {
       existing.lastLogin = Date.now();
       existing.id = playerId;
-      if (name) existing.name = name;
+      if (name && name !== 'Adventurer') existing.name = name;
       if (customization && Object.keys(customization).length > 0) {
-        const oldClass = existing.customization?.classType;
-        const newClass = customization.classType;
-        existing.customization = customization;
-        if (newClass && newClass !== oldClass) {
+        const serverClass = existing.customization?.classType;
+        const clientClass = customization.classType;
+        existing.customization = { ...existing.customization, ...customization };
+        if (clientClass && clientClass !== serverClass) {
           const s = recalcClassStats(customization);
           existing.hp = s.hp; existing.maxHp = s.hp;
           existing.mp = s.mp; existing.maxMp = s.mp;
           existing.atk = s.atk; existing.def = s.def;
           existing.spd = s.spd; existing.crit = s.crit;
-          existing.class = newClass;
+          existing.class = clientClass;
         }
       }
       if (persistentId) existing.persistentId = persistentId; // backfill

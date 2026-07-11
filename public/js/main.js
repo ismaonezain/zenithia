@@ -739,6 +739,8 @@ function handleServerMessage(msg) {
         });
       }
       if (msg.onlinePlayers) msg.onlinePlayers.forEach(p => createOtherPlayer(p));
+      // Spawn existing monsters
+      if (msg.monsters) msg.monsters.forEach(m => spawnMonsterClient(m));
       showHUD();
       createPlayerModelInWorld(state.player);
 
@@ -842,11 +844,6 @@ function handleServerMessage(msg) {
       state.partyUI.updateOnline(msg.players);
       break;
     }
-
-    case 'joined':
-      // Spawn existing monsters
-      if (msg.monsters) msg.monsters.forEach(m => spawnMonsterClient(m));
-      break;
 
     case 'monster_spawn':
       spawnMonsterClient(msg.monster);
@@ -1244,6 +1241,18 @@ function updatePlayerHP(hp, maxHp) {
     state.player.hp = hp; state.player.maxHp = maxHp;
     updateNameHPBar(state.playerModel, hp, maxHp, state.player.mp ?? 0, state.player.maxMp ?? maxHp);
   }
+}
+
+function updatePlayerXP(xp, maxXp) {
+  const fill = document.getElementById('xp-fill');
+  const text = document.getElementById('xp-text');
+  if (fill) fill.style.width = `${(xp / maxXp) * 100}%`;
+  if (text) text.textContent = `${xp}/${maxXp}`;
+}
+
+function updatePlayerLevel(level) {
+  const el = document.getElementById('hud-level');
+  if (el) el.textContent = `Lv.${level}`;
 }
 
 function updatePlayerMP(mp, maxMp) {
