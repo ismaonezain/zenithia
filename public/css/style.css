@@ -288,6 +288,27 @@ body {
   pointer-events: auto;
 }
 
+/* Player Name & Level */
+#hud-name {
+  position: absolute;
+  top: 8px;
+  left: 24px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #fff;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.8);
+  pointer-events: none;
+}
+#hud-level {
+  position: absolute;
+  top: 24px;
+  left: 248px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #ffd54f;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+  pointer-events: none;
+}
 /* HP Bar */
 #hp-bar {
   position: absolute;

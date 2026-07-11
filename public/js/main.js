@@ -766,8 +766,10 @@ function handleServerMessage(msg) {
       createPlayerModelInWorld(state.player);
 
       // Always update HUD from server data
-      document.getElementById('hud-name').textContent = state.player.name;
-      document.getElementById('hud-level').textContent = 'Lv.' + state.player.level;
+      const hudName = document.getElementById('hud-name');
+      const hudLevel = document.getElementById('hud-level');
+      if (hudName) hudName.textContent = state.player.name;
+      if (hudLevel) hudLevel.textContent = 'Lv.' + state.player.level;
       updatePlayerHP(state.player.hp, state.player.maxHp);
       updatePlayerMP(state.player.mp, state.player.maxMp);
       initSkillUI();
