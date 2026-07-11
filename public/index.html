@@ -36,6 +36,11 @@
       <div id="xp-fill"></div>
       <span id="xp-text">Lv.1</span>
     </div>
+    <!-- Target HP Bar -->
+    <div id="target-hp-bar">
+      <div id="target-hp-fill"></div>
+      <span id="target-hp-text"></span>
+    </div>
     <!-- Map Name Overlay -->
     <div id="map-name-overlay" style="display:none;">
       <div id="map-name-text"></div>
@@ -59,6 +64,35 @@
     <div id="chat-box">
       <div id="chat-messages"></div>
       <input id="chat-input" type="text" placeholder="Type a message..." maxlength="200">
+    </div>
+  </div>
+
+  <!-- Death Screen -->
+  <div id="death-screen" style="display:none;">
+    <div id="death-overlay"></div>
+    <div id="death-panel">
+      <h2>💀 You Died</h2>
+      <p id="death-msg">Defeated in battle...</p>
+      <div id="death-buttons">
+        <button id="respawn-city" class="death-btn">🏠 Respawn at City</button>
+        <button id="respawn-checkpoint" class="death-btn" style="display:none;">📍 Respawn at Checkpoint</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loot Pickup UI -->
+  <div id="loot-popup" style="display:none;">
+    <div id="loot-header">📦 Loot Dropped!</div>
+    <div id="loot-items"></div>
+    <button id="loot-pickup-all">Pick Up All</button>
+  </div>
+
+  <!-- Skill Hotbar -->
+  <div id="skill-hotbar" style="display:none;">
+    <div id="skill-slot-1" class="skill-slot" data-key="1">
+      <div id="skill-icon-1" class="skill-icon"></div>
+      <div id="skill-cd-1" class="skill-cd"></div>
+      <span class="skill-key">1</span>
     </div>
   </div>
 

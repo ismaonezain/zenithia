@@ -56,6 +56,7 @@ const state = {
   targetIndicator: null,  // visual ring mesh
   lastAttackTime: 0,      // client-side cooldown tracking
   autoAttacking: false,   // auto-attack loop active
+  isDead: false,          // death screen active
   // Day/night cycle
   dayTime: 0.25,         // 0-1, 0 = midnight, 0.25 = sunrise, 0.5 = noon, 0.75 = sunset
   daySpeed: 1 / 300,     // full cycle = 300 seconds (5 min)
@@ -757,6 +758,7 @@ function handleServerMessage(msg) {
       document.getElementById('hud-level').textContent = 'Lv.' + state.player.level;
       updatePlayerHP(state.player.hp, state.player.maxHp);
       updatePlayerMP(state.player.mp, state.player.maxMp);
+      initSkillUI();
       break;
 
     case 'player_joined':
@@ -806,14 +808,10 @@ function handleServerMessage(msg) {
       addChatMessage('System', `Defeated ${msg.monsterName}! +${msg.xp} XP | Loot: ${lootText}`);
       updatePlayerHP(msg.hp, msg.maxHp);
       updatePlayerMP(msg.mp, msg.maxMp);
-      if (msg.loot) {
-        msg.loot.forEach(l => {
-          if (!state.player.inventory) state.player.inventory = [];
-          const existing = state.player.inventory.find(i => i.id === l.id);
-          if (existing) existing.quantity = (existing.quantity || 1) + l.quantity;
-          else state.player.inventory.push({ ...l });
-        });
-        state.inventoryUI.player = state.player;
+      if (msg.xp !== undefined) state.player.xp = (state.player.xp || 0) + msg.xp;
+      // Show loot popup for manual pickup
+      if (msg.loot && msg.loot.length > 0) {
+        showLootPopup(msg.loot);
       }
       break;
     }
@@ -865,7 +863,11 @@ function handleServerMessage(msg) {
 
     case 'monster_hit': {
       const mob = state.monsters[msg.monsterId];
-      if (mob) updateMonsterHPBar(mob, msg.hp, msg.maxHp);
+      if (mob) {
+        updateMonsterHPBar(mob, msg.hp, msg.maxHp);
+        mob.userData.hp = msg.hp;
+        mob.userData.maxHp = msg.maxHp;
+      }
       showDamageNumber(msg.monsterId, msg.damage, msg.isCrit);
       break;
     }
@@ -901,6 +903,7 @@ function handleServerMessage(msg) {
       if (msg.mp !== undefined) updatePlayerMP(msg.mp, msg.maxMp);
       addChatMessage('System', 'You died! Respawning at village...');
       cancelTarget();
+      showDeathScreen(msg.hp, msg.maxHp);
       break;
     }
 
@@ -956,6 +959,35 @@ function handleServerMessage(msg) {
     }
     case 'combat_message': {
       addChatMessage('Combat', msg.text);
+      break;
+    }
+    case 'respawned': {
+      state.player.x = msg.x;
+      state.player.z = msg.z;
+      state.player.hp = msg.hp;
+      state.player.maxHp = msg.maxHp;
+      state.player.mp = msg.mp;
+      state.player.maxMp = msg.maxMp;
+      const model = state.players[state.playerId];
+      if (model) model.position.set(msg.x, 0, msg.z);
+      updatePlayerHP(msg.hp, msg.maxHp);
+      updatePlayerMP(msg.mp, msg.maxMp);
+      addChatMessage('System', '🏠 Respawned at village!');
+      break;
+    }
+    case 'skill_used': {
+      state.player.mp = msg.mp;
+      updatePlayerMP(msg.mp, state.player.maxMp);
+      if (msg.heal) {
+        state.player.hp = msg.hp;
+        updatePlayerHP(msg.hp, state.player.maxHp);
+        addChatMessage('Skill', `💚 Healed ${msg.heal} HP!`);
+      }
+      break;
+    }
+    case 'inventory_update': {
+      state.player.inventory = msg.inventory;
+      state.inventoryUI.player = state.player;
       break;
     }
     case 'shop_catalog':
@@ -1199,10 +1231,63 @@ function spawnMonsterClient(m) {
   const data = MONSTER_DATA[m.type] || { name: m.name, color: 0x999999, size: 0.5 };
   const model = createMonsterModel(m.type, { ...data, name: m.name, size: data.size });
   model.position.set(m.x, 0, m.z);
-  model.userData = { id: m.id, type: 'monster', monsterType: m.type };
+  model.userData = { id: m.id, type: 'monster', monsterType: m.type, hp: m.hp, maxHp: m.maxHp, monsterName: m.name };
   state.scene.add(model);
   state.monsters[m.id] = model;
 }
+
+// ============================
+// SKILL DEFINITIONS (1 per class)
+// ============================
+const SKILLS = {
+  laborer: {
+    name: 'Power Smash',
+    icon: '🔨',
+    mpCost: 15,
+    cooldown: 8000,
+    damageMulti: 2.5,
+    range: 3.5,
+    desc: 'Devastating blow dealing 2.5x ATK damage',
+  },
+  miner: {
+    name: 'Avalanche',
+    icon: '⛏️',
+    mpCost: 20,
+    cooldown: 10000,
+    damageMulti: 3.0,
+    range: 4,
+    desc: 'Rock slam dealing 3x ATK damage',
+  },
+  gardener: {
+    name: 'Thorn Whip',
+    icon: '🌿',
+    mpCost: 12,
+    cooldown: 6000,
+    damageMulti: 2.0,
+    range: 4.5,
+    desc: 'Ranged vine attack dealing 2x ATK',
+  },
+  herbalist: {
+    name: 'Heal',
+    icon: '💚',
+    mpCost: 25,
+    cooldown: 12000,
+    damageMulti: 0,
+    healMulti: 0.4,
+    range: 0,
+    desc: 'Restore 40% max HP',
+  },
+  watchman: {
+    name: 'Shield Bash',
+    icon: '🛡️',
+    mpCost: 18,
+    cooldown: 9000,
+    damageMulti: 2.0,
+    defBreak: 0.5,
+    range: 3,
+    desc: 'Bash dealing 2x ATK, reduces monster DEF',
+  },
+};
 
 function showDamageNumber(monsterId, damage, isCrit, targetId) {
   let pos;
@@ -1416,6 +1501,7 @@ function showClickIndicator(x, z) {
 // ============================
 canvas.addEventListener('click', (e) => {
   if (!state.connected || !state.player) return;
+  if (state.isDead) return;
   if (state.dialogue.container.style.display === 'block') return;
 
   const mouse = new THREE.Vector2(
@@ -1516,6 +1602,7 @@ canvas.addEventListener('click', (e) => {
 // ============================
 function updateMovement() {
   if (!state.targetPos) return;
+  if (state.isDead) return; // don't move while dead
   const model = state.players[state.playerId];
   if (!model) return;
 
@@ -1704,6 +1791,12 @@ document.addEventListener('keydown', (e) => {
     return;
   }
 
+  if (e.key === '1') {
+    e.preventDefault();
+    useSkill();
+    return;
+  }
+
   if (e.key === 'w' || e.key === 'W') {
     e.preventDefault();
     // If no target, auto-target nearest monster
@@ -1718,6 +1811,202 @@ document.addEventListener('keydown', (e) => {
     }
   }
 });
+
+// ============================
+// DEATH SCREEN
+// ============================
+let pendingLoot = [];
+let pendingRespawn = null;
+
+function showDeathScreen(hp, maxHp) {
+  const screen = document.getElementById('death-screen');
+  screen.style.display = 'flex';
+  // Pause game input
+  state.isDead = true;
+  cancelTarget();
+}
+
+function hideDeathScreen() {
+  document.getElementById('death-screen').style.display = 'none';
+  state.isDead = false;
+}
+
+document.getElementById('respawn-city').addEventListener('click', () => {
+  wsSend(JSON.stringify({ type: 'respawn', location: 'city' }));
+  hideDeathScreen();
+});
+
+document.getElementById('respawn-checkpoint').addEventListener('click', () => {
+  if (pendingRespawn) {
+    wsSend(JSON.stringify({ type: 'respawn', location: 'checkpoint', checkpointId: pendingRespawn }));
+    hideDeathScreen();
+    pendingRespawn = null;
+  }
+});
+
+// ============================
+// LOOT POPUP
+// ============================
+function showLootPopup(loot) {
+  if (!loot || loot.length === 0) return;
+  pendingLoot = loot;
+  const popup = document.getElementById('loot-popup');
+  const itemsEl = document.getElementById('loot-items');
+  itemsEl.innerHTML = '';
+
+  loot.forEach((item, i) => {
+    const rarity = item.rarity || 'common';
+    const div = document.createElement('div');
+    div.className = `loot-item loot-rarity-${rarity}`;
+    const iconBg = { common: '#555', uncommon: '#2E7D32', rare: '#1565C0', epic: '#6A1B9A', legendary: '#E65100' }[rarity] || '#555';
+    div.innerHTML = `
+      <div class="loot-item-icon" style="background:${iconBg}">${item.icon || '📦'}</div>
+      <div class="loot-item-info">
+        <div class="loot-item-name">${item.name}</div>
+        <div class="loot-item-type">${item.type || 'item'} ×${item.quantity || 1}</div>
+      </div>
+    `;
+    itemsEl.appendChild(div);
+  });
+
+  popup.style.display = 'block';
+  // Auto-hide after 8 seconds
+  clearTimeout(state._lootTimer);
+  state._lootTimer = setTimeout(() => { popup.style.display = 'none'; }, 8000);
+}
+
+document.getElementById('loot-pickup-all').addEventListener('click', () => {
+  if (pendingLoot.length > 0) {
+    wsSend(JSON.stringify({ type: 'pickup_loot' }));
+    pendingLoot = [];
+    document.getElementById('loot-popup').style.display = 'none';
+    addChatMessage('System', '📦 Loot collected!');
+  }
+});
+
+// ============================
+// SKILL SYSTEM
+// ============================
+let skillCooldownEnd = 0;
+
+function initSkillUI() {
+  const classType = state.player?.classType || 'laborer';
+  const skill = SKILLS[classType];
+  if (!skill) return;
+
+  const hotbar = document.getElementById('skill-hotbar');
+  hotbar.style.display = 'flex';
+
+  const icon = document.getElementById('skill-icon-1');
+  icon.textContent = skill.icon;
+  icon.title = `${skill.name}: ${skill.desc}`;
+
+  const slot = document.getElementById('skill-slot-1');
+  slot.title = `${skill.name} (${skill.mpCost} MP) — ${skill.desc}`;
+}
+
+function useSkill() {
+  if (state.isDead) return;
+  const classType = state.player?.classType || 'laborer';
+  const skill = SKILLS[classType];
+  if (!skill) return;
+
+  const now = Date.now();
+
+  // Cooldown check
+  if (now < skillCooldownEnd) {
+    const sec = Math.ceil((skillCooldownEnd - now) / 1000);
+    addChatMessage('Skill', `${skill.name} on cooldown (${sec}s)`);
+    return;
+  }
+
+  // MP check
+  if ((state.player?.mp || 0) < skill.mpCost) {
+    addChatMessage('Skill', `Not enough MP! Need ${skill.mpCost}`);
+    return;
+  }
+
+  // Heal skill (no target needed)
+  if (skill.healMulti) {
+    wsSend(JSON.stringify({ type: 'use_skill', skillId: classType }));
+    skillCooldownEnd = now + skill.cooldown;
+    startSkillCooldownUI(skill.cooldown);
+    return;
+  }
+
+  // Attack skill — need target
+  if (!state.targetedMonster) {
+    addChatMessage('Skill', `Target a monster first!`);
+    return;
+  }
+
+  const mob = state.monsters[state.targetedMonster];
+  if (!mob) { cancelTarget(); return; }
+
+  const model = state.players[state.playerId];
+  if (!model) return;
+
+  const dist = model.position.distanceTo(mob.position);
+  if (dist > skill.range) {
+    addChatMessage('Skill', `Too far! Move closer.`);
+    return;
+  }
+
+  // Face + swing
+  const faceDir = mob.position.clone().sub(model.position).normalize();
+  state.lastFacing = model.position.clone().add(faceDir);
+  model.lookAt(state.lastFacing);
+  attackSwing(model);
+
+  // Send to server
+  wsSend(JSON.stringify({ type: 'use_skill', skillId: classType, monsterId: state.targetedMonster }));
+  skillCooldownEnd = now + skill.cooldown;
+  startSkillCooldownUI(skill.cooldown);
+}
+
+function startSkillCooldownUI(durationMs) {
+  const cdEl = document.getElementById('skill-cd-1');
+  const slot = document.getElementById('skill-slot-1');
+  slot.classList.add('on-cd');
+  cdEl.style.height = '100%';
+
+  const start = Date.now();
+  const tick = () => {
+    const elapsed = Date.now() - start;
+    const pct = Math.max(0, 1 - elapsed / durationMs);
+    cdEl.style.height = (pct * 100) + '%';
+    if (pct > 0) requestAnimationFrame(tick);
+    else slot.classList.remove('on-cd');
+  };
+  requestAnimationFrame(tick);
+}
+
+// ============================
+// TARGET HP BAR (HUD)
+// ============================
+function updateTargetHPBar() {
+  const bar = document.getElementById('target-hp-bar');
+  if (!state.targetedMonster) {
+    bar.style.display = 'none';
+    return;
+  }
+  const mob = state.monsters[state.targetedMonster];
+  if (!mob) {
+    bar.style.display = 'none';
+    return;
+  }
+
+  // Get monster HP from userData (stored on spawn from server)
+  const hp = mob.userData?.hp ?? 0;
+  const maxHp = mob.userData?.maxHp ?? 1;
+  const name = mob.userData?.monsterName || 'Monster';
+
+  bar.style.display = 'block';
+  const fill = document.getElementById('target-hp-fill');
+  const text = document.getElementById('target-hp-text');
+  fill.style.width = `${Math.max(0, hp / maxHp) * 100}%`;
+  text.textContent = `${name} ${Math.round(hp)}/${maxHp}`;
+}
 
 // ============================
 // PHANTOM WALLET (Solana) + CAPTCHA + SIWS
@@ -2203,6 +2492,7 @@ function gameLoop() {
   // Day/night cycle + compass
   updateDayNight(dt);
   updateCompass();
+  updateTargetHPBar();
 
   if (state.scene && state.camera && state.renderer) {
     state.renderer.render(state.scene, state.camera);

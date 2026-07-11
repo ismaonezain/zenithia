@@ -869,6 +869,106 @@ function handleMessage(ws, playerId, msg) {
       }
       break;
     }
+    case 'respawn': {
+      const player = connectedPlayers[ws];
+      if (player) {
+        if (msg.location === 'checkpoint' && msg.checkpointId) {
+          // TODO: checkpoint system — for now, respawn at city
+          player.x = 0; player.z = 0;
+        } else {
+          // Respawn at city
+          player.x = 0; player.z = 0;
+        }
+        player.hp = player.maxHp;
+        player.mp = player.maxMp;
+        ws.send(JSON.stringify({ type: 'respawned', x: player.x, z: player.z, hp: player.hp, maxHp: player.maxHp, mp: player.mp, maxMp: player.maxMp }));
+        broadcast({ type: 'player_moved', playerId, x: player.x, y: 0, z: player.z });
+      }
+      break;
+    }
+    case 'use_skill': {
+      const player = connectedPlayers[ws];
+      if (!player) break;
+      // Skill definitions (must match client)
+      const SKILL_DATA = {
+        laborer: { mpCost: 15, damageMulti: 2.5, healMulti: 0 },
+        miner: { mpCost: 20, damageMulti: 3.0, healMulti: 0 },
+        gardener: { mpCost: 12, damageMulti: 2.0, healMulti: 0 },
+        herbalist: { mpCost: 25, damageMulti: 0, healMulti: 0.4 },
+        watchman: { mpCost: 18, damageMulti: 2.0, healMulti: 0 },
+      };
+      const skill = SKILL_DATA[player.classType];
+      if (!skill) break;
+      if (player.mp < skill.mpCost) {
+        ws.send(JSON.stringify({ type: 'combat_message', text: 'Not enough MP!' }));
+        break;
+      }
+      player.mp -= skill.mpCost;
+
+      // Heal skill
+      if (skill.healMulti > 0) {
+        const healAmt = Math.floor(player.maxHp * skill.healMulti);
+        player.hp = Math.min(player.maxHp, player.hp + healAmt);
+        ws.send(JSON.stringify({ type: 'skill_used', skillId: msg.skillId, hp: player.hp, mp: player.mp, heal: healAmt }));
+        break;
+      }
+
+      // Attack skill
+      if (!msg.monsterId) break;
+      const monster = world.monsters[msg.monsterId];
+      if (!monster || !monster.alive) break;
+
+      const data = MONSTERS[monster.type];
+      if (!data) break;
+
+      const dx = player.x - monster.x;
+      const dz = player.z - monster.z;
+      const dist = Math.sqrt(dx * dx + dz * dz);
+      if (dist > 5) { // skill range generous
+        ws.send(JSON.stringify({ type: 'combat_message', text: 'Too far!' }));
+        player.mp += skill.mpCost; // refund
+        break;
+      }
+
+      const isCrit = Math.random() < player.crit;
+      let dmg = Math.max(1, Math.floor(player.atk * skill.damageMulti) - Math.floor(monster.def * 0.4));
+      if (isCrit) dmg = Math.floor(dmg * 1.5);
+
+      monster.hp -= dmg;
+      if (monster.state === 'idle') { monster.state = 'chase'; monster.target = playerId; }
+
+      broadcast({ type: 'monster_hit', monsterId: monster.id, damage: dmg, isCrit, hp: monster.hp, maxHp: monster.maxHp });
+      ws.send(JSON.stringify({ type: 'skill_used', skillId: msg.skillId, mp: player.mp }));
+
+      if (monster.hp <= 0) {
+        monster.alive = false;
+        monster.hp = 0;
+        const xpGain = data.xp;
+        player.xp += xpGain;
+        const xpNeeded = 100 + (player.level - 1) * 200;
+        if (player.xp >= xpNeeded) {
+          player.level++;
+          player.xp -= xpNeeded;
+          player.maxHp += 10; player.hp = player.maxHp;
+          player.maxMp += 5; player.mp = player.maxMp;
+          ws.send(JSON.stringify({ type: 'level_up', level: player.level, maxHp: player.maxHp, maxMp: player.maxMp }));
+        }
+        const loot = rollLoot(monster.type);
+        addLootToPlayer(player, loot);
+        ws.send(JSON.stringify({ type: 'monster_killed', monsterId: monster.id, monsterName: monster.name, xp: xpGain, loot, hp: player.hp, maxHp: player.maxHp, mp: player.mp, maxMp: player.maxMp }));
+        broadcast({ type: 'monster_died', monsterId: monster.id });
+      }
+      break;
+    }
+    case 'pickup_loot': {
+      const player = connectedPlayers[ws];
+      if (player) {
+        // Loot already added to inventory by addLootToPlayer on kill
+        // This just confirms pickup — update inventory UI
+        ws.send(JSON.stringify({ type: 'inventory_update', inventory: player.inventory }));
+      }
+      break;
+    }
     default: console.log(`[WARN] Unknown: ${msg.type}`);
   }
 }

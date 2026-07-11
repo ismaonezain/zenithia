@@ -699,3 +699,254 @@ body {
   0% { transform: translateY(20px); opacity: 0; }
   100% { transform: translateY(0); opacity: 1; }
 }
+
+/* ============================
+   DEATH SCREEN
+   ============================ */
+#death-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+#death-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.75);
+  animation: deathFade 1s ease-in;
+}
+@keyframes deathFade {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+#death-panel {
+  position: relative;
+  z-index: 1;
+  background: rgba(20,10,10,0.92);
+  border: 2px solid #8B0000;
+  border-radius: 16px;
+  padding: 40px 60px;
+  text-align: center;
+  box-shadow: 0 0 60px rgba(139,0,0,0.5);
+}
+#death-panel h2 {
+  font-size: 2.2rem;
+  color: #FF4444;
+  text-shadow: 0 0 20px rgba(255,0,0,0.5);
+  margin: 0 0 12px;
+}
+#death-msg {
+  color: #aa8888;
+  font-size: 0.95rem;
+  margin-bottom: 28px;
+}
+.death-btn {
+  display: block;
+  width: 260px;
+  margin: 10px auto;
+  padding: 14px 24px;
+  font-size: 1rem;
+  font-weight: 600;
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+  color: #fff;
+}
+#respawn-city {
+  background: linear-gradient(135deg, #2E7D32, #388E3C);
+}
+#respawn-city:hover {
+  background: linear-gradient(135deg, #388E3C, #43A047);
+  transform: scale(1.03);
+}
+#respawn-checkpoint {
+  background: linear-gradient(135deg, #1565C0, #1E88E5);
+}
+#respawn-checkpoint:hover {
+  background: linear-gradient(135deg, #1E88E5, #2196F3);
+  transform: scale(1.03);
+}
+
+/* ============================
+   LOOT POPUP
+   ============================ */
+#loot-popup {
+  position: fixed;
+  bottom: 100px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 90;
+  background: rgba(15,12,8,0.93);
+  border: 1px solid rgba(255,215,0,0.3);
+  border-radius: 12px;
+  padding: 16px 24px;
+  min-width: 280px;
+  max-width: 400px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.6);
+  animation: lootSlideUp 0.3s ease-out;
+}
+@keyframes lootSlideUp {
+  0% { transform: translateX(-50%) translateY(20px); opacity: 0; }
+  100% { transform: translateX(-50%) translateY(0); opacity: 1; }
+}
+#loot-header {
+  font-size: 0.85rem;
+  color: #FFD700;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  margin-bottom: 12px;
+  text-align: center;
+}
+#loot-items {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+.loot-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: rgba(255,255,255,0.05);
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+.loot-item-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+.loot-item-info {
+  flex: 1;
+}
+.loot-item-name {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+.loot-item-type {
+  font-size: 0.7rem;
+  color: #888;
+}
+.loot-rarity-common .loot-item-name { color: #ccc; }
+.loot-rarity-uncommon .loot-item-name { color: #4CAF50; }
+.loot-rarity-rare .loot-item-name { color: #2196F3; }
+.loot-rarity-epic .loot-item-name { color: #9C27B0; }
+.loot-rarity-legendary .loot-item-name { color: #FF9800; }
+
+#loot-pickup-all {
+  width: 100%;
+  padding: 10px;
+  background: linear-gradient(135deg, #FF8F00, #FFA000);
+  border: none;
+  border-radius: 8px;
+  color: #fff;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+#loot-pickup-all:hover {
+  background: linear-gradient(135deg, #FFA000, #FFB300);
+  transform: scale(1.02);
+}
+
+/* ============================
+   SKILL HOTBAR
+   ============================ */
+#skill-hotbar {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 80;
+  display: flex;
+  gap: 8px;
+}
+.skill-slot {
+  width: 56px;
+  height: 56px;
+  background: rgba(15,12,8,0.85);
+  border: 2px solid rgba(255,255,255,0.15);
+  border-radius: 10px;
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+.skill-slot:hover {
+  border-color: rgba(255,215,0,0.5);
+}
+.skill-slot.on-cd {
+  border-color: rgba(100,100,100,0.4);
+}
+.skill-slot.no-mp {
+  border-color: rgba(50,50,150,0.4);
+}
+.skill-icon {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+}
+.skill-cd {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 0%;
+  background: rgba(0,0,0,0.65);
+  transition: height 0.1s;
+  pointer-events: none;
+}
+.skill-key {
+  position: absolute;
+  bottom: 2px;
+  right: 4px;
+  font-size: 0.6rem;
+  color: rgba(255,255,255,0.5);
+  font-weight: 600;
+}
+/* Target HP bar in HUD */
+#target-hp-bar {
+  position: absolute;
+  top: 80px;
+  left: 20px;
+  width: 220px;
+  height: 18px;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 68, 68, 0.3);
+  border-radius: 10px;
+  overflow: hidden;
+  display: none;
+}
+#target-hp-fill {
+  height: 100%;
+  width: 100%;
+  background: linear-gradient(90deg, #c62828, #e53935);
+  border-radius: 10px;
+  transition: width 0.3s;
+}
+#target-hp-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 0.55rem;
+  font-weight: 600;
+  text-shadow: 1px 1px 3px rgba(0,0,0,0.8);
+  white-space: nowrap;
+}
