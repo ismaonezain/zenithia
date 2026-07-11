@@ -373,18 +373,18 @@ setInterval(() => {
         // Attack player
         m.state = 'attack';
         m.lastAttack = now;
-        const player = connectedPlayers[nearest.ws];
-        if (player) {
-          const dmg = Math.max(1, m.atk - Math.floor(player.def * 0.6));
-          player.hp = Math.max(0, player.hp - dmg);
-          nearest.ws.send(JSON.stringify({ type: 'player_hit', damage: dmg, hp: player.hp, maxHp: player.maxHp }));
+        const playerWs = nearest._ws;
+        if (playerWs && playerWs.readyState === 1) {
+          const dmg = Math.max(1, m.atk - Math.floor(nearest.def * 0.6));
+          nearest.hp = Math.max(0, nearest.hp - dmg);
+          playerWs.send(JSON.stringify({ type: 'player_hit', damage: dmg, hp: nearest.hp, maxHp: nearest.maxHp }));
           broadcast({ type: 'monster_attack', monsterId: m.id, targetId: nearest.id, damage: dmg });
-          if (player.hp <= 0) {
+          if (nearest.hp <= 0) {
             // Player died — respawn at village
-            player.hp = player.maxHp;
-            player.x = 0;
-            player.z = 0;
-            nearest.ws.send(JSON.stringify({ type: 'player_died', hp: player.hp }));
+            nearest.hp = nearest.maxHp;
+            nearest.x = 0;
+            nearest.z = 0;
+            playerWs.send(JSON.stringify({ type: 'player_died', hp: nearest.hp, maxHp: nearest.maxHp }));
             m.state = 'idle';
             m.target = null;
           }
@@ -418,6 +418,11 @@ function handleAttack(ws, playerId, msg) {
   const player = connectedPlayers[ws];
   const monster = world.monsters[msg.monsterId];
   if (!player || !monster || !monster.alive) return;
+
+  // Attack cooldown (500ms)
+  const now = Date.now();
+  if (player._lastAttack && now - player._lastAttack < 500) return;
+  player._lastAttack = now;
 
   const data = MONSTERS[monster.type];
   if (!data) return;
@@ -464,7 +469,7 @@ function handleAttack(ws, playerId, msg) {
 
     // XP + Gold reward
     const xpGain = data.xp;
-    const zenGain = data.gold[0] + Math.floor(Math.random() * (data.gold[1] - data.gold[0]));
+    const zenGain = data.zen[0] + Math.floor(Math.random() * (data.zen[1] - data.zen[0]));
     player.xp += xpGain;
     // Zen only from item drops, not monster kills
 
@@ -480,12 +485,17 @@ function handleAttack(ws, playerId, msg) {
       ws.send(JSON.stringify({ type: 'level_up', level: player.level, maxHp: player.maxHp, maxMp: player.maxMp }));
     }
 
+    // Roll loot drops
+    const loot = rollLoot(monster.type);
+    addLootToPlayer(player, loot);
+
     ws.send(JSON.stringify({
       type: 'monster_killed',
       monsterId: monster.id,
       monsterName: monster.name,
       xp: xpGain,
       zen: zenGain,
+      loot,
       hp: player.hp,
       maxHp: player.maxHp,
       mp: player.mp,
@@ -559,6 +569,7 @@ function handleMessage(ws, playerId, msg) {
       const isNew = !world.players[Object.keys(world.players).find(k => world.players[k].wallet === msg.wallet)] && msg.wallet;
       const player = getOrCreatePlayer(playerId, msg.name, msg.wallet, msg.customization, msg.persistentId);
       connectedPlayers[ws] = player;
+      player._ws = ws; // back-reference for monster AI to send messages
       ws.playerId = playerId;
       ws.send(JSON.stringify({
         type: 'joined', player, npcs: world.npcs,

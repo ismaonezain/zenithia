@@ -51,6 +51,11 @@ const state = {
   lastMouseY: 0,
   monsters: {},
   damageNumbers: [],
+  // Combat system
+  targetedMonster: null,  // currently targeted monster id
+  targetIndicator: null,  // visual ring mesh
+  lastAttackTime: 0,      // client-side cooldown tracking
+  autoAttacking: false,   // auto-attack loop active
   // Day/night cycle
   dayTime: 0.25,         // 0-1, 0 = midnight, 0.25 = sunrise, 0.5 = noon, 0.75 = sunset
   daySpeed: 1 / 300,     // full cycle = 300 seconds (5 min)
@@ -262,6 +267,9 @@ function initScene() {
       }
     }
   }, { passive: false });
+
+  // Combat: target indicator ring
+  createTargetIndicator();
 }
 
 // ============================
@@ -868,6 +876,8 @@ function handleServerMessage(msg) {
         state.scene.remove(mob);
         delete state.monsters[msg.monsterId];
       }
+      // Cancel target if this was our target
+      if (state.targetedMonster === msg.monsterId) cancelTarget();
       break;
     }
 
@@ -878,6 +888,11 @@ function handleServerMessage(msg) {
 
     case 'player_hit': {
       updatePlayerHP(msg.hp, msg.maxHp);
+      // Show damage number on self
+      const selfModel = state.players[state.playerId];
+      if (selfModel) {
+        showDamageNumber(null, msg.damage, false, state.playerId);
+      }
       break;
     }
 
@@ -885,6 +900,7 @@ function handleServerMessage(msg) {
       updatePlayerHP(msg.hp, msg.maxHp);
       if (msg.mp !== undefined) updatePlayerMP(msg.mp, msg.maxMp);
       addChatMessage('System', 'You died! Respawning at village...');
+      cancelTarget();
       break;
     }
 
@@ -1170,13 +1186,13 @@ function addChatMessage(name, message) {
 // COMBAT HELPERS
 // ============================
 const MONSTER_DATA = {
-  moss_beetle: { name: 'Moss Beetle', color: 0x4CAF50, size: 0.6 },
-  dust_mouse: { name: 'Dust Mouse', color: 0xBCAAA4, size: 0.35 },
-  thorn_lizard: { name: 'Thorn Lizard', color: 0x689F38, size: 0.7 },
-  puddle_frog: { name: 'Puddle Frog', color: 0x00BCD4, size: 0.55 },
-  wind_sprite: { name: 'Wind Sprite', color: 0x81D4FA, size: 0.4 },
-  rock_crawler: { name: 'Rock Crawler', color: 0x9E9E9E, size: 0.45 },
-  bramble_boar: { name: 'Bramble Boar', color: 0x5D4037, size: 1.2 },
+  moss_beetle: { name: 'Moss Beetle', color: 0x4CAF50, accentColor: 0x81C784, size: 0.6 },
+  dust_mouse: { name: 'Dust Mouse', color: 0xBCAAA4, accentColor: 0xD7CCC8, size: 0.35 },
+  thorn_lizard: { name: 'Thorn Lizard', color: 0x689F38, accentColor: 0x8BC34A, size: 0.7 },
+  puddle_frog: { name: 'Puddle Frog', color: 0x00BCD4, accentColor: 0x4DD0E1, size: 0.55 },
+  wind_sprite: { name: 'Wind Sprite', color: 0x81D4FA, accentColor: 0xB3E5FC, size: 0.4 },
+  rock_crawler: { name: 'Rock Crawler', color: 0x9E9E9E, accentColor: 0xBDBDBD, size: 0.45 },
+  bramble_boar: { name: 'Bramble Boar', color: 0x5D4037, accentColor: 0x8D6E63, size: 1.2 },
 };
 
 function spawnMonsterClient(m) {
@@ -1458,16 +1474,11 @@ canvas.addEventListener('click', (e) => {
     }
   }
 
-  // Check Monster proximity — attack
+  // Check Monster proximity — attack via combat system
   for (const mob of Object.values(state.monsters)) {
     if (mob.position.distanceTo(point) < 2) {
-      const model = state.players[state.playerId];
-      if (model) {
-        const faceDir = mob.position.clone().sub(model.position).normalize();
-        state.lastFacing = model.position.clone().add(faceDir);
-        model.lookAt(state.lastFacing);
-      }
-      wsSend(JSON.stringify({ type: 'attack', monsterId: mob.userData.id }));
+      setTarget(mob.userData.id); // sets target + visual indicator
+      performAttack(); // attack immediately if in range
       return;
     }
   }
@@ -1569,6 +1580,135 @@ document.getElementById('chat-input').addEventListener('keydown', (e) => {
       // Show bubble above own character
       if (state.playerModel) showChatBubble(state.playerModel, msg);
       e.target.value = '';
+    }
+  }
+});
+
+// ============================
+// COMBAT SYSTEM — Auto-Target + Auto-Attack
+// ============================
+
+// Create target indicator ring
+function createTargetIndicator() {
+  const ring = new THREE.Mesh(
+    new THREE.RingGeometry(0.8, 1.0, 32),
+    new THREE.MeshBasicMaterial({ color: 0xFF4444, transparent: true, opacity: 0.7, side: THREE.DoubleSide })
+  );
+  ring.rotation.x = -Math.PI / 2;
+  ring.position.y = 0.05;
+  ring.visible = false;
+  state.scene.add(ring);
+  state.targetIndicator = ring;
+}
+
+// Set target on a monster
+function setTarget(monsterId) {
+  state.targetedMonster = monsterId;
+  state.autoAttacking = true;
+  if (state.targetIndicator) {
+    state.targetIndicator.visible = true;
+  }
+  // Clear pathfinding so player doesn't walk away
+  state.targetPos = null;
+  state.pathWaypoints = null;
+}
+
+// Cancel targeting
+function cancelTarget() {
+  state.targetedMonster = null;
+  state.autoAttacking = false;
+  if (state.targetIndicator) {
+    state.targetIndicator.visible = false;
+  }
+}
+
+// Find nearest monster to player
+function findNearestMonster() {
+  const model = state.players[state.playerId];
+  if (!model) return null;
+  let nearest = null;
+  let nearestDist = Infinity;
+  for (const mob of Object.values(state.monsters)) {
+    const dist = model.position.distanceTo(mob.position);
+    if (dist < nearestDist) {
+      nearestDist = dist;
+      nearest = mob;
+    }
+  }
+  return nearest;
+}
+
+// Perform attack on targeted monster
+function performAttack() {
+  const mobId = state.targetedMonster;
+  if (!mobId) return;
+  const mob = state.monsters[mobId];
+  if (!mob) { cancelTarget(); return; }
+
+  const model = state.players[state.playerId];
+  if (!model) return;
+
+  const dist = model.position.distanceTo(mob.position);
+
+  // If in attack range (3 units), send attack
+  if (dist <= 3) {
+    const now = Date.now();
+    if (now - state.lastAttackTime < 600) return; // client cooldown 600ms
+    state.lastAttackTime = now;
+    // Face the monster
+    const faceDir = mob.position.clone().sub(model.position).normalize();
+    state.lastFacing = model.position.clone().add(faceDir);
+    model.lookAt(state.lastFacing);
+    // Attack swing animation
+    attackSwing(model);
+    // Send attack to server
+    wsSend(JSON.stringify({ type: 'attack', monsterId: mobId }));
+  } else {
+    // Walk to monster — pathfind to it
+    const startX = Math.round(model.position.x);
+    const startZ = Math.round(model.position.z);
+    const targetX = Math.round(mob.position.x);
+    const targetZ = Math.round(mob.position.z);
+    const path = findPath(startX, startZ, targetX, targetZ);
+    if (path && path.length > 1) {
+      state.pathWaypoints = path.slice(1);
+      state.targetPos = new THREE.Vector3(state.pathWaypoints[0].x, 0, state.pathWaypoints[0].z);
+    }
+  }
+}
+
+// Simple attack swing animation
+function attackSwing(model) {
+  if (!model) return;
+  const rightArm = model.getObjectByName('rightArm');
+  if (rightArm) {
+    const origRot = rightArm.rotation.x;
+    rightArm.rotation.x = -1.2; // swing forward
+    setTimeout(() => { rightArm.rotation.x = origRot; }, 200);
+  }
+}
+
+// Global keyboard handler
+document.addEventListener('keydown', (e) => {
+  // Don't process if typing in chat or any input
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+  if (e.key === 'Escape') {
+    cancelTarget();
+    return;
+  }
+
+  if (e.key === 'w' || e.key === 'W') {
+    e.preventDefault();
+    // If no target, auto-target nearest monster
+    if (!state.targetedMonster) {
+      const nearest = findNearestMonster();
+      if (nearest) {
+        setTarget(nearest.userData.id);
+      }
+    } else {
+      // Already targeted — attack
+      performAttack();
     }
   }
 });
@@ -2023,6 +2163,36 @@ function gameLoop() {
 
   // Monster animation
   Object.values(state.monsters).forEach(m => animateMonster(m, time));
+
+  // --- COMBAT: Target indicator + auto-attack ---
+  if (state.targetedMonster) {
+    const mob = state.monsters[state.targetedMonster];
+    if (!mob) {
+      // Monster died or despawned — cancel target
+      cancelTarget();
+    } else {
+      // Move indicator ring to follow monster
+      if (state.targetIndicator) {
+        state.targetIndicator.position.x = mob.position.x;
+        state.targetIndicator.position.z = mob.position.z;
+        // Pulse effect
+        const pulse = 1 + Math.sin(time * 4) * 0.15;
+        state.targetIndicator.scale.set(pulse, pulse, 1);
+      }
+      // Auto-attack: walk to monster if out of range, attack if in range
+      if (state.autoAttacking && !state.targetPos) {
+        const model = state.players[state.playerId];
+        if (model) {
+          const dist = model.position.distanceTo(mob.position);
+          if (dist <= 3) {
+            performAttack();
+          } else {
+            performAttack(); // this will pathfind to monster
+          }
+        }
+      }
+    }
+  }
 
   // Day/night cycle + compass
   updateDayNight(dt);
