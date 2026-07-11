@@ -504,8 +504,10 @@ function handleAttack(ws, playerId, msg) {
       mp: player.mp,
       maxMp: player.maxMp,
     }));
+    console.log(`[KILL] Sending monster_killed to attacker for ${monster.id}`);
 
     broadcast({ type: 'monster_died', monsterId: monster.id });
+    console.log(`[KILL] Broadcast monster_died for ${monster.id}`);
   }
 }
 

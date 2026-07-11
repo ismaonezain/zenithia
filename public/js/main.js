@@ -808,6 +808,7 @@ function handleServerMessage(msg) {
       break;
 
     case 'monster_killed': {
+      console.log('[KILL] Received monster_killed for', msg.monsterId);
       const lootText = msg.loot?.length > 0 ? msg.loot.map(l => `${l.name} x${l.quantity}`).join(', ') : 'Nothing';
       addChatMessage('System', `Defeated ${msg.monsterName}! +${msg.xp} XP | Loot: ${lootText}`);
       updatePlayerHP(msg.hp, msg.maxHp);
@@ -820,8 +821,12 @@ function handleServerMessage(msg) {
       // Fallback: also remove monster from scene (in case monster_died broadcast is delayed)
       const deadMob = state.monsters[msg.monsterId];
       if (deadMob) {
+        console.log('[KILL] Removing monster from scene:', msg.monsterId, 'children:', deadMob.children?.length);
         state.scene.remove(deadMob);
         delete state.monsters[msg.monsterId];
+        console.log('[KILL] Removed. Monsters left:', Object.keys(state.monsters).length);
+      } else {
+        console.log('[KILL] Monster already removed:', msg.monsterId);
       }
       if (state.targetedMonster === msg.monsterId) cancelTarget();
       break;
