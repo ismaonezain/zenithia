@@ -812,13 +812,13 @@ function addBuildings(group) {
   roofR.rotation.x = 0.15;
   roofR.castShadow = true;
   barnG.add(roofR);
-  // Upper slope (steep — was lower)
+  // Upper slope (steep — was lower) — attached to ridge
   const roofT = new THREE.Mesh(new THREE.BoxGeometry(5.4, 0.1, 1.2), barnRoofMat);
-  roofT.position.y = 4.3;
+  roofT.position.set(0, 4.35, 0.55);
   roofT.rotation.x = -0.3;
   barnG.add(roofT);
   const roofT2 = new THREE.Mesh(new THREE.BoxGeometry(5.4, 0.1, 1.2), barnRoofMat);
-  roofT2.position.y = 4.3;
+  roofT2.position.set(0, 4.35, -0.55);
   roofT2.rotation.x = 0.3;
   barnG.add(roofT2);
   // Ridge
