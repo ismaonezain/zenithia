@@ -1002,53 +1002,77 @@ function createOtherPlayer(player) {
   state.players[player.id] = model;
 }
 function createNameHPBar(name, hp, maxHp, mp, maxMp) {
-  const canvas = document.createElement('canvas');
-  canvas.width = 256; canvas.height = 80;
-  const tex = new THREE.CanvasTexture(canvas);
-  tex.minFilter = THREE.LinearFilter;
-  const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false }));
-  sprite.scale.set(3, 1, 1);
-  sprite.position.y = 3.2;
-  // Store canvas refs for updates
-  sprite.userData.canvas = canvas;
-  sprite.userData.texture = tex;
-  sprite.userData.renderNameHPBar = function(n, h, mH, mp2, mMp) {
-    const ctx = canvas.getContext('2d');
-    ctx.clearRect(0, 0, 256, 80);
+  // === NAME sprite (above head) ===
+  const nameCanvas = document.createElement('canvas');
+  nameCanvas.width = 256; nameCanvas.height = 64;
+  const nameTex = new THREE.CanvasTexture(nameCanvas);
+  nameTex.minFilter = THREE.LinearFilter;
+  const nameSprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: nameTex, transparent: true, depthWrite: false }));
+  nameSprite.scale.set(3, 0.8, 1);
+  nameSprite.position.y = 3.4;
+
+  // === HP/MP sprite (below feet) ===
+  const barCanvas = document.createElement('canvas');
+  barCanvas.width = 256; barCanvas.height = 64;
+  const barTex = new THREE.CanvasTexture(barCanvas);
+  barTex.minFilter = THREE.LinearFilter;
+  const barSprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: barTex, transparent: true, depthWrite: false }));
+  barSprite.scale.set(3, 0.8, 1);
+  barSprite.position.y = -0.3;
+
+  function render() {
     // Name
-    ctx.fillStyle = '#FFFFFF';
-    ctx.font = 'bold 20px Arial';
-    ctx.textAlign = 'center';
-    ctx.strokeStyle = '#000000';
-    ctx.lineWidth = 3;
-    ctx.strokeText(n, 128, 18);
-    ctx.fillText(n, 128, 18);
+    const nc = nameCanvas.getContext('2d');
+    nc.clearRect(0, 0, 256, 64);
+    nc.fillStyle = '#FFFFFF';
+    nc.font = 'bold 24px Arial';
+    nc.textAlign = 'center';
+    nc.strokeStyle = '#000000';
+    nc.lineWidth = 4;
+    nc.strokeText(name, 128, 40);
+    nc.fillText(name, 128, 40);
+    nameTex.needsUpdate = true;
+
+    // Bars
+    const ctx = barCanvas.getContext('2d');
+    ctx.clearRect(0, 0, 256, 64);
     // HP bar
-    const hpPct = Math.max(0, Math.min(1, h / mH));
-    ctx.fillStyle = 'rgba(0,0,0,0.5)';
-    ctx.fillRect(58, 28, 140, 12);
+    const hpPct = Math.max(0, Math.min(1, hp / maxHp));
+    ctx.fillStyle = 'rgba(0,0,0,0.6)';
+    ctx.fillRect(48, 8, 160, 16);
     ctx.fillStyle = hpPct > 0.3 ? '#4CAF50' : hpPct > 0.15 ? '#FF9800' : '#F44336';
-    ctx.fillRect(58, 28, 140 * hpPct, 12);
-    ctx.fillStyle = '#FFF'; ctx.font = '9px Arial'; ctx.textAlign = 'center';
-    ctx.fillText(Math.ceil(h) + '/' + mH, 128, 38);
+    ctx.fillRect(50, 9, 156 * hpPct, 14);
+    ctx.fillStyle = '#FFF'; ctx.font = '11px Arial'; ctx.textAlign = 'center';
+    ctx.fillText('HP ' + Math.ceil(hp) + '/' + maxHp, 128, 20);
     // MP bar
-    const mpPct = mMp > 0 ? Math.max(0, Math.min(1, mp2 / mMp)) : 0;
-    ctx.fillStyle = 'rgba(0,0,0,0.5)';
-    ctx.fillRect(58, 48, 140, 10);
+    const mpPct = maxMp > 0 ? Math.max(0, Math.min(1, mp / maxMp)) : 0;
+    ctx.fillStyle = 'rgba(0,0,0,0.6)';
+    ctx.fillRect(48, 30, 160, 14);
     ctx.fillStyle = '#42A5F5';
-    ctx.fillRect(58, 48, 140 * mpPct, 10);
-    ctx.fillStyle = '#FFF'; ctx.font = '8px Arial';
-    ctx.fillText(Math.ceil(mp2) + '/' + mMp, 128, 56);
-    tex.needsUpdate = true;
+    ctx.fillRect(50, 31, 156 * mpPct, 12);
+    ctx.fillStyle = '#FFF'; ctx.font = '10px Arial';
+    ctx.fillText('MP ' + Math.ceil(mp) + '/' + maxMp, 128, 42);
+    barTex.needsUpdate = true;
+  }
+  render();
+
+  // Pack both sprites into a group-like object
+  const group = new THREE.Group();
+  group.add(nameSprite);
+  group.add(barSprite);
+  group.userData.canvas = { name: nameCanvas, bar: barCanvas };
+  group.userData.texture = { name: nameTex, bar: barTex };
+  group.userData.renderNameHPBar = function(n, h, mH, mp2, mMp) {
+    name = n; hp = h; maxHp = mH; mp = mp2; maxMp = mMp;
+    render();
   };
-  sprite.userData.renderNameHPBar(name, hp, maxHp, mp, maxMp);
-  return sprite;
+  return group;
 }
 
 function addNameHPBarToModel(model, name, hp, maxHp, mp, maxMp) {
-  const bar = createNameHPBar(name, hp, maxHp, mp, maxMp);
-  model.add(bar);
-  model.userData.nameHPBar = bar;
+  const group = createNameHPBar(name, hp, maxHp, mp, maxMp);
+  model.add(group);
+  model.userData.nameHPBar = group;
 }
 
 function updateNameHPBar(model, hp, maxHp, mp, maxMp) {
