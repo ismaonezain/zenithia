@@ -287,8 +287,12 @@ setInterval(() => {
 }, 5000);
 
 // --- Monster AI (Cahaya v2 pattern) ---
+let aiDebugCounter = 0;
 setInterval(() => {
   const now = Date.now();
+  const playerCount = Object.keys(connectedPlayers).length;
+  aiDebugCounter++;
+
   for (const m of Object.values(world.monsters)) {
     if (!m.alive) continue;
     const data = MONSTERS[m.type];
@@ -306,10 +310,17 @@ setInterval(() => {
     let closestDist = Infinity;
     for (const p of Object.values(connectedPlayers)) {
       if (!p || p.hp <= 0) continue;
-      const dx = p.x - m.x;
-      const dz = p.z - m.z;
+      const dx = (p.x || 0) - m.x;
+      const dz = (p.z || 0) - m.z;
       const d = Math.sqrt(dx * dx + dz * dz);
       if (d < closestDist) { closestDist = d; closestPlayer = p; }
+    }
+
+    // Debug log every 2 seconds (10 ticks)
+    if (aiDebugCounter % 10 === 0 && closestPlayer) {
+      const aggroR = data.aggroRange || 5;
+      const atkR = Math.max(data.attackRange || 1.5, 3);
+      console.log(`[AI-DBG] ${m.id}(${m.type}) state=${m.state} players=${playerCount} closest=${closestPlayer.id} dist=${closestDist.toFixed(1)} aggro=${aggroR} atkRange=${atkR} mpos=(${m.x.toFixed(1)},${m.z.toFixed(1)}) ppos=(${(closestPlayer.x||0).toFixed(1)},${(closestPlayer.z||0).toFixed(1)})`);
     }
 
     if (closestPlayer && closestDist < (data.aggroRange || 5)) {
@@ -326,8 +337,8 @@ setInterval(() => {
 
       if (dist > attackRange) {
         // Move toward player
-        const dx = closestPlayer.x - m.x;
-        const dz = closestPlayer.z - m.z;
+        const dx = (closestPlayer.x || 0) - m.x;
+        const dz = (closestPlayer.z || 0) - m.z;
         const len = Math.sqrt(dx * dx + dz * dz) || 1;
         const speed = data.spd * 0.1;
         m.x += (dx / len) * speed;
@@ -339,7 +350,7 @@ setInterval(() => {
         m.state = 'attack';
         const dmg = Math.max(1, m.atk - (closestPlayer.def || 0));
         closestPlayer.hp = Math.max(0, closestPlayer.hp - dmg);
-        console.log(`[COMBAT] Monster ${m.id} HIT player ${closestPlayer.id} dmg=${dmg} hp=${closestPlayer.hp}/${closestPlayer.maxHp}`);
+        console.log(`[COMBAT] Monster ${m.id}(${m.type}) HIT player ${closestPlayer.id} dmg=${dmg} hp=${closestPlayer.hp}/${closestPlayer.maxHp} def=${closestPlayer.def} atk=${m.atk}`);
         broadcast({ type: 'monster_attack', monsterId: m.id, targetId: closestPlayer.id, damage: dmg });
         if (closestPlayer.hp <= 0) {
           broadcast({ type: 'player_died', targetId: closestPlayer.id });
