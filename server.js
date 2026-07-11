@@ -147,15 +147,33 @@ let world = loadWorld();
 const connectedPlayers = {};
 
 // --- Player Management ---
-function getOrCreatePlayer(playerId, name, wallet, customization) {
-  // Try to load existing player by wallet
+function getOrCreatePlayer(playerId, name, wallet, customization, persistentId) {
+  // 1. Try to load existing player by persistentId (cross-device identity)
+  if (persistentId) {
+    const existing = Object.values(world.players).find(p => p.persistentId === persistentId);
+    if (existing) {
+      existing.lastLogin = Date.now();
+      existing.id = playerId; // rebind to current session
+      if (name) existing.name = name; // always update name from client
+      if (customization && Object.keys(customization).length > 0) existing.customization = customization;
+      world.players[playerId] = existing;
+      // Remove old entry if different id
+      Object.keys(world.players).forEach(k => {
+        if (k !== playerId && world.players[k].persistentId === persistentId) delete world.players[k];
+      });
+      return existing;
+    }
+  }
+  // 2. Try wallet fallback
   if (wallet) {
     const existing = Object.values(world.players).find(p => p.wallet === wallet);
     if (existing) {
       existing.lastLogin = Date.now();
-      existing.id = playerId; // rebind to current session
+      existing.id = playerId;
+      if (name) existing.name = name;
+      if (customization && Object.keys(customization).length > 0) existing.customization = customization;
+      if (persistentId) existing.persistentId = persistentId; // backfill
       world.players[playerId] = existing;
-      // Remove old entry if different id
       Object.keys(world.players).forEach(k => {
         if (k !== playerId && world.players[k].wallet === wallet) delete world.players[k];
       });
@@ -175,6 +193,7 @@ function getOrCreatePlayer(playerId, name, wallet, customization) {
   const s = CLASS_STATS[cls] || CLASS_STATS.laborer;
   const player = {
     id: playerId, name: name || 'Adventurer', wallet: wallet || null,
+    persistentId: persistentId || null,
     x: 0, y: 0, z: 0, class: cls, className: null, level: 1, xp: 0,
     hp: s.hp, maxHp: s.hp, mp: s.mp, maxMp: s.mp, atk: s.atk, def: s.def, spd: s.spd, crit: s.crit,
     zen: 50, inventory: [], quests: {}, reputation: {}, region: 'willowmere',
@@ -499,8 +518,7 @@ function handleMessage(ws, playerId, msg) {
   switch (msg.type) {
     case 'join': {
       const isNew = !world.players[Object.keys(world.players).find(k => world.players[k].wallet === msg.wallet)] && msg.wallet;
-      const player = getOrCreatePlayer(playerId, msg.name, msg.wallet, msg.customization);
-      if (msg.customization && !player.customization?.skinIdx) player.customization = msg.customization;
+      const player = getOrCreatePlayer(playerId, msg.name, msg.wallet, msg.customization, msg.persistentId);
       connectedPlayers[ws] = player;
       ws.playerId = playerId;
       ws.send(JSON.stringify({

@@ -23,11 +23,16 @@ const state = {
   connected: false,
   targetPos: null,
   interactTarget: null,
+  persistentId: (() => {
+    let id = localStorage.getItem('zenithia_persistent_id');
+    if (!id) { id = 'p_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8); localStorage.setItem('zenithia_persistent_id', id); }
+    return id;
+  })(),
   customization: (() => {
     try { return JSON.parse(localStorage.getItem('zenithia_customization')) || {}; } catch(e) { return {}; }
   })() || {
-    gender: 'male',
-    classType: 'laborer',
+    gender: 'male', classType: 'laborer', skinIdx: 0, hairColorIdx: 0, hairStyle: 'undercut', topColorIdx: 0, bottomColorIdx: 0, eyeColorIdx: 0,
+  },
     skinIdx: 0,
     hairColorIdx: 0,
     hairStyle: 'undercut',
@@ -676,6 +681,7 @@ function handleServerMessage(msg) {
       if (msg.dayTime !== undefined) state.dayTime = msg.dayTime;
       wsSend(JSON.stringify({
         type: 'join',
+        persistentId: state.persistentId,
         name: document.getElementById('name-input').value || 'Adventurer',
         wallet: state.walletAddress || null,
         customization: state.customization,
@@ -743,11 +749,9 @@ function handleServerMessage(msg) {
       showHUD();
       createPlayerModelInWorld(state.player);
 
-      // Update HUD name for returning players
-      if (msg.returning) {
-        document.getElementById('hud-name').textContent = state.player.name;
-        document.getElementById('hud-level').textContent = 'Lv.' + state.player.level;
-      }
+      // Always update HUD from server data
+      document.getElementById('hud-name').textContent = state.player.name;
+      document.getElementById('hud-level').textContent = 'Lv.' + state.player.level;
       break;
 
     case 'player_joined':
