@@ -824,7 +824,17 @@ function handleServerMessage(msg) {
       if (msg.hp !== undefined) updatePlayerHP(msg.hp, msg.maxHp);
       if (msg.mp !== undefined) updatePlayerMP(msg.mp, msg.maxMp);
       if (msg.xp !== undefined) state.player.xp = (state.player.xp || 0) + msg.xp;
-      if (msg.leveledUp) addChatMessage('System', `🎉 Level Up! Now Lv.${msg.level}`);
+      if (msg.leveledUp) {
+        state.player.level = msg.level;
+        state.player.maxHp = msg.maxHp;
+        state.player.maxMp = msg.maxMp;
+        state.player.hp = msg.hp;
+        state.player.mp = msg.mp;
+        updatePlayerLevel(msg.level);
+        updatePlayerHP(msg.hp, msg.maxHp);
+        updatePlayerMP(msg.mp, msg.maxMp);
+        addChatMessage('System', `🎉 Level Up! Now Lv.${msg.level}`);
+      }
       if (msg.loot?.length > 0) showLootPopup(msg.loot);
       break;
     }
@@ -954,7 +964,11 @@ function handleServerMessage(msg) {
     }
 
     case 'level_up': {
+      state.player.level = msg.level;
+      state.player.maxHp = msg.maxHp;
+      state.player.maxMp = msg.maxMp;
       addChatMessage('System', `🎉 Level Up! You are now Level ${msg.level}!`);
+      updatePlayerLevel(msg.level);
       updatePlayerHP(msg.maxHp, msg.maxHp);
       updatePlayerMP(msg.maxMp, msg.maxMp);
       break;
