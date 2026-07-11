@@ -26,10 +26,10 @@ const QUESTS = {
     name: 'Harvest Help',
     type: 'main',
     chapter: 1,
-    description: 'Help Mr. Tani harvest crops in the farm.',
+    description: 'Help Mr. Tani protect the farm from Moss Beetles.',
     objectives: [
       { id: 'talk_tani', type: 'talk', target: 'mr_tani', current: 0, required: 1, text: 'Talk to Mr. Tani' },
-      { id: 'harvest_crops', type: 'gather', target: 'wheat_field', current: 0, required: 5, text: 'Gather 5 crops from the farm' },
+      { id: 'kill_beetles', type: 'kill', target: 'moss_beetle', current: 0, required: 5, text: 'Defeat 5 Moss Beetles near the farm' },
       { id: 'return_tani', type: 'talk', target: 'mr_tani', current: 0, required: 1, text: 'Return to Mr. Tani' },
     ],
     rewards: { xp: 100, items: [{ id: 'willow_rice', quantity: 3 }], reputation: { mr_tani: 3 } },

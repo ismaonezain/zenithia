@@ -468,6 +468,7 @@ function handleAttack(ws, playerId, msg) {
     // Loot
     const loot = rollLoot(monster.type);
     addLootToPlayer(player, loot);
+    trackQuestKills(player, monster.type);
 
     broadcast({
       type: 'monster_killed',
@@ -489,6 +490,28 @@ function handleAttack(ws, playerId, msg) {
   }
 }
 
+// --- Quest Kill Tracking ---
+function trackQuestKills(player, monsterType) {
+  if (!player.quests) return;
+  Object.entries(player.quests).forEach(([questId, qState]) => {
+    if (qState.status !== 'active') return;
+    const questDef = QUESTS[questId];
+    if (!questDef) return;
+    questDef.objectives.forEach(obj => {
+      if (obj.type === 'kill' && obj.target === monsterType) {
+        if (!qState.progress) qState.progress = {};
+        qState.progress[obj.id] = (qState.progress[obj.id] || 0) + 1;
+        // Notify client
+        if (player._ws && player._ws.readyState === 1) {
+          player._ws.send(JSON.stringify({
+            type: 'quest_progress', questId, objectiveId: obj.id,
+            current: qState.progress[obj.id],
+          }));
+        }
+      }
+    });
+  });
+}
 
 // --- Loot System ---
 function rollLoot(monsterType) {
@@ -970,6 +993,7 @@ function handleMessage(ws, playerId, msg) {
         }
         const loot = rollLoot(monster.type);
         addLootToPlayer(player, loot);
+        trackQuestKills(player, monster.type);
         ws.send(JSON.stringify({ type: 'monster_killed', monsterId: monster.id, monsterName: monster.name, xp: xpGain, loot, hp: player.hp, maxHp: player.maxHp, mp: player.mp, maxMp: player.maxMp }));
         broadcast({ type: 'monster_died', monsterId: monster.id });
         saveWorld();
