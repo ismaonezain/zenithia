@@ -910,13 +910,14 @@ function handleServerMessage(msg) {
     }
 
     case 'monster_attack': {
-      showDamageNumber(null, msg.damage, false, msg.targetId);
-      // Handle damage directly (Cahaya v2 pattern — proven reliable)
       if (msg.targetId === state.playerId) {
-        console.log('[COMBAT] monster_attack hit ME! damage:', msg.damage, 'hp:', msg.hp);
-        if (msg.hp !== undefined) {
-          updatePlayerHP(msg.hp, msg.maxHp);
-        }
+        // Apply damage directly (Cahaya v2 pattern)
+        state.player.hp = Math.max(0, (state.player.hp || 0) - msg.damage);
+        updatePlayerHP(state.player.hp, state.player.maxHp);
+        showDamageNumber(null, msg.damage, false, state.playerId);
+        // Screen shake
+        document.body.style.transform = `translate(${Math.random()*6-3}px, ${Math.random()*6-3}px)`;
+        setTimeout(() => document.body.style.transform = '', 100);
       }
       break;
     }
@@ -935,11 +936,35 @@ function handleServerMessage(msg) {
 
     case 'player_died': {
       if (msg.targetId && msg.targetId !== state.playerId) break;
-      if (msg.hp !== undefined) updatePlayerHP(msg.hp, msg.maxHp);
-      if (msg.mp !== undefined) updatePlayerMP(msg.mp, msg.maxMp);
-      addChatMessage('System', 'You died! Respawning at village...');
+      // Auto-respawn handled by server (Cahaya v2 pattern)
+      state.isDead = true;
       cancelTarget();
-      showDeathScreen(msg.hp, msg.maxHp);
+      addChatMessage('System', 'You died! Respawning in 5 seconds...');
+      // Show death overlay (simple)
+      const deathEl = document.getElementById('death-screen');
+      if (deathEl) deathEl.style.display = 'flex';
+      break;
+    }
+
+    case 'player_respawn': {
+      if (msg.targetId && msg.targetId !== state.playerId) break;
+      state.isDead = false;
+      state.player.hp = msg.hp;
+      state.player.maxHp = msg.maxHp;
+      state.player.mp = msg.mp;
+      state.player.maxMp = msg.maxMp;
+      updatePlayerHP(msg.hp, msg.maxHp);
+      updatePlayerMP(msg.mp, msg.maxMp);
+      // Move player back to spawn
+      const model = state.players[state.playerId];
+      if (model) {
+        model.position.set(msg.x || 0, 0, msg.z || 0);
+      }
+      wsSend(JSON.stringify({ type: 'move', x: msg.x || 0, y: 0, z: msg.z || 0 }));
+      // Hide death screen
+      const deathEl = document.getElementById('death-screen');
+      if (deathEl) deathEl.style.display = 'none';
+      addChatMessage('System', '🏠 Respawned at village!');
       break;
     }
 

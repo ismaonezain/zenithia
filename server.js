@@ -316,7 +316,7 @@ setInterval(() => {
   });
 }, 5000);
 
-// --- Monster AI (server-side) ---
+// --- Monster AI (server-side) — Cahaya v2 pattern ---
 setInterval(() => {
   const now = Date.now();
   Object.values(world.monsters).forEach(m => {
@@ -324,93 +324,65 @@ setInterval(() => {
     const data = MONSTERS[m.type];
     if (!data) return;
 
-    // Find nearest player
-    let nearest = null;
-    let nearestDist = Infinity;
+    // Find closest player
+    let closestPlayer = null;
+    let closestDist = Infinity;
     Object.values(connectedPlayers).forEach(p => {
       const dx = p.x - m.x;
       const dz = p.z - m.z;
       const dist = Math.sqrt(dx * dx + dz * dz);
-      if (dist < nearestDist) {
-        nearestDist = dist;
-        nearest = p;
-      }
+      if (dist < closestDist) { closestDist = dist; closestPlayer = p; }
     });
 
-    // Behavior logic
-    const aggroRange = data.aggroRange || 5;
-    if (data.behavior === 'aggressive' || data.behavior === 'pack') {
-      if (m.state === 'idle' && nearest && nearestDist < aggroRange) {
-        m.state = 'chase';
-        m.target = nearest.id;
-      }
-    }
-    // Passive: only chase if player hit it first (target set by handleAttack)
-
-    // Chase & Attack
-    if (m.state === 'chase' && nearest) {
-      const dx = nearest.x - m.x;
-      const dz = nearest.z - m.z;
+    if (closestPlayer && closestDist < (data.aggroRange || 5)) {
+      // Aggro/Chase/Attack
+      const target = closestPlayer;
+      const dx = target.x - m.x;
+      const dz = target.z - m.z;
       const dist = Math.sqrt(dx * dx + dz * dz);
-      const effectiveRange = Math.max(data.attackRange || 1.5, 3);
+      const attackRange = Math.max(data.attackRange || 1.5, 3);
 
-      if (dist > effectiveRange) {
-        // Chase — move toward player
+      if (dist > attackRange) {
+        // Chase
+        m.state = 'chase';
         const speed = data.spd * 0.1;
         m.x += (dx / dist) * speed;
         m.z += (dz / dist) * speed;
         broadcast({ type: 'monster_move', monsterId: m.id, x: m.x, z: m.z });
-      } else if (now - m.lastAttack > (data.attackSpeed || 1) * 1000) {
-        // Attack!
+      } else if (now - m.lastAttack > 1500) {
+        // Attack (Cahaya v2: 1500ms cooldown, atk - def)
         m.lastAttack = now;
-        const dmg = Math.max(1, m.atk - Math.floor(nearest.def * 0.6));
-        nearest.hp = Math.max(0, nearest.hp - dmg);
-        // BROADCAST monster_attack (same pattern as Cahaya v2 — proven reliable)
-        broadcast({ type: 'monster_attack', monsterId: m.id, targetId: nearest.id, damage: dmg, hp: nearest.hp, maxHp: nearest.maxHp });
-        if (nearest.hp <= 0) {
-          nearest.hp = nearest.maxHp;
-          nearest.mp = nearest.maxMp;
-          nearest.x = 0;
-          nearest.z = 0;
-          broadcast({ type: 'player_died', targetId: nearest.id, hp: nearest.hp, maxHp: nearest.maxHp, mp: nearest.mp, maxMp: nearest.maxMp });
+        m.state = 'attack';
+        const dmg = Math.max(1, m.atk - (target.def || 0));
+        target.hp = Math.max(0, target.hp - dmg);
+        broadcast({ type: 'monster_attack', monsterId: m.id, targetId: target.id, damage: dmg });
+
+        if (target.hp <= 0) {
+          // Player died — auto-respawn after 5s (Cahaya v2 pattern)
+          broadcast({ type: 'player_died', targetId: target.id });
+          setTimeout(() => {
+            target.hp = target.maxHp;
+            target.mp = target.maxMp;
+            target.x = 0;
+            target.z = 0;
+            broadcast({ type: 'player_respawn', targetId: target.id, hp: target.hp, maxHp: target.maxHp, mp: target.mp, maxMp: target.maxMp });
+          }, 5000);
           m.state = 'idle';
-          m.target = null;
         }
       }
-    }
-
-    // Retreat check (after attack)
-    if (m.state === 'chase' && m.hp / data.hp < (data.retreatHp || 0.2)) {
-      m.state = 'retreat';
-      m.target = null;
-    }
-
-    // Retreat — run away from player
-    if (m.state === 'retreat' && nearest) {
-      const dx = m.x - nearest.x;
-      const dz = m.z - nearest.z;
-      const dist = Math.sqrt(dx * dx + dz * dz) || 1;
-      m.x += (dx / dist) * data.spd * 0.08;
-      m.z += (dz / dist) * data.spd * 0.08;
-      broadcast({ type: 'monster_move', monsterId: m.id, x: m.x, z: m.z });
-      if (nearestDist > aggroRange * 1.5) {
-        m.state = 'idle';
-        m.hp = Math.min(m.hp + data.hp * 0.1, data.hp);
-      }
-    }
-
-    // Return to spawn when idle
-    if (m.state === 'idle' && m.spawnX !== undefined) {
-      const dx = m.spawnX - m.x;
-      const dz = m.spawnZ - m.z;
-      const dist = Math.sqrt(dx * dx + dz * dz);
-      if (dist > 1) {
-        const speed = data.spd * 0.03;
-        m.x += (dx / dist) * speed;
-        m.z += (dz / dist) * speed;
-        broadcast({ type: 'monster_move', monsterId: m.id, x: m.x, z: m.z });
-      } else if (m.hp < data.hp) {
-        m.hp = Math.min(m.hp + data.hp * 0.02, data.hp);
+    } else {
+      // Return to spawn (Cahaya v2 pattern)
+      m.targetId = null;
+      m.state = 'idle';
+      if (m.spawnX !== undefined) {
+        const dx = m.spawnX - m.x;
+        const dz = m.spawnZ - m.z;
+        const dist = Math.sqrt(dx * dx + dz * dz);
+        if (dist > 1) {
+          m.x += (dx / dist) * data.spd * 0.05;
+          m.z += (dz / dist) * data.spd * 0.05;
+          broadcast({ type: 'monster_move', monsterId: m.id, x: m.x, z: m.z });
+        }
       }
     }
   });
@@ -446,7 +418,7 @@ function handleAttack(ws, playerId, msg) {
 
   // Calculate damage
   const isCrit = Math.random() < player.crit;
-  let dmg = Math.max(1, player.atk - Math.floor(monster.def * 0.6));
+  let dmg = Math.max(1, player.atk - (monster.def || 0));
   if (isCrit) dmg = Math.floor(dmg * 1.5);
 
   monster.hp -= dmg;
@@ -464,11 +436,8 @@ function handleAttack(ws, playerId, msg) {
     maxHp: monster.maxHp,
   });
 
-  // Monster aggro — always chase the attacker
-  if (monster.state === 'idle' || monster.state === 'retreat') {
-    monster.state = 'chase';
-    monster.target = playerId;
-  }
+  // Always aggro when hit (Cahaya v2: game loop picks closest player naturally)
+  monster.state = 'chase';
 
   // Monster died
   if (monster.hp <= 0) {
@@ -898,6 +867,7 @@ function handleMessage(ws, playerId, msg) {
         player.mp = player.maxMp;
         ws.send(JSON.stringify({ type: 'respawned', x: player.x, z: player.z, hp: player.hp, maxHp: player.maxHp, mp: player.mp, maxMp: player.maxMp }));
         broadcast({ type: 'player_moved', playerId, x: player.x, y: 0, z: player.z });
+        broadcast({ type: 'player_respawn', targetId: playerId, hp: player.hp, maxHp: player.maxHp, mp: player.mp, maxMp: player.maxMp, x: player.x, z: player.z });
       }
       break;
     }
