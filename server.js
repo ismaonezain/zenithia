@@ -485,6 +485,7 @@ function handleAttack(ws, playerId, msg) {
       maxMp: player.maxMp,
     });
     broadcast({ type: 'monster_died', monsterId: monster.id });
+    saveWorld();
   }
 }
 
@@ -546,6 +547,7 @@ wss.on('connection', (ws) => {
 
   ws.on('close', () => {
     console.log(`[DISCONNECT] ${playerId}`);
+    saveWorld();
     delete connectedPlayers[ws];
     broadcast({ type: 'player_left', playerId });
   });
@@ -608,6 +610,7 @@ function handleMessage(ws, playerId, msg) {
           // Remove one quantity
           item.quantity = (item.quantity || 1) - 1;
           if (item.quantity <= 0) player.inventory.splice(itemIdx, 1);
+          saveWorld();
           ws.send(JSON.stringify({ type: 'item_used', itemId: msg.itemId, hp: player.hp, maxHp: player.maxHp, mp: player.mp, maxMp: player.maxMp, inventory: player.inventory }));
         }
       }
@@ -643,6 +646,7 @@ function handleMessage(ws, playerId, msg) {
                 if (s.crit) player.crit += s.crit;
               }
             });
+            saveWorld();
             ws.send(JSON.stringify({ type: 'item_equipped', equipment: player.equipment, inventory: player.inventory, atk: player.atk, def: player.def, spd: player.spd, crit: player.crit }));
           }
         }
@@ -669,6 +673,7 @@ function handleMessage(ws, playerId, msg) {
             if (s.crit) player.crit += s.crit;
           }
         });
+        saveWorld();
         ws.send(JSON.stringify({ type: 'item_unequipped', equipment: player.equipment, inventory: player.inventory, atk: player.atk, def: player.def, spd: player.spd, crit: player.crit }));
       }
       break;
@@ -849,6 +854,7 @@ function handleMessage(ws, playerId, msg) {
           return ws.send(JSON.stringify({ type: 'shop_error', error: `Not enough Zen. Need ${totalCost}, have ${player.zen}` }));
         }
         player.zen -= totalCost;
+        saveWorld();
         if (!player.inventory) player.inventory = [];
         const existing = player.inventory.find(i => i.id === msg.itemId);
         if (existing) existing.quantity = (existing.quantity || 1) + qty;
@@ -871,6 +877,7 @@ function handleMessage(ws, playerId, msg) {
         item.quantity = (item.quantity || 1) - qty;
         if (item.quantity <= 0) player.inventory.splice(itemIdx, 1);
         player.zen = (player.zen || 0) + totalGold;
+        saveWorld();
         ws.send(JSON.stringify({ type: 'shop_result', action: 'sell', itemId: item.id, quantity: qty, earned: totalGold, zen: player.zen, inventory: player.inventory }));
       }
       break;
@@ -965,8 +972,9 @@ function handleMessage(ws, playerId, msg) {
         addLootToPlayer(player, loot);
         ws.send(JSON.stringify({ type: 'monster_killed', monsterId: monster.id, monsterName: monster.name, xp: xpGain, loot, hp: player.hp, maxHp: player.maxHp, mp: player.mp, maxMp: player.maxMp }));
         broadcast({ type: 'monster_died', monsterId: monster.id });
-      }
-      break;
+        saveWorld();
+        }
+        break;
     }
     case 'pickup_loot': {
       const player = connectedPlayers[ws];

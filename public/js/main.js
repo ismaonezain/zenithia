@@ -835,6 +835,7 @@ function handleServerMessage(msg) {
         updatePlayerLevel(msg.level);
         updatePlayerHP(msg.hp, msg.maxHp);
         updatePlayerMP(msg.mp, msg.maxMp);
+        showLevelUpEffect();
         addChatMessage('System', `🎉 Level Up! Now Lv.${msg.level}`);
       }
       if (msg.loot?.length > 0) showLootPopup(msg.loot);
@@ -969,6 +970,7 @@ function handleServerMessage(msg) {
       state.player.level = msg.level;
       state.player.maxHp = msg.maxHp;
       state.player.maxMp = msg.maxMp;
+      showLevelUpEffect();
       addChatMessage('System', `🎉 Level Up! You are now Level ${msg.level}!`);
       updatePlayerLevel(msg.level);
       updatePlayerHP(msg.maxHp, msg.maxHp);
@@ -1386,6 +1388,113 @@ function showDamageNumber(monsterId, damage, isCrit, targetId) {
     requestAnimationFrame(animate);
   };
   animate();
+}
+
+// Level Up Visual Effect — Chaya Berkah (pillar of light + particles)
+function showLevelUpEffect() {
+  const playerModel = state.playerModel;
+  if (!playerModel) return;
+  const pos = playerModel.position.clone();
+
+  // === LIGHT PILLAR ===
+  const pillarGeo = new THREE.CylinderGeometry(0.3, 0.6, 5, 8, 1, true);
+  const pillarMat = new THREE.MeshBasicMaterial({
+    color: 0xFFD700, transparent: true, opacity: 0.4, side: THREE.DoubleSide, depthWrite: false,
+  });
+  const pillar = new THREE.Mesh(pillarGeo, pillarMat);
+  pillar.position.set(pos.x, 2.5, pos.z);
+  pillar.renderOrder = 1000;
+  state.scene.add(pillar);
+
+  // === INNER GLOW ===
+  const glowGeo = new THREE.CylinderGeometry(0.15, 0.3, 5, 8);
+  const glowMat = new THREE.MeshBasicMaterial({
+    color: 0xFFFFFF, transparent: true, opacity: 0.6, depthWrite: false,
+  });
+  const glow = new THREE.Mesh(glowGeo, glowMat);
+  glow.position.set(pos.x, 2.5, pos.z);
+  glow.renderOrder = 1001;
+  state.scene.add(glow);
+
+  // === RISING PARTICLES ===
+  const particles = [];
+  for (let i = 0; i < 20; i++) {
+    const size = 0.08 + Math.random() * 0.12;
+    const pGeo = new THREE.BoxGeometry(size, size, size);
+    const pMat = new THREE.MeshBasicMaterial({
+      color: Math.random() > 0.5 ? 0xFFD700 : 0xFFF176,
+      transparent: true, opacity: 0.9, depthWrite: false,
+    });
+    const p = new THREE.Mesh(pGeo, pMat);
+    const angle = Math.random() * Math.PI * 2;
+    const r = Math.random() * 0.8;
+    p.position.set(
+      pos.x + Math.cos(angle) * r,
+      Math.random() * 2,
+      pos.z + Math.sin(angle) * r
+    );
+    p.userData.vy = 1.5 + Math.random() * 2;
+    p.userData.vx = (Math.random() - 0.5) * 0.5;
+    p.userData.vz = (Math.random() - 0.5) * 0.5;
+    p.renderOrder = 1002;
+    state.scene.add(p);
+    particles.push(p);
+  }
+
+  // === "LEVEL UP!" floating text ===
+  const canvas = document.createElement('canvas');
+  canvas.width = 256;
+  canvas.height = 64;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#FFD700';
+  ctx.font = 'bold 40px Courier New';
+  ctx.textAlign = 'center';
+  ctx.strokeStyle = '#000';
+  ctx.lineWidth = 3;
+  ctx.strokeText('LEVEL UP!', 128, 42);
+  ctx.fillText('LEVEL UP!', 128, 42);
+  const tex = new THREE.CanvasTexture(canvas);
+  const textSprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false }));
+  textSprite.position.set(pos.x, 4, pos.z);
+  textSprite.scale.set(3, 0.75, 1);
+  textSprite.renderOrder = 1003;
+  state.scene.add(textSprite);
+
+  // === Animate ===
+  const startTime = Date.now();
+  const dur = 2.0; // seconds
+  function tick() {
+    const t = (Date.now() - startTime) / 1000;
+    if (t > dur) {
+      state.scene.remove(pillar);
+      state.scene.remove(glow);
+      state.scene.remove(textSprite);
+      particles.forEach(p => state.scene.remove(p));
+      pillar.geometry.dispose(); pillar.material.dispose();
+      glow.geometry.dispose(); glow.material.dispose();
+      tex.dispose(); textSprite.material.dispose();
+      return;
+    }
+    const progress = t / dur;
+    // Pillar fade out + pulse
+    pillar.material.opacity = 0.4 * (1 - progress);
+    pillar.scale.x = 1 + Math.sin(t * 8) * 0.15;
+    glow.material.opacity = 0.6 * (1 - progress);
+    // Text rises
+    textSprite.position.y = 4 + t * 0.8;
+    textSprite.material.opacity = 1 - progress;
+    // Particles rise + fade
+    particles.forEach(p => {
+      p.position.y += p.userData.vy * 0.016;
+      p.position.x += p.userData.vx * 0.016;
+      p.position.z += p.userData.vz * 0.016;
+      p.material.opacity = 1 - progress;
+      p.rotation.x += 0.05;
+      p.rotation.y += 0.08;
+    });
+    requestAnimationFrame(tick);
+  }
+  tick();
 }
 
 function updatePlayerHP(hp, maxHp) {
