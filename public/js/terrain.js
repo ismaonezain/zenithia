@@ -427,17 +427,12 @@ function addPaths(group) {
   group.add(housePath2);
   addPathLabel(group, 'JALAN RUMAH 2', -3, 14);
 
-  // [I] Main → Green House (5,10) — path going east then north
-  const housePath3a = new THREE.Mesh(new THREE.PlaneGeometry(4, 2), pathMat);
-  housePath3a.rotation.x = -Math.PI / 2;
-  housePath3a.position.set(3, 0.02, 11);
-  housePath3a.receiveShadow = true;
-  group.add(housePath3a);
-  const housePath3b = new THREE.Mesh(new THREE.PlaneGeometry(2, 3), pathMat);
-  housePath3b.rotation.x = -Math.PI / 2;
-  housePath3b.position.set(5, 0.02, 9.5);
-  housePath3b.receiveShadow = true;
-  group.add(housePath3b);
+  // [I] Main → Green House (5,10) — straight horizontal path
+  const housePath3 = new THREE.Mesh(new THREE.PlaneGeometry(5, 1.2), pathMat);
+  housePath3.rotation.x = -Math.PI / 2;
+  housePath3.position.set(3.5, 0.02, 10);
+  housePath3.receiveShadow = true;
+  group.add(housePath3);
   addPathLabel(group, 'JALAN RUMAH 3', 1, 14);
 }
 
@@ -1775,7 +1770,6 @@ function addStreetLamps(group) {
     // Bridge approaches (offset from road)
     { x: 3.5, z: -1 },
     // Village paths
-    { x: -4, z: 12 },
     { x: 4, z: 11 },
     // Green House area
     { x: 7, z: 9 },
