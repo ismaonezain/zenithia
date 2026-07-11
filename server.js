@@ -8,7 +8,8 @@ const nacl = require('tweetnacl');
 const bs58 = require('bs58').default || require('bs58');
 
 const PORT = process.env.PORT || 2567;
-const SAVE_DIR = path.join(__dirname, 'data');
+// Use /data volume if mounted (Railway persistent storage), fallback to local
+const SAVE_DIR = fs.existsSync('/data') ? '/data' : path.join(__dirname, 'data');
 const SAVE_FILE = path.join(SAVE_DIR, 'world.json');
 const MONSTERS = require('./shared/monsters');
 const { ITEMS, LOOT_TABLES } = require('./shared/items');
