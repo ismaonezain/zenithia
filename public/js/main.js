@@ -1855,15 +1855,39 @@ function showLootPopup(loot) {
   itemsEl.innerHTML = '';
 
   loot.forEach((item, i) => {
-    const rarity = item.rarity || 'common';
+    const tier = item.tier || 0;
+    const chance = item.dropChance || 0.5;
+    // Drop difficulty based on chance
+    const difficulty = chance >= 0.5 ? 'easy' : chance >= 0.1 ? 'medium' : 'hard';
+    const diffLabel = { easy: 'Common', medium: 'Uncommon', hard: 'Rare' }[difficulty];
+
     const div = document.createElement('div');
-    div.className = `loot-item loot-rarity-${rarity}`;
-    const iconBg = { common: '#555', uncommon: '#2E7D32', rare: '#1565C0', epic: '#6A1B9A', legendary: '#E65100' }[rarity] || '#555';
+    div.className = `loot-item loot-tier-${tier}`;
+    const iconBg = { 0: '#555', 1: '#666', 2: '#2E7D32', 3: '#1565C0' }[tier] || '#555';
+
+    // Stats text for equipment
+    let statsText = '';
+    if (item.type === 'equipment' && item.stats) {
+      const parts = [];
+      if (item.stats.atk) parts.push(`ATK+${item.stats.atk}`);
+      if (item.stats.def) parts.push(`DEF+${item.stats.def}`);
+      if (item.stats.hp) parts.push(`HP+${item.stats.hp}`);
+      if (item.stats.mp) parts.push(`MP+${item.stats.mp}`);
+      if (item.stats.spd) parts.push(`SPD+${item.stats.spd}`);
+      if (item.stats.crit) parts.push(`CRIT+${Math.round(item.stats.crit*100)}%`);
+      statsText = parts.join(' ');
+    } else if (item.healAmount) {
+      statsText = `Heals ${item.healAmount} HP`;
+    } else if (item.manaAmount) {
+      statsText = `Restores ${item.manaAmount} MP`;
+    }
+
     div.innerHTML = `
-      <div class="loot-item-icon" style="background:${iconBg}">${item.icon || '📦'}</div>
+      <div class="loot-item-icon" style="background:${iconBg}">${item.icon?.symbol || '📦'}</div>
       <div class="loot-item-info">
         <div class="loot-item-name">${item.name}</div>
-        <div class="loot-item-type">${item.type || 'item'} ×${item.quantity || 1}</div>
+        <div class="loot-item-type">${item.type || 'item'}${item.slot ? ' • ' + item.slot : ''} ×${item.quantity || 1} <span class="loot-drop-${difficulty}">• ${diffLabel}</span></div>
+        ${statsText ? `<div class="loot-item-stats">${statsText}</div>` : ''}
       </div>
     `;
     itemsEl.appendChild(div);

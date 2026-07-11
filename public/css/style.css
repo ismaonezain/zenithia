@@ -838,11 +838,21 @@ body {
   font-size: 0.7rem;
   color: #888;
 }
-.loot-rarity-common .loot-item-name { color: #ccc; }
-.loot-rarity-uncommon .loot-item-name { color: #4CAF50; }
-.loot-rarity-rare .loot-item-name { color: #2196F3; }
-.loot-rarity-epic .loot-item-name { color: #9C27B0; }
-.loot-rarity-legendary .loot-item-name { color: #FF9800; }
+.loot-item-stats {
+  font-size: 0.65rem;
+  color: #aaa;
+  margin-top: 2px;
+}
+/* Tier colors — tier 1=common, 2=good, 3=rare */
+.loot-tier-1 .loot-item-name { color: #bbb; }
+.loot-tier-2 .loot-item-name { color: #4CAF50; }
+.loot-tier-3 .loot-item-name { color: #2196F3; }
+/* Consumable/material = white */
+.loot-tier-0 .loot-item-name { color: #ddd; }
+/* Drop difficulty badge */
+.loot-drop-easy { color: #888; }
+.loot-drop-medium { color: #FF9800; }
+.loot-drop-hard { color: #F44336; }
 
 #loot-pickup-all {
   width: 100%;

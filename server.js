@@ -523,9 +523,15 @@ function rollLoot(monsterType) {
           id: entry.itemId,
           name: itemDef.name,
           type: itemDef.type,
-          rarity: itemDef.rarity,
+          tier: itemDef.tier || 0,
+          slot: itemDef.slot || null,
+          stats: itemDef.stats || null,
+          healAmount: itemDef.healAmount || null,
+          manaAmount: itemDef.manaAmount || null,
+          description: itemDef.description || '',
           quantity: qty,
           icon: itemDef.icon,
+          dropChance: entry.chance,
         });
       }
     }
