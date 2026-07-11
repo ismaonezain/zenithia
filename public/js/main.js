@@ -52,8 +52,8 @@ const state = {
   monsters: {},
   damageNumbers: [],
   // Day/night cycle
-  dayTime: 0.25,         // 0-1, 0.25 = sunrise, 0.5 = noon, 0.75 = sunset, 0 = midnight
-  daySpeed: 1 / 300,     // full cycle = 300 seconds (5 min)
+  dayTime: 0.35,         // 0-1, 0 = midnight, 0.25 = sunrise, 0.5 = noon, 0.75 = sunset
+  daySpeed: 1 / 1200,    // full cycle = 1200 seconds (20 min)
   sunLight: null,
   ambientLight: null,
   moonMesh: null,
@@ -1637,7 +1637,7 @@ function updateCompass() {
 
 function gameLoop() {
   requestAnimationFrame(gameLoop);
-  const dt = state.clock ? state.clock.getDelta() : 0.016;
+  const dt = state.clock ? Math.min(state.clock.getDelta(), 0.1) : 0.016;
   updateMovement();
 
   const playerModel = state.players[state.playerId];
