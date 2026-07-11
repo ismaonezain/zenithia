@@ -471,12 +471,12 @@ function handleAttack(ws, playerId, msg) {
   if (monster.hp <= 0) {
     monster.alive = false;
     monster.hp = 0;
+    console.log(`[KILL] Monster ${monster.id} (${monster.name}) killed by ${playerId}`);
 
     // XP + Gold reward
     const xpGain = data.xp;
-    const zenGain = data.zen[0] + Math.floor(Math.random() * (data.zen[1] - data.zen[0]));
+    const zenGain = data.zen ? data.zen[0] + Math.floor(Math.random() * (data.zen[1] - data.zen[0])) : 0;
     player.xp += xpGain;
-    // Zen only from item drops, not monster kills
 
     // Level up check
     const xpNeeded = 100 + (player.level - 1) * 200;
@@ -510,6 +510,14 @@ function handleAttack(ws, playerId, msg) {
 
     broadcast({ type: 'monster_died', monsterId: monster.id });
     console.log(`[KILL] Broadcast monster_died for ${monster.id}`);
+
+    // Schedule respawn — remove dead monster, let spawnMonsters create a new one
+    const respawnMs = (data.respawnTime || 30) * 1000;
+    setTimeout(() => {
+      delete world.monsters[monster.id];
+      console.log(`[RESPAWN] Removed dead ${monster.id}, will respawn on next tick`);
+      spawnMonsters();
+    }, respawnMs);
   }
 }
 
@@ -969,6 +977,12 @@ function handleMessage(ws, playerId, msg) {
         addLootToPlayer(player, loot);
         ws.send(JSON.stringify({ type: 'monster_killed', monsterId: monster.id, monsterName: monster.name, xp: xpGain, loot, hp: player.hp, maxHp: player.maxHp, mp: player.mp, maxMp: player.maxMp }));
         broadcast({ type: 'monster_died', monsterId: monster.id });
+        // Schedule respawn
+        const respawnMs = (data.respawnTime || 30) * 1000;
+        setTimeout(() => {
+          delete world.monsters[monster.id];
+          spawnMonsters();
+        }, respawnMs);
       }
       break;
     }

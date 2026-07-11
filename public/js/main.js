@@ -809,26 +809,27 @@ function handleServerMessage(msg) {
 
     case 'monster_killed': {
       console.log('[KILL] Received monster_killed for', msg.monsterId);
-      const lootText = msg.loot?.length > 0 ? msg.loot.map(l => `${l.name} x${l.quantity}`).join(', ') : 'Nothing';
-      addChatMessage('System', `Defeated ${msg.monsterName}! +${msg.xp} XP | Loot: ${lootText}`);
-      updatePlayerHP(msg.hp, msg.maxHp);
-      updatePlayerMP(msg.mp, msg.maxMp);
-      if (msg.xp !== undefined) state.player.xp = (state.player.xp || 0) + msg.xp;
-      // Show loot popup for manual pickup
-      if (msg.loot && msg.loot.length > 0) {
-        showLootPopup(msg.loot);
-      }
-      // Fallback: also remove monster from scene (in case monster_died broadcast is delayed)
+      // *** REMOVAL FIRST — before any DOM/logic that could crash ***
       const deadMob = state.monsters[msg.monsterId];
       if (deadMob) {
-        console.log('[KILL] Removing monster from scene:', msg.monsterId, 'children:', deadMob.children?.length);
         state.scene.remove(deadMob);
         delete state.monsters[msg.monsterId];
-        console.log('[KILL] Removed. Monsters left:', Object.keys(state.monsters).length);
-      } else {
-        console.log('[KILL] Monster already removed:', msg.monsterId);
+        console.log('[KILL] Removed monster from scene:', msg.monsterId);
       }
       if (state.targetedMonster === msg.monsterId) cancelTarget();
+      // Now do UI updates
+      try {
+        const lootText = msg.loot?.length > 0 ? msg.loot.map(l => `${l.name} x${l.quantity}`).join(', ') : 'Nothing';
+        addChatMessage('System', `Defeated ${msg.monsterName}! +${msg.xp} XP | Loot: ${lootText}`);
+        updatePlayerHP(msg.hp, msg.maxHp);
+        updatePlayerMP(msg.mp, msg.maxMp);
+        if (msg.xp !== undefined) state.player.xp = (state.player.xp || 0) + msg.xp;
+        if (msg.loot && msg.loot.length > 0) {
+          showLootPopup(msg.loot);
+        }
+      } catch (e) {
+        console.error('[KILL] Error in UI update:', e);
+      }
       break;
     }
 
@@ -879,11 +880,18 @@ function handleServerMessage(msg) {
 
     case 'monster_hit': {
       const mob = state.monsters[msg.monsterId];
-      console.log('[COMBAT] monster_hit', msg.monsterId, 'hp:', msg.hp, '/', msg.maxHp, 'mob exists:', !!mob, 'hpBar:', !!mob?.userData?.hpBar);
+      console.log('[COMBAT] monster_hit', msg.monsterId, 'hp:', msg.hp, '/', msg.maxHp);
       if (mob) {
         updateMonsterHPBar(mob, msg.hp, msg.maxHp);
         mob.userData.hp = msg.hp;
         mob.userData.maxHp = msg.maxHp;
+        // Safety net: if hp=0, remove monster immediately
+        if (msg.hp <= 0) {
+          console.log('[COMBAT] Monster hp=0, removing from scene:', msg.monsterId);
+          state.scene.remove(mob);
+          delete state.monsters[msg.monsterId];
+          if (state.targetedMonster === msg.monsterId) cancelTarget();
+        }
       }
       showDamageNumber(msg.monsterId, msg.damage, msg.isCrit);
       break;
