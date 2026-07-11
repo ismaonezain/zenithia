@@ -1018,7 +1018,7 @@ function createNameHPBar(name, hp, maxHp, mp, maxMp) {
   barTex.minFilter = THREE.LinearFilter;
   const barSprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: barTex, transparent: true, depthWrite: false, depthTest: false }));
   barSprite.scale.set(3, 0.8, 1);
-  barSprite.position.y = 0.4;
+  barSprite.position.y = -0.3;
   barSprite.renderOrder = 999;
 
   function render() {
