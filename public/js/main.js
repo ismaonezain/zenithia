@@ -1484,8 +1484,8 @@ function updateDayNight(dt) {
     fogColor = lerpColor(0x87CEEB, 0x5eb8f5, p);
     sunIntensity = 1.0;
     ambientIntensity = 0.4;
-    ambientColor = 0xffffff;
-    sunColor = 0xfff5e0;
+    ambientColor = new THREE.Color(0xffffff);
+    sunColor = new THREE.Color(0xfff5e0);
   } else if (t < 0.65) {
     // Noon → golden hour (0.5 → 0.65) — warm light
     const p = (t - 0.5) / 0.15;
@@ -1523,16 +1523,18 @@ function updateDayNight(dt) {
     sunColor = new THREE.Color(0x334466);
   }
 
-  state.scene.background = skyColor;
-  state.scene.fog.color = fogColor;
+  state.scene.background.set(skyColor);
+  state.scene.fog.color.set(fogColor);
   state.sunLight.intensity = sunIntensity;
-  state.sunLight.color = sunColor;
+  state.sunLight.color.set(sunColor);
   state.ambientLight.intensity = ambientIntensity;
-  state.ambientLight.color = ambientColor;
+  state.ambientLight.color.set(ambientColor);
 
   // DEBUG: log lighting values every 5 seconds
   if (!state._lastLightLog || Date.now() - state._lastLightLog > 5000) {
-    console.log(`[LIGHT] t=${t.toFixed(3)} h=${(t*24).toFixed(1)} sunInt=${state.sunLight.intensity.toFixed(3)} ambInt=${state.ambientLight.intensity.toFixed(3)} sunColor=${state.sunLight.color.getHexString()} bg=${state.scene.background?.getHexString()}`);
+    const sunHex = state.sunLight.color.getHexString ? state.sunLight.color.getHexString() : String(state.sunLight.color);
+    const bgHex = state.scene.background?.getHexString ? state.scene.background.getHexString() : 'N/A';
+    console.log(`[LIGHT] t=${t.toFixed(3)} h=${(t*24).toFixed(1)} sunInt=${state.sunLight.intensity.toFixed(3)} ambInt=${state.ambientLight.intensity.toFixed(3)} sunColor=${sunHex} bg=${bgHex}`);
     state._lastLightLog = Date.now();
   }
 
