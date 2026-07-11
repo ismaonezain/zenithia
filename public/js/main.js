@@ -885,7 +885,8 @@ function handleServerMessage(msg) {
     }
 
     case 'player_died': {
-      updatePlayerHP(msg.hp, msg.hp);
+      updatePlayerHP(msg.hp, msg.maxHp);
+      if (msg.mp !== undefined) updatePlayerMP(msg.mp, msg.maxMp);
       addChatMessage('System', 'You died! Respawning at village...');
       break;
     }
@@ -978,7 +979,7 @@ function createPlayerModelInWorld(player) {
   });
   model.position.set(player.x, player.y, player.z);
   model.userData = { id: player.id, name: player.name, type: 'player' };
-  addNameHPBarToModel(model, player.name, player.hp || 100, player.maxHp || 100, player.mp || 50, player.maxMp || 50);
+  addNameHPBarToModel(model, player.name, player.hp ?? 100, player.maxHp ?? 100, player.mp ?? 50, player.maxMp ?? 50);
   state.scene.add(model);
   state.players[player.id] = model;
   state.playerModel = model;
@@ -999,7 +1000,7 @@ function createOtherPlayer(player) {
   });
   model.position.set(player.x, player.y, player.z);
   model.userData = { id: player.id, name: player.name, type: 'player' };
-  addNameHPBarToModel(model, player.name, player.hp || 100, player.maxHp || 100, player.mp || 50, player.maxMp || 50);
+  addNameHPBarToModel(model, player.name, player.hp ?? 100, player.maxHp ?? 100, player.mp ?? 50, player.maxMp ?? 50);
   state.scene.add(model);
   state.players[player.id] = model;
 }
@@ -1241,7 +1242,7 @@ function updatePlayerHP(hp, maxHp) {
   // Update 3D name plate
   if (state.player && state.playerModel) {
     state.player.hp = hp; state.player.maxHp = maxHp;
-    updateNameHPBar(state.playerModel, hp, maxHp, state.player.mp || 0, state.player.maxMp || 0);
+    updateNameHPBar(state.playerModel, hp, maxHp, state.player.mp ?? 0, state.player.maxMp ?? maxHp);
   }
 }
 
@@ -1253,7 +1254,7 @@ function updatePlayerMP(mp, maxMp) {
   // Update 3D name plate
   if (state.player && state.playerModel) {
     state.player.mp = mp; state.player.maxMp = maxMp;
-    updateNameHPBar(state.playerModel, state.player.hp || 0, state.player.maxHp || 0, mp, maxMp);
+    updateNameHPBar(state.playerModel, state.player.hp ?? 0, state.player.maxHp ?? 100, mp, maxMp);
   }
 }
 
