@@ -263,6 +263,8 @@ function spawnMonsters() {
         x: area.x + Math.cos(angle) * dist,
         y: 0,
         z: area.z + Math.sin(angle) * dist,
+        spawnX: area.x + Math.cos(angle) * dist,
+        spawnZ: area.z + Math.sin(angle) * dist,
         hp: data.hp,
         maxHp: data.hp,
         atk: data.atk,
@@ -287,6 +289,8 @@ function respawnMonster(monster) {
   const dist = Math.random() * area.radius;
   monster.x = area.x + Math.cos(angle) * dist;
   monster.z = area.z + Math.sin(angle) * dist;
+  monster.spawnX = monster.x;
+  monster.spawnZ = monster.z;
   monster.hp = data.hp;
   monster.alive = true;
   monster.target = null;
@@ -314,11 +318,7 @@ setInterval(() => {
 
 // --- Monster AI (server-side) ---
 setInterval(() => {
-  try {
   const now = Date.now();
-  const playerCount = Object.keys(connectedPlayers).length;
-  const monsterCount = Object.keys(world.monsters).length;
-  if (Math.random() < 0.01) console.log(`[AI-HEARTBEAT] players=${playerCount} monsters=${monsterCount}`);
   Object.values(world.monsters).forEach(m => {
     if (!m.alive) return;
     const data = MONSTERS[m.type];
@@ -337,102 +337,84 @@ setInterval(() => {
       }
     });
 
-    if (!nearest) { m.state = 'idle'; return; }
-
     // Behavior logic
-    switch (data.behavior) {
-      case 'passive':
-        if (m.state === 'idle' && nearestDist < data.aggroRange && m.target) {
-          m.state = 'chase';
-        }
-        break;
-      case 'aggressive':
-        if (m.state === 'idle' && nearestDist < data.aggroRange) {
-          m.state = 'chase';
-          m.target = nearest.id;
-        }
-        break;
-      case 'pack':
-        if (nearestDist < data.aggroRange) {
-          m.state = 'chase';
-          m.target = nearest.id;
-        }
-        break;
-      default:
-        if (nearestDist < data.aggroRange) {
-          m.state = 'chase';
-          m.target = nearest.id;
-        }
+    const aggroRange = data.aggroRange || 5;
+    if (data.behavior === 'aggressive' || data.behavior === 'pack') {
+      if (m.state === 'idle' && nearest && nearestDist < aggroRange) {
+        m.state = 'chase';
+        m.target = nearest.id;
+      }
     }
+    // Passive: only chase if player hit it first (target set by handleAttack)
 
-    // Chase
+    // Chase & Attack
     if (m.state === 'chase' && nearest) {
       const dx = nearest.x - m.x;
       const dz = nearest.z - m.z;
       const dist = Math.sqrt(dx * dx + dz * dz);
-      // Monster uses player's attack range (3) so they can fight back fairly
-      const effectiveRange = Math.max(data.attackRange, 3);
+      const effectiveRange = Math.max(data.attackRange || 1.5, 3);
+
       if (dist > effectiveRange) {
-        const speed = data.spd * 0.12;
+        // Chase — move toward player
+        const speed = data.spd * 0.1;
         m.x += (dx / dist) * speed;
         m.z += (dz / dist) * speed;
         broadcast({ type: 'monster_move', monsterId: m.id, x: m.x, z: m.z });
-      } else if (now - m.lastAttack > data.attackSpeed * 1000) {
-        // Attack player
-        m.state = 'attack';
+      } else if (now - m.lastAttack > (data.attackSpeed || 1) * 1000) {
+        // Attack!
         m.lastAttack = now;
-        const playerWs = nearest._ws;
         const dmg = Math.max(1, m.atk - Math.floor(nearest.def * 0.6));
         nearest.hp = Math.max(0, nearest.hp - dmg);
-        console.log(`[AI] Monster ${m.id}(${m.type}) → HIT ${nearest.id} dmg=${dmg} hp=${nearest.hp}/${nearest.maxHp} ws=${!!playerWs} ready=${playerWs?.readyState}`);
-        // Send player_hit directly to victim
-        try {
-          if (playerWs && playerWs.readyState === 1) {
-            playerWs.send(JSON.stringify({ type: 'player_hit', damage: dmg, hp: nearest.hp, maxHp: nearest.maxHp }));
-          }
-        } catch (e) {
-          console.error('[AI] player_hit send failed:', e.message);
-        }
-        // Also broadcast so client definitely receives it
-        broadcast({ type: 'player_hit', damage: dmg, hp: nearest.hp, maxHp: nearest.maxHp });
+        // BROADCAST to all clients (proven reliable)
+        broadcast({ type: 'player_hit', targetId: nearest.id, damage: dmg, hp: nearest.hp, maxHp: nearest.maxHp });
         broadcast({ type: 'monster_attack', monsterId: m.id, targetId: nearest.id, damage: dmg });
         if (nearest.hp <= 0) {
-          // Player died — respawn at village
           nearest.hp = nearest.maxHp;
+          nearest.mp = nearest.maxMp;
           nearest.x = 0;
           nearest.z = 0;
-          try {
-            if (playerWs && playerWs.readyState === 1) {
-              playerWs.send(JSON.stringify({ type: 'player_died', hp: nearest.hp, maxHp: nearest.maxHp }));
-            }
-          } catch (e) {}
-          broadcast({ type: 'player_died', hp: nearest.hp, maxHp: nearest.maxHp });
+          broadcast({ type: 'player_died', hp: nearest.hp, maxHp: nearest.maxHp, mp: nearest.mp, maxMp: nearest.maxMp });
           m.state = 'idle';
           m.target = null;
         }
-        m.state = 'chase';
       }
     }
 
-    // Retreat check
-    if (m.hp / data.hp < data.retreatHp && m.state !== 'retreat') {
+    // Retreat check (after attack)
+    if (m.state === 'chase' && m.hp / data.hp < (data.retreatHp || 0.2)) {
       m.state = 'retreat';
       m.target = null;
     }
-    if (m.state === 'retreat') {
-      const dx = m.x - (nearest?.x || 0);
-      const dz = m.z - (nearest?.z || 0);
+
+    // Retreat — run away from player
+    if (m.state === 'retreat' && nearest) {
+      const dx = m.x - nearest.x;
+      const dz = m.z - nearest.z;
       const dist = Math.sqrt(dx * dx + dz * dz) || 1;
       m.x += (dx / dist) * data.spd * 0.08;
       m.z += (dz / dist) * data.spd * 0.08;
       broadcast({ type: 'monster_move', monsterId: m.id, x: m.x, z: m.z });
-      if (nearestDist > data.aggroRange * 1.5) {
+      if (nearestDist > aggroRange * 1.5) {
         m.state = 'idle';
-        m.hp = Math.min(m.hp + data.hp * 0.1, data.hp); // Heal when retreated
+        m.hp = Math.min(m.hp + data.hp * 0.1, data.hp);
+      }
+    }
+
+    // Return to spawn when idle
+    if (m.state === 'idle' && m.spawnX !== undefined) {
+      const dx = m.spawnX - m.x;
+      const dz = m.spawnZ - m.z;
+      const dist = Math.sqrt(dx * dx + dz * dz);
+      if (dist > 1) {
+        const speed = data.spd * 0.03;
+        m.x += (dx / dist) * speed;
+        m.z += (dz / dist) * speed;
+        broadcast({ type: 'monster_move', monsterId: m.id, x: m.x, z: m.z });
+      } else if (m.hp < data.hp) {
+        m.hp = Math.min(m.hp + data.hp * 0.02, data.hp);
       }
     }
   });
-  } catch (e) { console.error('[AI-ERROR]', e.message); }
 }, 200);
 
 // --- Combat Handler ---
@@ -483,11 +465,10 @@ function handleAttack(ws, playerId, msg) {
     maxHp: monster.maxHp,
   });
 
-  // Monster aggro
-  if (monster.state === 'idle') {
+  // Monster aggro — always chase the attacker
+  if (monster.state === 'idle' || monster.state === 'retreat') {
     monster.state = 'chase';
     monster.target = playerId;
-    console.log(`[COMBAT] Monster ${monster.id} aggro → chasing ${playerId}`);
   }
 
   // Monster died

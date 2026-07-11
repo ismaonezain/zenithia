@@ -915,9 +915,10 @@ function handleServerMessage(msg) {
     }
 
     case 'player_hit': {
+      // Only apply damage if this message is for us
+      if (msg.targetId && msg.targetId !== state.playerId) break;
       console.log('[COMBAT] player_hit received! damage:', msg.damage, 'hp:', msg.hp, '/', msg.maxHp);
       updatePlayerHP(msg.hp, msg.maxHp);
-      // Show damage number on self
       const selfModel = state.players[state.playerId];
       if (selfModel) {
         showDamageNumber(null, msg.damage, false, state.playerId);
@@ -926,6 +927,7 @@ function handleServerMessage(msg) {
     }
 
     case 'player_died': {
+      if (msg.targetId && msg.targetId !== state.playerId) break;
       updatePlayerHP(msg.hp, msg.maxHp);
       if (msg.mp !== undefined) updatePlayerMP(msg.mp, msg.maxMp);
       addChatMessage('System', 'You died! Respawning at village...');
@@ -2520,8 +2522,7 @@ function gameLoop() {
   // --- COMBAT: Target indicator + auto-attack ---
   if (state.targetedMonster) {
     const mob = state.monsters[state.targetedMonster];
-    if (!mob || (mob.userData.hp !== undefined && mob.userData.hp <= 0)) {
-      // Monster died or despawned — cancel target
+    if (!mob) {
       cancelTarget();
     } else {
       // Move indicator ring to follow monster
