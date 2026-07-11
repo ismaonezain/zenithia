@@ -407,7 +407,7 @@ function initCustomization() {
       o.classList.add('selected');
       state.customization.gender = g;
       updatePreviewModel();
-      window._saveCustomization?.();
+      if(window._saveCustomization)window._saveCustomization();
     };
     genderPicker.appendChild(o);
   });
@@ -444,7 +444,7 @@ function initCustomization() {
       state.customization.classType = cls;
       showClassInfo(cls);
       updatePreviewModel();
-      window._saveCustomization?.();
+      if(window._saveCustomization)window._saveCustomization();
     };
     classPicker.appendChild(o);
   });
@@ -471,7 +471,7 @@ function initCustomization() {
       s.classList.add('selected');
       state.customization.skinIdx = i;
       updatePreviewModel();
-      window._saveCustomization?.();
+      if(window._saveCustomization)window._saveCustomization();
     };
     skinPicker.appendChild(s);
   });
@@ -487,7 +487,7 @@ function initCustomization() {
       s.classList.add('selected');
       state.customization.hairColorIdx = i;
       updatePreviewModel();
-      window._saveCustomization?.();
+      if(window._saveCustomization)window._saveCustomization();
     };
     hairPicker.appendChild(s);
   });
@@ -503,7 +503,7 @@ function initCustomization() {
       o.classList.add('selected');
       state.customization.hairStyle = style;
       updatePreviewModel();
-      window._saveCustomization?.();
+      if(window._saveCustomization)window._saveCustomization();
     };
     stylePicker.appendChild(o);
   });
@@ -519,7 +519,7 @@ function initCustomization() {
       s.classList.add('selected');
       state.customization.topColorIdx = i;
       updatePreviewModel();
-      window._saveCustomization?.();
+      if(window._saveCustomization)window._saveCustomization();
     };
     topPicker.appendChild(s);
   });
@@ -535,7 +535,7 @@ function initCustomization() {
       s.classList.add('selected');
       state.customization.bottomColorIdx = i;
       updatePreviewModel();
-      window._saveCustomization?.();
+      if(window._saveCustomization)window._saveCustomization();
     };
     bottomPicker.appendChild(s);
   });
@@ -551,7 +551,7 @@ function initCustomization() {
       s.classList.add('selected');
       state.customization.eyeColorIdx = i;
       updatePreviewModel();
-      window._saveCustomization?.();
+      if(window._saveCustomization)window._saveCustomization();
     };
     eyePicker.appendChild(s);
   });
