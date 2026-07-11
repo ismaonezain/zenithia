@@ -513,6 +513,31 @@ function trackQuestKills(player, monsterType) {
   });
 }
 
+// --- Quest Talk Tracking ---
+// Increment the FIRST incomplete talk objective for this NPC
+function trackQuestTalk(player, npcId) {
+  if (!player.quests) return;
+  Object.entries(player.quests).forEach(([questId, qState]) => {
+    if (qState.status !== 'active') return;
+    const questDef = QUESTS[questId];
+    if (!questDef) return;
+    if (!qState.progress) qState.progress = {};
+    // Find first incomplete talk objective targeting this NPC
+    const obj = questDef.objectives.find(o =>
+      o.type === 'talk' && o.target === npcId && (qState.progress[o.id] || 0) < o.required
+    );
+    if (obj) {
+      qState.progress[obj.id] = (qState.progress[obj.id] || 0) + 1;
+      if (player._ws && player._ws.readyState === 1) {
+        player._ws.send(JSON.stringify({
+          type: 'quest_progress', questId, objectiveId: obj.id,
+          current: qState.progress[obj.id],
+        }));
+      }
+    }
+  });
+}
+
 // --- Loot System ---
 function rollLoot(monsterType) {
   const table = LOOT_TABLES[monsterType];
@@ -610,7 +635,12 @@ function handleMessage(ws, playerId, msg) {
     }
     case 'interact_npc': {
       const npc = world.npcs[msg.npcId];
-      if (npc) ws.send(JSON.stringify({ type: 'npc_dialogue', npcId: npc.id, name: npc.name, title: npc.title }));
+      if (npc) {
+        ws.send(JSON.stringify({ type: 'npc_dialogue', npcId: npc.id, name: npc.name, title: npc.title }));
+        // Track talk objectives for quests
+        const player = connectedPlayers[ws];
+        if (player) trackQuestTalk(player, msg.npcId);
+      }
       break;
     }
     case 'attack': {
