@@ -459,7 +459,7 @@ function initCustomization() {
   window._saveCustomization = () => {
     localStorage.setItem('zenithia_customization', JSON.stringify(state.customization));
   };
-}
+
   // Skin picker
   const skinPicker = document.getElementById('skin-picker');
   PALETTES.skin.forEach((color, i) => {
