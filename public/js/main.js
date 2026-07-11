@@ -1,6 +1,6 @@
 // Zenithia — Client Entry Point
 import * as THREE from 'three';
-import { buildTerrain, isWalkable } from './terrain.js';
+import { buildTerrain, isWalkable, getWaterMeshes } from './terrain.js';
 import { createPlayerModel, createNPCModel, PALETTES, animateWalk, stopWalk, applyEquipment, blinkEyes, waveHand, idleArms, animateIdle } from './character.js';
 import { DialogueSystem } from './dialogue_ui.js';
 import { InventoryUI } from './inventory.js';
@@ -1392,6 +1392,26 @@ function gameLoop() {
     lastBlinkTime = Date.now();
     nextBlinkDelay = 3000 + Math.random() * 3000;
   }
+
+  // Water animation
+  const water = getWaterMeshes();
+  water.forEach(w => {
+    if (w.type === 'bob') {
+      // Lily pads bob up and down
+      w.mesh.position.y = w.baseY + Math.sin(time * 1.5 + w.mesh.position.x * 0.5) * 0.015;
+    } else if (w.type === 'ripple') {
+      // Expanding ripple rings
+      const scale = 1 + Math.sin(time * w.speed) * 0.3;
+      w.mesh.scale.set(scale, scale, 1);
+      w.mesh.material.opacity = 0.2 * (1 - Math.sin(time * w.speed) * 0.5);
+    } else if (w.speed) {
+      // Flowing water layers (horizontal movement)
+      w.mesh.position.x = w.baseX + Math.sin(time * w.speed) * w.amp;
+      if (w.mesh.material.opacity !== undefined) {
+        w.mesh.material.opacity = 0.25 + Math.sin(time * 0.8 + w.baseX * 0.1) * 0.1;
+      }
+    }
+  });
 
   if (state.previewModel) {
     state.previewModel.rotation.y += 0.01;

@@ -41,13 +41,13 @@ export const COLLISIONS = [
   { x: -20, z: -5, hw: 0.8, hd: 0.8 },
   { x: -22, z: 0, hw: 0.7, hd: 0.7 },
   { x: -18, z: -2, hw: 0.9, hd: 0.9 },
-  // Creek — block walking in water (approx z = -1 to 1.5 area)
+  // Creek — block walking in water (approx z = 0 to 4 area, full map)
   // Rocks
   { x: -15, z: -8, hw: 0.7, hd: 0.7 },
   { x: 14, z: 10, hw: 0.5, hd: 0.5 },
   { x: -8, z: 18, hw: 0.6, hd: 0.6 },
-  // Creek (z=0.5 to z=3.5, x=-25 to x=25) — block in segments
-  ...Array.from({ length: 13 }, (_, i) => ({ x: -24 + i * 4, z: 2, hw: 2.5, hd: 1.8 })),
+  // Creek (z=0 to z=4, x=-60 to x=60) — block in segments
+  ...Array.from({ length: 31 }, (_, i) => ({ x: -60 + i * 4, z: 2, hw: 2.5, hd: 2 })),
 ];
 
 export function isWalkable(x, z) {
@@ -98,80 +98,124 @@ export function buildTerrain(scene) {
 }
 
 // --- Water ---
+let waterMeshes = []; // for animation
+export function getWaterMeshes() { return waterMeshes; }
+
 function addWater(group) {
-  // Main creek with depth effect
-  const creekGeo = new THREE.PlaneGeometry(50, 3);
+  waterMeshes = [];
+
+  // Main creek — spans full map width
+  const creekGeo = new THREE.PlaneGeometry(120, 4);
   const creekMat = new THREE.MeshLambertMaterial({ color: 0x42A5F5, transparent: true, opacity: 0.7 });
   const creek = new THREE.Mesh(creekGeo, creekMat);
   creek.rotation.x = -Math.PI / 2;
   creek.position.set(0, 0.05, 2);
   group.add(creek);
+  waterMeshes.push(creek);
 
-  // Deeper center stripe
-  const deepGeo = new THREE.PlaneGeometry(50, 1.2);
+  // Deep center stripe
+  const deepGeo = new THREE.PlaneGeometry(120, 1.8);
   const deepMat = new THREE.MeshLambertMaterial({ color: 0x1E88E5, transparent: true, opacity: 0.5 });
   const deep = new THREE.Mesh(deepGeo, deepMat);
   deep.rotation.x = -Math.PI / 2;
   deep.position.set(0, 0.06, 2);
   group.add(deep);
+  waterMeshes.push(deep);
+
+  // Ripple layers (animated)
+  for (let i = 0; i < 4; i++) {
+    const rippleGeo = new THREE.PlaneGeometry(120, 0.4);
+    const rippleMat = new THREE.MeshLambertMaterial({ color: 0x90CAF9, transparent: true, opacity: 0.3 });
+    const ripple = new THREE.Mesh(rippleGeo, rippleMat);
+    ripple.rotation.x = -Math.PI / 2;
+    ripple.position.set(-30 + i * 20, 0.07, 2 + (Math.random() - 0.5) * 2);
+    group.add(ripple);
+    waterMeshes.push({ mesh: ripple, baseX: -30 + i * 20, speed: 0.3 + Math.random() * 0.2, amp: 0.5 + Math.random() * 0.5 });
+  }
 
   // Water edge highlights
   const edgeMat = new THREE.MeshLambertMaterial({ color: 0xBBDEFB, transparent: true, opacity: 0.4 });
-  [3.5, 0.5].forEach(z => {
-    const edge = new THREE.Mesh(new THREE.PlaneGeometry(50, 0.3), edgeMat);
+  [4.1, -0.1].forEach(z => {
+    const edge = new THREE.Mesh(new THREE.PlaneGeometry(120, 0.4), edgeMat);
     edge.rotation.x = -Math.PI / 2;
     edge.position.set(0, 0.055, z);
     group.add(edge);
+    waterMeshes.push(edge);
   });
 
+  // Foam line (white, animated)
+  const foamGeo = new THREE.PlaneGeometry(120, 0.2);
+  const foamMat = new THREE.MeshBasicMaterial({ color: 0xFFFFFF, transparent: true, opacity: 0.25 });
+  const foam = new THREE.Mesh(foamGeo, foamMat);
+  foam.rotation.x = -Math.PI / 2;
+  foam.position.set(0, 0.075, 4.2);
+  group.add(foam);
+  waterMeshes.push({ mesh: foam, baseX: 0, speed: 0.5, amp: 0.3 });
+
   // Pond near big willow
-  const pondGeo = new THREE.CircleGeometry(2, 16);
+  const pondGeo = new THREE.CircleGeometry(2.5, 20);
   const pondMat = new THREE.MeshLambertMaterial({ color: 0x42A5F5, transparent: true, opacity: 0.7 });
   const pond = new THREE.Mesh(pondGeo, pondMat);
   pond.rotation.x = -Math.PI / 2;
   pond.position.set(-10, 0.05, 2);
   group.add(pond);
+  waterMeshes.push(pond);
 
   // Pond deeper center
   const pondDeep = new THREE.Mesh(
-    new THREE.CircleGeometry(1.2, 12),
+    new THREE.CircleGeometry(1.5, 14),
     new THREE.MeshLambertMaterial({ color: 0x1E88E5, transparent: true, opacity: 0.4 })
   );
   pondDeep.rotation.x = -Math.PI / 2;
   pondDeep.position.set(-10, 0.06, 2);
   group.add(pondDeep);
 
+  // Pond ripple rings (animated)
+  for (let i = 0; i < 3; i++) {
+    const ring = new THREE.Mesh(
+      new THREE.RingGeometry(0.5 + i * 0.5, 0.6 + i * 0.5, 16),
+      new THREE.MeshBasicMaterial({ color: 0xBBDEFB, transparent: true, opacity: 0.2 })
+    );
+    ring.rotation.x = -Math.PI / 2;
+    ring.position.set(-10, 0.065, 2);
+    group.add(ring);
+    waterMeshes.push({ mesh: ring, type: 'ripple', baseR: 0.5 + i * 0.5, speed: 0.4 + i * 0.1 });
+  }
+
   // Lily pads on pond
   const lilyMat = new THREE.MeshLambertMaterial({ color: 0x2E7D32 });
-  [[-10.5, 2.3], [-9.5, 1.7], [-10.8, 1.5]].forEach(([lx, lz]) => {
+  [[-10.8, 2.5], [-9.2, 1.5], [-11, 1.3], [-9.8, 2.8]].forEach(([lx, lz]) => {
     const lily = new THREE.Mesh(
-      new THREE.CircleGeometry(0.15, 8),
+      new THREE.CircleGeometry(0.2, 10),
       lilyMat
     );
     lily.rotation.x = -Math.PI / 2;
     lily.position.set(lx, 0.07, lz);
     group.add(lily);
-    // Tiny flower on one lily
-    if (Math.random() > 0.5) {
+    waterMeshes.push({ mesh: lily, type: 'bob', baseY: 0.07 });
+    // Tiny flower on some lilies
+    if (Math.random() > 0.4) {
       const flower = new THREE.Mesh(
-        new THREE.SphereGeometry(0.05, 4, 3),
+        new THREE.SphereGeometry(0.06, 5, 4),
         new THREE.MeshBasicMaterial({ color: 0xF48FB1 })
       );
-      flower.position.set(lx, 0.1, lz);
+      flower.position.set(lx, 0.12, lz);
       group.add(flower);
+      waterMeshes.push({ mesh: flower, type: 'bob', baseY: 0.12 });
     }
   });
 
-  // Lily pads on creek
+  // Lily pads on creek (spread across map)
   const creekLilyMat = new THREE.MeshLambertMaterial({ color: 0x388E3C });
-  [[-5, 2.2], [3, 1.8], [-8, 2.5], [10, 2.1]].forEach(([lx, lz]) => {
+  [[-40, 2.3], [-25, 1.7], [-15, 2.5], [-5, 1.9], [5, 2.2], [15, 1.6], [25, 2.4], [35, 1.8], [45, 2.1]].forEach(([lx, lz]) => {
     const lily = new THREE.Mesh(
-      new THREE.CircleGeometry(0.18, 8),
+      new THREE.CircleGeometry(0.2, 10),
       creekLilyMat
     );
     lily.rotation.x = -Math.PI / 2;
     lily.position.set(lx, 0.07, lz);
     group.add(lily);
+    waterMeshes.push({ mesh: lily, type: 'bob', baseY: 0.07 });
   });
 
   // Bridge (detailed wooden planks)
@@ -180,7 +224,7 @@ function addWater(group) {
   const beamMat = new THREE.MeshLambertMaterial({ color: 0x5D4037 });
   [-0.8, 0.8].forEach(bx => {
     const beam = new THREE.Mesh(
-      new THREE.BoxGeometry(0.15, 0.2, 4.5),
+      new THREE.BoxGeometry(0.15, 0.2, 5),
       beamMat
     );
     beam.position.set(bx, 0.1, 2);
@@ -190,7 +234,7 @@ function addWater(group) {
 
   // Planks (individual boards)
   const plankMat = new THREE.MeshLambertMaterial({ color: 0x8D6E63 });
-  for (let z = 0; z < 4; z += 0.35) {
+  for (let z = -0.3; z < 4.5; z += 0.35) {
     const plank = new THREE.Mesh(
       new THREE.BoxGeometry(1.6, 0.08, 0.28),
       plankMat
@@ -204,7 +248,7 @@ function addWater(group) {
   const ropeMat = new THREE.MeshLambertMaterial({ color: 0xA1887F });
   [-0.85, 0.85].forEach(rx => {
     // Vertical posts
-    [0.3, 1.5, 2.5, 3.7].forEach(pz => {
+    [0.1, 1.3, 2.3, 3.5].forEach(pz => {
       const post = new THREE.Mesh(
         new THREE.CylinderGeometry(0.03, 0.03, 0.8, 5),
         ropeMat
@@ -221,7 +265,7 @@ function addWater(group) {
     bridgeGroup.add(rope);
   });
 
-  // Rope curve (catenary shape approximation)
+  // Rope curve
   const curveMat = new THREE.MeshLambertMaterial({ color: 0xBCAAA4 });
   [-0.85, 0.85].forEach(rx => {
     for (let i = 0; i < 8; i++) {
@@ -233,7 +277,7 @@ function addWater(group) {
       ropeDot.position.set(
         rx,
         0.95 - Math.sin(t * Math.PI) * 0.15,
-        0.3 + t * 3.4
+        0.1 + t * 3.8
       );
       bridgeGroup.add(ropeDot);
     }
