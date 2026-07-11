@@ -689,7 +689,7 @@ function handleServerMessage(msg) {
       wsSend(JSON.stringify({
         type: 'join',
         persistentId: state.persistentId,
-        name: document.getElementById('name-input').value || 'Adventurer',
+        name: (document.getElementById('name-input')?.value) || 'Adventurer',
         wallet: state.walletAddress || null,
         customization: state.customization,
       }));
@@ -913,6 +913,8 @@ function handleServerMessage(msg) {
       if (msg.targetId && msg.targetId !== state.playerId) break;
       console.log('[COMBAT] player_hit received! damage:', msg.damage, 'hp:', msg.hp, '/', msg.maxHp);
       updatePlayerHP(msg.hp, msg.maxHp);
+      state.player.hp = msg.hp;
+      state.player.maxHp = msg.maxHp;
       const selfModel = state.players[state.playerId];
       if (selfModel) {
         showDamageNumber(null, msg.damage, false, state.playerId);
@@ -956,20 +958,6 @@ function handleServerMessage(msg) {
       break;
     }
 
-    case 'party_update': {
-      state.partyUI.updateParty(msg.party);
-      break;
-    }
-    case 'party_invite': {
-      if (confirm(`${msg.from} invites you to a party. Accept?`)) {
-      wsSend(JSON.stringify({ type: 'party_accept', inviterId: msg.fromId }));
-      }
-      break;
-    }
-    case 'online_list': {
-      state.partyUI.updateOnline(msg.players);
-      break;
-    }
     case 'quest_started': {
       state.questUI.startQuest(msg.quest);
       addChatMessage('Quest', `Started: ${msg.quest.name}`);
@@ -1252,7 +1240,10 @@ function showMapName(name, subtitle) {
 function addChatMessage(name, message) {
   const el = document.getElementById('chat-messages');
   const div = document.createElement('div');
-  div.innerHTML = `<strong>${name}:</strong> ${message}`;
+  const strong = document.createElement('strong');
+  strong.textContent = name + ':';
+  div.appendChild(strong);
+  div.appendChild(document.createTextNode(' ' + message));
   el.appendChild(div);
   el.scrollTop = el.scrollHeight;
 }
@@ -1958,7 +1949,7 @@ document.getElementById('loot-pickup-all').addEventListener('click', () => {
 let skillCooldownEnd = 0;
 
 function initSkillUI() {
-  const classType = state.player?.classType || 'laborer';
+  const classType = state.player?.class || 'laborer';
   const skill = SKILLS[classType];
   if (!skill) return;
 
@@ -1975,7 +1966,7 @@ function initSkillUI() {
 
 function useSkill() {
   if (state.isDead) return;
-  const classType = state.player?.classType || 'laborer';
+  const classType = state.player?.class || 'laborer';
   const skill = SKILLS[classType];
   if (!skill) return;
 
@@ -2453,16 +2444,10 @@ function gameLoop() {
   if (isNaN(dt) || dt > 1) dt = 0.016; // safety clamp
   updateMovement();
 
-  // Sync HUD HP/MP from state.player (bulletproof fallback)
+  // Sync HUD HP/MP from state.player using existing update functions
   if (state.player && state.player.hp !== undefined) {
-    const hpText = document.getElementById('hp-text');
-    const hpFill = document.getElementById('hp-fill');
-    if (hpText) hpText.textContent = `${Math.round(state.player.hp)}/${state.player.maxHp}`;
-    if (hpFill) hpFill.style.width = `${(state.player.hp / state.player.maxHp) * 100}%`;
-    const mpText = document.getElementById('mp-text');
-    const mpFill = document.getElementById('mp-fill');
-    if (mpText) mpText.textContent = `${Math.round(state.player.mp)}/${state.player.maxMp}`;
-    if (mpFill) mpFill.style.width = `${(state.player.mp / state.player.maxMp) * 100}%`;
+    updatePlayerHP(state.player.hp, state.player.maxHp);
+    updatePlayerMP(state.player.mp, state.player.maxMp);
   }
 
   const playerModel = state.players[state.playerId];

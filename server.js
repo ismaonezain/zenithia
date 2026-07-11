@@ -432,6 +432,7 @@ function handleAttack(ws, playerId, msg) {
     const xpGain = data.xp || 0;
     const zenGain = data.zen ? data.zen[0] + Math.floor(Math.random() * (data.zen[1] - data.zen[0])) : 0;
     player.xp += xpGain;
+    player.zen = (player.zen || 0) + zenGain;
 
     // Level up check
     const xpNeeded = 100 + (player.level - 1) * 200;
@@ -528,6 +529,8 @@ wss.on('connection', (ws) => {
     delete connectedPlayers[ws];
     broadcast({ type: 'player_left', playerId });
   });
+
+  ws.on('error', () => {});
 });
 
 function handleMessage(ws, playerId, msg) {
@@ -604,9 +607,17 @@ function handleMessage(ws, playerId, msg) {
             }
             // Equip new
             player.equipment[itemDef.slot] = player.inventory.splice(itemIdx, 1)[0];
-            // Apply stats
-            if (itemDef.atk) player.atk = 10 + itemDef.atk;
-            if (itemDef.def) player.def = 5 + itemDef.def;
+            // Apply stats (use class base stats + equipment bonuses)
+            const baseStats = recalcClassStats(player.customization);
+            player.atk = baseStats.atk;
+            player.def = baseStats.def;
+            // Sum all equipped items (including the one just equipped)
+            Object.values(player.equipment).forEach(e => {
+              if (e && ITEMS[e.id]) {
+                if (ITEMS[e.id].atk) player.atk += ITEMS[e.id].atk;
+                if (ITEMS[e.id].def) player.def += ITEMS[e.id].def;
+              }
+            });
             ws.send(JSON.stringify({ type: 'item_equipped', equipment: player.equipment, inventory: player.inventory, atk: player.atk, def: player.def }));
           }
         }
@@ -618,9 +629,10 @@ function handleMessage(ws, playerId, msg) {
       if (player && player.equipment[msg.slot]) {
         player.inventory.push(player.equipment[msg.slot]);
         delete player.equipment[msg.slot];
-        // Recalc stats
-        player.atk = 10;
-        player.def = 5;
+        // Recalc stats (restore class base, then add equipment bonuses)
+        const baseStats = recalcClassStats(player.customization);
+        player.atk = baseStats.atk;
+        player.def = baseStats.def;
         Object.values(player.equipment).forEach(e => {
           if (e && ITEMS[e.id]) {
             if (ITEMS[e.id].atk) player.atk += ITEMS[e.id].atk;
@@ -717,8 +729,7 @@ function handleMessage(ws, playerId, msg) {
       if (inviter && targetWs) {
         const target = connectedPlayers[targetWs];
         if (!inviter.party) inviter.party = { leader: inviter.id, members: [inviter.id] };
-        JSON.parse(targetWs).send?.(null); // can't send like this
-        // Send via ws
+        // Send via broadcast loop below
         wss.clients.forEach(c => {
           if (connectedPlayers[c] && connectedPlayers[c].name === msg.targetName) {
             c.send(JSON.stringify({ type: 'party_invite', from: inviter.name, fromId: inviter.id }));
@@ -852,18 +863,6 @@ function handleMessage(ws, playerId, msg) {
       }
       break;
     }
-    case 'player_respawn': {
-      // Client requesting manual respawn (fallback if auto-respawn didn't fire)
-      const p = connectedPlayers[ws];
-      if (p) {
-        p.hp = p.maxHp;
-        p.mp = p.maxMp;
-        p.x = 0;
-        p.z = 0;
-        broadcast({ type: 'player_respawn', targetId: p.id, hp: p.hp, maxHp: p.maxHp, mp: p.mp, maxMp: p.maxMp, x: 0, z: 0 });
-      }
-      break;
-    }
     case 'use_skill': {
       const player = connectedPlayers[ws];
       if (!player) break;
@@ -875,7 +874,7 @@ function handleMessage(ws, playerId, msg) {
         herbalist: { mpCost: 25, damageMulti: 0, healMulti: 0.4 },
         watchman: { mpCost: 18, damageMulti: 2.0, healMulti: 0 },
       };
-      const skill = SKILL_DATA[player.classType];
+      const skill = SKILL_DATA[player.class];
       if (!skill) break;
       if (player.mp < skill.mpCost) {
         ws.send(JSON.stringify({ type: 'combat_message', text: 'Not enough MP!' }));
