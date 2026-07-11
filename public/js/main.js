@@ -699,13 +699,12 @@ function handleServerMessage(msg) {
       state.dialogue.ws = state.ws;
       state.dialogue.playerState = state.player;
 
-      // Restore saved customization from server (source of truth)
+      // Reload from server — server data is the truth, full replace
       if (msg.player.customization && Object.keys(msg.player.customization).length > 0) {
-        Object.assign(state.customization, msg.player.customization);
+        state.customization = { ...msg.player.customization };
       }
-      // Save to localStorage so next load on any device uses correct data
+      // Sync localStorage to server data
       try { localStorage.setItem('zenithia_customization', JSON.stringify(state.customization)); } catch(e) {}
-      // Also save name
       if (msg.player.name) {
         try { localStorage.setItem('zenithia_name', msg.player.name); } catch(e) {}
         const nameInput = document.getElementById('name-input');

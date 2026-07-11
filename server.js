@@ -166,21 +166,13 @@ function getOrCreatePlayer(playerId, name, wallet, customization, persistentId) 
     if (existing) {
       existing.lastLogin = Date.now();
       existing.id = playerId; // rebind to current session
-      if (name && name !== 'Adventurer') existing.name = name; // only update if real name
-      if (customization && Object.keys(customization).length > 0) {
-        // Server is source of truth — only update cosmetic fields, keep class/stats from server
-        const serverClass = existing.customization?.classType;
-        const clientClass = customization.classType;
-        // Merge cosmetic fields ONLY — classType/server is source of truth
-        const { classType, ...cosmeticFields } = customization || {};
-        existing.customization = { ...existing.customization, ...cosmeticFields };
-      }
+      if (persistentId && !existing.persistentId) existing.persistentId = persistentId; // backfill
       world.players[playerId] = existing;
       // Remove old entry if different id
       Object.keys(world.players).forEach(k => {
         if (k !== playerId && world.players[k].persistentId === persistentId) delete world.players[k];
       });
-      return existing;
+      return existing; // reload as-is, NO overwrite
     }
   }
   // 2. Try wallet fallback
@@ -189,18 +181,12 @@ function getOrCreatePlayer(playerId, name, wallet, customization, persistentId) 
     if (existing) {
       existing.lastLogin = Date.now();
       existing.id = playerId;
-      if (name && name !== 'Adventurer') existing.name = name;
-      if (customization && Object.keys(customization).length > 0) {
-        // Merge cosmetic fields ONLY — classType/server is source of truth
-        const { classType, ...cosmeticFields } = customization || {};
-        existing.customization = { ...existing.customization, ...cosmeticFields };
-      }
-      if (persistentId) existing.persistentId = persistentId; // backfill
+      if (persistentId && !existing.persistentId) existing.persistentId = persistentId; // backfill
       world.players[playerId] = existing;
       Object.keys(world.players).forEach(k => {
         if (k !== playerId && world.players[k].wallet === wallet) delete world.players[k];
       });
-      return existing;
+      return existing; // reload as-is, NO overwrite
     }
   }
   // Create new
