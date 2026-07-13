@@ -2233,45 +2233,21 @@ function classAttackAnim(model, classType) {
   if (!model) return;
   const rightArm = model.getObjectByName('rightArm');
   const leftArm = model.getObjectByName('leftArm');
-  const body = model.getObjectByName('body');
-  const rightLeg = model.getObjectByName('rightLeg');
-  const leftLeg = model.getObjectByName('leftLeg');
 
-  // Helper: animate property with easing
-  const anim = (obj, prop, val, dur, restore) => {
+  // Helper: animate property
+  const anim = (obj, prop, val, dur) => {
     if (!obj) return;
     const orig = obj[prop];
     obj[prop] = val;
-    setTimeout(() => { obj[prop] = restore !== undefined ? restore : orig; }, dur);
-  };
-
-  // Common: body lunge forward + leg step
-  const lungeForward = () => {
-    if (body) {
-      const origZ = body.position.z;
-      body.position.z = 0.12;
-      setTimeout(() => { body.position.z = origZ; }, 300);
-    }
-    // Right leg steps forward
-    if (rightLeg) {
-      anim(rightLeg, 'rotation.x', 0.5, 150);
-      setTimeout(() => anim(rightLeg, 'rotation.x', -0.3, 100), 150);
-      setTimeout(() => anim(rightLeg, 'rotation.x', 0, 150), 250);
-    }
-    // Left leg braces back
-    if (leftLeg) {
-      anim(leftLeg, 'rotation.x', -0.4, 200);
-      setTimeout(() => anim(leftLeg, 'rotation.x', 0, 200), 200);
-    }
+    setTimeout(() => { obj[prop] = orig; }, dur);
   };
 
   switch (classType) {
     case 'laborer': {
       // Heavy overhead smash — both arms raise then slam down
-      lungeForward();
       if (rightArm) {
-        anim(rightArm, 'rotation.x', -2.2, 150); // raise high
-        setTimeout(() => anim(rightArm, 'rotation.x', 1.0, 100), 150); // slam down hard
+        anim(rightArm, 'rotation.x', -2.2, 150);
+        setTimeout(() => anim(rightArm, 'rotation.x', 1.0, 100), 150);
         setTimeout(() => anim(rightArm, 'rotation.x', 0, 200), 250);
       }
       if (leftArm) {
@@ -2282,16 +2258,15 @@ function classAttackAnim(model, classType) {
       break;
     }
     case 'miner': {
-      // Quick dual slash — right then left, with body twist
-      lungeForward();
+      // Quick dual slash — right then left
       if (rightArm) {
-        anim(rightArm, 'rotation.z', -1.0, 100); // swing right
+        anim(rightArm, 'rotation.z', -1.0, 100);
         anim(rightArm, 'rotation.x', -0.8, 100);
         setTimeout(() => { anim(rightArm, 'rotation.z', 0, 100); anim(rightArm, 'rotation.x', 0, 100); }, 150);
       }
       if (leftArm) {
         setTimeout(() => {
-          anim(leftArm, 'rotation.z', 1.0, 100); // swing left
+          anim(leftArm, 'rotation.z', 1.0, 100);
           anim(leftArm, 'rotation.x', -0.8, 100);
           setTimeout(() => { anim(leftArm, 'rotation.z', 0, 100); anim(leftArm, 'rotation.x', 0, 100); }, 150);
         }, 100);
@@ -2299,10 +2274,9 @@ function classAttackAnim(model, classType) {
       break;
     }
     case 'gardener': {
-      // Ranged cast — step forward + extend arm
-      lungeForward();
+      // Ranged cast — extend arm forward
       if (rightArm) {
-        anim(rightArm, 'rotation.x', -1.4, 200); // extend forward
+        anim(rightArm, 'rotation.x', -1.4, 200);
         setTimeout(() => anim(rightArm, 'rotation.x', 0, 300), 400);
       }
       if (leftArm) {
@@ -2312,13 +2286,9 @@ function classAttackAnim(model, classType) {
       break;
     }
     case 'herbalist': {
-      // Heal — arms open wide + lift
+      // Heal — arms open wide
       if (rightArm) anim(rightArm, 'rotation.z', -0.8, 200);
       if (leftArm) anim(leftArm, 'rotation.z', 0.8, 200);
-      // Lift body slightly
-      const origY = model.position.y;
-      model.position.y += 0.15;
-      setTimeout(() => { model.position.y = origY; }, 500);
       setTimeout(() => {
         if (rightArm) anim(rightArm, 'rotation.z', 0, 300);
         if (leftArm) anim(leftArm, 'rotation.z', 0, 300);
@@ -2326,23 +2296,25 @@ function classAttackAnim(model, classType) {
       break;
     }
     case 'watchman': {
-      // Quick thrust — fast forward jab with step
-      lungeForward();
+      // Quick thrust — fast forward jab
       if (rightArm) {
-        anim(rightArm, 'rotation.x', -1.8, 80); // fast thrust
+        anim(rightArm, 'rotation.x', -1.8, 80);
         anim(rightArm, 'rotation.z', -0.3, 80);
-        setTimeout(() => anim(rightArm, 'rotation.x', -0.3, 60), 80); // recoil
+        setTimeout(() => anim(rightArm, 'rotation.x', -0.3, 60), 80);
         setTimeout(() => { anim(rightArm, 'rotation.x', 0, 100); anim(rightArm, 'rotation.z', 0, 100); }, 140);
       }
-      // Left arm counterbalance
       if (leftArm) {
         anim(leftArm, 'rotation.x', 0.4, 80);
         setTimeout(() => anim(leftArm, 'rotation.x', 0, 120), 80);
       }
       break;
     }
-    default:
-      attackSwing(model);
+    default: {
+      // Simple arm swing
+      if (rightArm) {
+        anim(rightArm, 'rotation.x', -1.2, 200);
+      }
+    }
   }
 }
 
