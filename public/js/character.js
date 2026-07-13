@@ -660,35 +660,35 @@ export function createPlayerModel(options = {}) {
   rightArm.castShadow = true;
   group.add(rightArm);
 
-  // Arm cuffs (trim color)
+  // Arm cuffs (trim color) — parented to arms so they move together
   const cuffGeo = new THREE.BoxGeometry(0.17 * scale, 0.06 * scale, 0.17 * scale);
   const leftCuff = new THREE.Mesh(cuffGeo, trimMat);
-  leftCuff.position.set(-armX, 0.65 * scale, 0);
-  group.add(leftCuff);
+  leftCuff.position.set(0, -0.23 * scale, 0);
+  leftArm.add(leftCuff);
   const rightCuff = new THREE.Mesh(cuffGeo, trimMat);
-  rightCuff.position.set(armX, 0.65 * scale, 0);
-  group.add(rightCuff);
+  rightCuff.position.set(0, -0.23 * scale, 0);
+  rightArm.add(rightCuff);
 
-  // === HANDS ===
+  // === HANDS — parented to arms ===
   const handGeo = new THREE.BoxGeometry(0.1 * scale, 0.1 * scale, 0.1 * scale);
   const leftHand = new THREE.Mesh(handGeo, skinMat);
   leftHand.name = 'leftHand';
-  leftHand.position.set(-armX, 0.58 * scale, 0);
-  group.add(leftHand);
+  leftHand.position.set(0, -0.30 * scale, 0);
+  leftArm.add(leftHand);
   const rightHand = new THREE.Mesh(handGeo, skinMat);
   rightHand.name = 'rightHand';
-  rightHand.position.set(armX, 0.58 * scale, 0);
-  group.add(rightHand);
+  rightHand.position.set(0, -0.30 * scale, 0);
+  rightArm.add(rightHand);
 
-  // Fingers (3 tiny boxes per hand)
+  // Fingers (3 tiny boxes per hand) — parented to arms
   const fingerGeo = new THREE.BoxGeometry(0.025 * scale, 0.06 * scale, 0.025 * scale);
   for (let i = -1; i <= 1; i++) {
     const lf = new THREE.Mesh(fingerGeo, skinMat);
-    lf.position.set(-armX + i * 0.03 * scale, 0.52 * scale, 0);
-    group.add(lf);
+    lf.position.set(i * 0.03 * scale, -0.36 * scale, 0);
+    leftArm.add(lf);
     const rf = new THREE.Mesh(fingerGeo, skinMat);
-    rf.position.set(armX + i * 0.03 * scale, 0.52 * scale, 0);
-    group.add(rf);
+    rf.position.set(i * 0.03 * scale, -0.36 * scale, 0);
+    rightArm.add(rf);
   }
 
   return group;
