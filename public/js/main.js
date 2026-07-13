@@ -780,6 +780,8 @@ function handleServerMessage(msg) {
       updatePlayerHP(state.player.hp, state.player.maxHp);
       updatePlayerMP(state.player.mp, state.player.maxMp);
       initSkillUI();
+      // Sync inventory/equipment UI from server data
+      state.inventoryUI.updatePlayer(state.player);
       break;
 
     case 'player_joined':
