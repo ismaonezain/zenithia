@@ -57,6 +57,8 @@ const state = {
   lastAttackTime: 0,      // client-side cooldown tracking
   autoAttacking: false,   // auto-attack loop active
   skillArmed: null,       // { classType, skill } — skill ready to cast, waiting for target click
+  isAttacking: false,     // attack animation playing — skip walk/idle arm overrides
+  attackEndTime: 0,       // when attack anim finishes
   isDead: false,          // death screen active
   // Day/night cycle
   dayTime: 0.25,         // 0-1, 0 = midnight, 0.25 = sunrise, 0.5 = noon, 0.75 = sunset
@@ -1580,14 +1582,24 @@ function spawnAttackImpact(position, color = 0xFF5252) {
 // ============================
 // HIT REACTION (flinch when taking damage)
 // ============================
+let _hitReactionTimer = null;
 function hitReaction(model) {
   if (!model) return;
+  // Cancel previous hit reaction if still playing
+  if (_hitReactionTimer) {
+    clearTimeout(_hitReactionTimer);
+    clearTimeout(_hitReactionTimer._t2);
+    clearTimeout(_hitReactionTimer._t3);
+    _hitReactionTimer = null;
+  }
   const body = model.getObjectByName('body');
   if (body) {
     const orig = body.rotation.x;
-    body.rotation.x = 0.2; // lean back
-    setTimeout(() => { body.rotation.x = -0.05; }, 80);
-    setTimeout(() => { body.rotation.x = orig; }, 150);
+    body.rotation.x = 0.15;
+    const t1 = setTimeout(() => { body.rotation.x = -0.03; }, 80);
+    const t2 = setTimeout(() => { body.rotation.x = orig; _hitReactionTimer = null; }, 150);
+    t1._t2 = t2; t1._t3 = null;
+    _hitReactionTimer = t1;
   }
   // Flash effect — brief red tint on body mesh
   const bodyMesh = model.getObjectByName('body');
@@ -2233,6 +2245,10 @@ function classAttackAnim(model, classType) {
   if (!model) return;
   const rightArm = model.getObjectByName('rightArm');
   const leftArm = model.getObjectByName('leftArm');
+
+  // Mark attacking so game loop doesn't overwrite arm rotations
+  state.isAttacking = true;
+  state.attackEndTime = Date.now() + 400; // max anim duration
 
   // Helper: animate property
   const anim = (obj, prop, val, dur) => {
@@ -3129,11 +3145,16 @@ function gameLoop() {
   const time = Date.now() * 0.001;
 
   if (state.targetPos) {
-    animateWalk(playerModel, 1);
+    animateWalk(playerModel, 1, state.isAttacking);
   } else {
     stopWalk(playerModel);
-    // Idle animation when not walking
-    if (playerModel) animateIdle(playerModel, time);
+    // Idle animation when not walking (skip arms if attacking)
+    if (playerModel) {
+      if (Date.now() >= state.attackEndTime) {
+        state.isAttacking = false;
+        animateIdle(playerModel, time);
+      }
+    }
   }
 
   // Auto blink (every 3-6 seconds)
