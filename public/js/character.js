@@ -844,18 +844,20 @@ export function idleArms(model, time) {
   if (rightArm) rightArm.rotation.x = -Math.sin(time * 1.5) * 0.1;
 }
 
-export function stopWalk(model) {
+export function stopWalk(model, skipArms) {
   if (!model) return;
   // Reset leg rotations only
   const leftLeg = model.getObjectByName('leftLeg');
   const rightLeg = model.getObjectByName('rightLeg');
   if (leftLeg) leftLeg.rotation.x = 0;
   if (rightLeg) rightLeg.rotation.x = 0;
-  // Reset arms
-  const leftArm = model.getObjectByName('leftArm');
-  const rightArm = model.getObjectByName('rightArm');
-  if (leftArm) leftArm.rotation.x = 0;
-  if (rightArm) rightArm.rotation.x = 0;
+  // Reset arms (skip if attacking)
+  if (!skipArms) {
+    const leftArm = model.getObjectByName('leftArm');
+    const rightArm = model.getObjectByName('rightArm');
+    if (leftArm) leftArm.rotation.x = 0;
+    if (rightArm) rightArm.rotation.x = 0;
+  }
   // Reset body bob
   const body = model.getObjectByName('body');
   if (body) body.position.y = 0.8;

@@ -3147,7 +3147,7 @@ function gameLoop() {
   if (state.targetPos) {
     animateWalk(playerModel, 1, state.isAttacking);
   } else {
-    stopWalk(playerModel);
+    stopWalk(playerModel, state.isAttacking);
     // Idle animation when not walking (skip arms if attacking)
     if (playerModel) {
       if (Date.now() >= state.attackEndTime) {
