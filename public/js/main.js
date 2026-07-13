@@ -898,11 +898,19 @@ function handleServerMessage(msg) {
       spawnMonsterClient(msg.monster);
       break;
 
-    case 'monster_move':
-      if (state.monsters[msg.monsterId]) {
-        state.monsters[msg.monsterId].position.set(msg.x, 0, msg.z);
+    case 'monster_move': {
+      const mmob = state.monsters[msg.monsterId];
+      if (mmob) {
+        mmob.position.set(msg.x, 0, msg.z);
+        // Monster faces the player when chasing
+        const myModel = state.players[state.playerId];
+        if (myModel) {
+          const dir = myModel.position.clone().sub(mmob.position).normalize();
+          mmob.lookAt(mmob.position.clone().add(dir));
+        }
       }
       break;
+    }
 
     case 'monster_hit': {
       const mob = state.monsters[msg.monsterId];
@@ -2123,7 +2131,7 @@ function performAttack() {
   if (!model) return;
 
   const dist = model.position.distanceTo(mob.position);
-  if (dist <= 3) {
+  if (dist <= 1.8) {
     const now = Date.now();
     const spd = state.player?.spd || 7;
     const aspdCooldown = 600 + (10 - spd) * 80;
@@ -2164,108 +2172,116 @@ function attackSwing(model) {
   }
 }
 
-// Class-specific attack animation
+// Class-specific attack animation — full body: arms + legs + body lunge
 function classAttackAnim(model, classType) {
   if (!model) return;
   const rightArm = model.getObjectByName('rightArm');
   const leftArm = model.getObjectByName('leftArm');
   const body = model.getObjectByName('body');
+  const rightLeg = model.getObjectByName('rightLeg');
+  const leftLeg = model.getObjectByName('leftLeg');
+
+  // Helper: animate property with easing
+  const anim = (obj, prop, val, dur, restore) => {
+    if (!obj) return;
+    const orig = obj[prop];
+    obj[prop] = val;
+    setTimeout(() => { obj[prop] = restore !== undefined ? restore : orig; }, dur);
+  };
+
+  // Common: body lunge forward + leg step
+  const lungeForward = () => {
+    if (body) {
+      const origZ = body.position.z;
+      body.position.z = 0.12;
+      setTimeout(() => { body.position.z = origZ; }, 300);
+    }
+    // Right leg steps forward
+    if (rightLeg) {
+      anim(rightLeg, 'rotation.x', 0.5, 150);
+      setTimeout(() => anim(rightLeg, 'rotation.x', -0.3, 100), 150);
+      setTimeout(() => anim(rightLeg, 'rotation.x', 0, 150), 250);
+    }
+    // Left leg braces back
+    if (leftLeg) {
+      anim(leftLeg, 'rotation.x', -0.4, 200);
+      setTimeout(() => anim(leftLeg, 'rotation.x', 0, 200), 200);
+    }
+  };
 
   switch (classType) {
     case 'laborer': {
       // Heavy overhead smash — both arms raise then slam down
+      lungeForward();
       if (rightArm) {
-        const orig = rightArm.rotation.x;
-        rightArm.rotation.x = -2.0; // raise high
-        setTimeout(() => { rightArm.rotation.x = 0.8; }, 150); // slam down
-        setTimeout(() => { rightArm.rotation.x = orig; }, 350);
+        anim(rightArm, 'rotation.x', -2.2, 150); // raise high
+        setTimeout(() => anim(rightArm, 'rotation.x', 1.0, 100), 150); // slam down hard
+        setTimeout(() => anim(rightArm, 'rotation.x', 0, 200), 250);
       }
       if (leftArm) {
-        const orig = leftArm.rotation.x;
-        leftArm.rotation.x = -1.5; // raise together
-        setTimeout(() => { leftArm.rotation.x = 0.5; }, 150);
-        setTimeout(() => { leftArm.rotation.x = orig; }, 350);
-      }
-      // Slight body lunge forward
-      if (body) {
-        const orig = body.rotation.x;
-        body.rotation.x = 0.15;
-        setTimeout(() => { body.rotation.x = orig; }, 300);
+        anim(leftArm, 'rotation.x', -1.8, 150);
+        setTimeout(() => anim(leftArm, 'rotation.x', 0.6, 100), 150);
+        setTimeout(() => anim(leftArm, 'rotation.x', 0, 200), 250);
       }
       break;
     }
     case 'miner': {
-      // Quick dual slash — right then left, fast
+      // Quick dual slash — right then left, with body twist
+      lungeForward();
       if (rightArm) {
-        const orig = rightArm.rotation.x;
-        rightArm.rotation.z = -0.8; // swing right
-        rightArm.rotation.x = -0.5;
-        setTimeout(() => { rightArm.rotation.z = 0; rightArm.rotation.x = orig; }, 150);
+        anim(rightArm, 'rotation.z', -1.0, 100); // swing right
+        anim(rightArm, 'rotation.x', -0.8, 100);
+        setTimeout(() => { anim(rightArm, 'rotation.z', 0, 100); anim(rightArm, 'rotation.x', 0, 100); }, 150);
       }
       if (leftArm) {
-        const orig = leftArm.rotation.x;
         setTimeout(() => {
-          leftArm.rotation.z = 0.8; // swing left
-          leftArm.rotation.x = -0.5;
-          setTimeout(() => { leftArm.rotation.z = 0; leftArm.rotation.x = orig; }, 150);
+          anim(leftArm, 'rotation.z', 1.0, 100); // swing left
+          anim(leftArm, 'rotation.x', -0.8, 100);
+          setTimeout(() => { anim(leftArm, 'rotation.z', 0, 100); anim(leftArm, 'rotation.x', 0, 100); }, 150);
         }, 100);
       }
       break;
     }
     case 'gardener': {
-      // Ranged cast — right arm extends forward, left arm supports
+      // Ranged cast — step forward + extend arm
+      lungeForward();
       if (rightArm) {
-        const orig = rightArm.rotation.x;
-        rightArm.rotation.x = -1.0; // extend forward
-        setTimeout(() => { rightArm.rotation.x = orig; }, 400);
+        anim(rightArm, 'rotation.x', -1.4, 200); // extend forward
+        setTimeout(() => anim(rightArm, 'rotation.x', 0, 300), 400);
       }
       if (leftArm) {
-        const orig = leftArm.rotation.x;
-        leftArm.rotation.x = -0.6; // support pose
-        setTimeout(() => { leftArm.rotation.x = orig; }, 400);
-      }
-      // Slight lean forward
-      if (body) {
-        const orig = body.rotation.x;
-        body.rotation.x = 0.1;
-        setTimeout(() => { body.rotation.x = orig; }, 400);
+        anim(leftArm, 'rotation.x', -0.8, 200);
+        setTimeout(() => anim(leftArm, 'rotation.x', 0, 300), 400);
       }
       break;
     }
     case 'herbalist': {
-      // Heal — arms open wide, slight glow pose
-      if (rightArm) {
-        const orig = rightArm.rotation.z;
-        rightArm.rotation.z = -0.6; // open right
-        setTimeout(() => { rightArm.rotation.z = orig; }, 500);
-      }
-      if (leftArm) {
-        const orig = leftArm.rotation.z;
-        leftArm.rotation.z = 0.6; // open left
-        setTimeout(() => { leftArm.rotation.z = orig; }, 500);
-      }
-      // Slight lift
-      if (body) {
-        const origY = model.position.y;
-        model.position.y += 0.1;
-        setTimeout(() => { model.position.y = origY; }, 500);
-      }
+      // Heal — arms open wide + lift
+      if (rightArm) anim(rightArm, 'rotation.z', -0.8, 200);
+      if (leftArm) anim(leftArm, 'rotation.z', 0.8, 200);
+      // Lift body slightly
+      const origY = model.position.y;
+      model.position.y += 0.15;
+      setTimeout(() => { model.position.y = origY; }, 500);
+      setTimeout(() => {
+        if (rightArm) anim(rightArm, 'rotation.z', 0, 300);
+        if (leftArm) anim(leftArm, 'rotation.z', 0, 300);
+      }, 300);
       break;
     }
     case 'watchman': {
-      // Quick thrust — fast forward jab
+      // Quick thrust — fast forward jab with step
+      lungeForward();
       if (rightArm) {
-        const orig = rightArm.rotation.x;
-        rightArm.rotation.x = -1.5; // thrust forward
-        rightArm.rotation.z = -0.2;
-        setTimeout(() => { rightArm.rotation.x = -0.3; }, 100); // recoil
-        setTimeout(() => { rightArm.rotation.x = orig; rightArm.rotation.z = 0; }, 250);
+        anim(rightArm, 'rotation.x', -1.8, 80); // fast thrust
+        anim(rightArm, 'rotation.z', -0.3, 80);
+        setTimeout(() => anim(rightArm, 'rotation.x', -0.3, 60), 80); // recoil
+        setTimeout(() => { anim(rightArm, 'rotation.x', 0, 100); anim(rightArm, 'rotation.z', 0, 100); }, 140);
       }
-      // Body lunge
-      if (body) {
-        const orig = body.rotation.x;
-        body.rotation.x = 0.2;
-        setTimeout(() => { body.rotation.x = orig; }, 200);
+      // Left arm counterbalance
+      if (leftArm) {
+        anim(leftArm, 'rotation.x', 0.4, 80);
+        setTimeout(() => anim(leftArm, 'rotation.x', 0, 120), 80);
       }
       break;
     }
@@ -3137,7 +3153,7 @@ function gameLoop() {
         const model = state.players[state.playerId];
         if (model) {
           const dist = model.position.distanceTo(mob.position);
-          if (dist <= 3) {
+          if (dist <= 1.8) {
             performAttack();
           } else {
             performAttack(); // will pathfind to monster

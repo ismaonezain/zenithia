@@ -782,14 +782,14 @@ export function animateWalk(model, dt) {
   const body = model.getObjectByName('body');
 
   const time = Date.now() * 0.005;
-  // Legs swing
-  if (leftLeg) leftLeg.rotation.x = Math.sin(time) * 0.3;
-  if (rightLeg) rightLeg.rotation.x = -Math.sin(time) * 0.3;
-  // Arms swing opposite to legs (natural walk)
-  if (leftArm) leftArm.rotation.x = -Math.sin(time) * 0.25;
-  if (rightArm) rightArm.rotation.x = Math.sin(time) * 0.25;
-  // Slight body bob
-  if (body) body.position.y = 0.8 + Math.abs(Math.sin(time * 2)) * 0.03;
+  // Legs swing (bigger amplitude for visibility)
+  if (leftLeg) leftLeg.rotation.x = Math.sin(time) * 0.6;
+  if (rightLeg) rightLeg.rotation.x = -Math.sin(time) * 0.6;
+  // Arms swing opposite to legs (natural walk, bigger swing)
+  if (leftArm) leftArm.rotation.x = -Math.sin(time) * 0.5;
+  if (rightArm) rightArm.rotation.x = Math.sin(time) * 0.5;
+  // Body bob (more pronounced)
+  if (body) body.position.y = 0.8 + Math.abs(Math.sin(time * 2)) * 0.06;
 }
 
 // --- Blink Animation ---

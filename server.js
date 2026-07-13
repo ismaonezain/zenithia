@@ -363,7 +363,7 @@ setInterval(() => {
     // Debug log every 2 seconds (10 ticks)
     if (aiDebugCounter % 10 === 0 && closestPlayer) {
       const aggroR = data.aggroRange || 5;
-      const atkR = Math.max(data.attackRange || 1.5, 3);
+      const atkR = Math.max(data.attackRange || 1.2, 1.5);
       console.log(`[AI-DBG] ${m.id}(${m.type}) state=${m.state} players=${playerCount} closest=${closestPlayer.id} dist=${closestDist.toFixed(1)} aggro=${aggroR} atkRange=${atkR} mpos=(${m.x.toFixed(1)},${m.z.toFixed(1)}) ppos=(${(closestPlayer.x||0).toFixed(1)},${(closestPlayer.z||0).toFixed(1)})`);
     }
 
@@ -377,7 +377,7 @@ setInterval(() => {
       }
 
       const dist = closestDist;
-      const attackRange = Math.max(data.attackRange || 1.5, 3);
+      const attackRange = Math.max(data.attackRange || 1.2, 1.5);
 
       if (dist > attackRange) {
         // Move toward player
