@@ -346,3 +346,33 @@ export function animateMonster(model, time) {
   // Slight rotation wobble
   model.rotation.y += Math.sin(time * 1.5) * 0.002;
 }
+
+// Monster attack lunge — called on monster_attack event
+export function monsterAttackAnim(model, duration = 400) {
+  if (!model) return;
+  const startY = model.position.y;
+  const startRot = model.rotation.x;
+  const t0 = performance.now();
+  function step(now) {
+    const p = Math.min((now - t0) / duration, 1);
+    if (p < 0.3) {
+      // Wind up — lean back
+      const lp = p / 0.3;
+      model.rotation.x = startRot - 0.15 * lp;
+      model.position.y = startY + 0.08 * lp;
+    } else if (p < 0.6) {
+      // Lunge forward
+      const lp = (p - 0.3) / 0.3;
+      model.rotation.x = startRot - 0.15 + 0.3 * lp;
+      model.position.y = startY + 0.08 - 0.15 * lp;
+    } else {
+      // Recover
+      const lp = (p - 0.6) / 0.4;
+      model.rotation.x = startRot + 0.15 * (1 - lp);
+      model.position.y = startY - 0.07 * (1 - lp);
+    }
+    if (p < 1) requestAnimationFrame(step);
+    else { model.rotation.x = startRot; model.position.y = startY; }
+  }
+  requestAnimationFrame(step);
+}

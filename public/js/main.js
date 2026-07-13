@@ -7,7 +7,7 @@ import { InventoryUI } from './inventory.js';
 import { QuestUI } from './quest_ui.js';
 import { PartyUI } from './party_ui.js';
 import { ShopUI } from './shop_ui.js';
-import { createMonsterModel, updateMonsterHPBar, animateMonster } from './monsters.js';
+import { createMonsterModel, updateMonsterHPBar, animateMonster, monsterAttackAnim } from './monsters.js';
 
 // --- State ---
 const state = {
@@ -59,7 +59,7 @@ const state = {
   isDead: false,          // death screen active
   // Day/night cycle
   dayTime: 0.25,         // 0-1, 0 = midnight, 0.25 = sunrise, 0.5 = noon, 0.75 = sunset
-  daySpeed: 1 / 300,     // full cycle = 300 seconds (5 min)
+  daySpeed: 1 / 1200,    // full cycle = 1200 seconds (20 min, matches server)
   sunLight: null,
   ambientLight: null,
   moonMesh: null,
@@ -806,9 +806,20 @@ function handleServerMessage(msg) {
       }
       break;
 
-    case 'time_sync':
-      if (msg.dayTime !== undefined) state.dayTime = msg.dayTime;
+    case 'time_sync': {
+      // Smooth interpolation toward server time (no jump)
+      if (msg.dayTime !== undefined) {
+        const serverTime = msg.dayTime;
+        const localTime = state.dayTime;
+        // Handle wraparound (e.g. 0.99 → 0.01 = small diff, not 0.98)
+        let diff = serverTime - localTime;
+        if (diff > 0.5) diff -= 1.0;
+        if (diff < -0.5) diff += 1.0;
+        // Lerp 20% toward server value (smooth correction over ~5 syncs)
+        state.dayTime = (localTime + diff * 0.2 + 1.0) % 1.0;
+      }
       break;
+    }
 
     case 'npc_dialogue':
       state.dialogue.open(msg.npcId, msg.name, msg.title);
@@ -899,6 +910,11 @@ function handleServerMessage(msg) {
         updateMonsterHPBar(mob, msg.hp, msg.maxHp);
         mob.userData.hp = msg.hp;
         mob.userData.maxHp = msg.maxHp;
+        // Monster flinch — brief scale punch
+        const origScale = mob.scale.x;
+        mob.scale.set(0.85, 1.1, 0.85);
+        setTimeout(() => mob.scale.set(1.05, 0.95, 1.05), 80);
+        setTimeout(() => mob.scale.set(origScale, origScale, origScale), 160);
       }
       showDamageNumber(msg.monsterId, msg.damage, msg.isCrit);
       break;
@@ -907,19 +923,25 @@ function handleServerMessage(msg) {
     case 'monster_died': {
       const mob = state.monsters[msg.monsterId];
       if (mob) {
-        state.scene.remove(mob);
         delete state.monsters[msg.monsterId];
+        // Death animation — fade + shrink over 0.5s, then remove
+        animateMonsterDeath(mob);
       }
       if (state.targetedMonster === msg.monsterId) cancelTarget();
       break;
     }
 
     case 'monster_attack': {
-      console.log('[COMBAT] monster_attack received! targetId:', msg.targetId, 'myId:', state.playerId, 'damage:', msg.damage);
+      // Monster attack lunge animation
+      const attackerMob = state.monsters[msg.monsterId];
+      if (attackerMob) monsterAttackAnim(attackerMob);
       if (msg.targetId === state.playerId) {
         state.player.hp = Math.max(0, (state.player.hp || 0) - msg.damage);
         updatePlayerHP(state.player.hp, state.player.maxHp);
         showDamageNumber(null, msg.damage, false, state.playerId);
+        // Hit reaction — flinch + red flash
+        const myModel = state.players[state.playerId];
+        if (myModel) hitReaction(myModel);
         // Screen shake (Cahaya v2 pattern)
         document.body.style.transform = `translate(${Math.random()*6-3}px, ${Math.random()*6-3}px)`;
         setTimeout(() => document.body.style.transform = '', 100);
@@ -1501,6 +1523,168 @@ function showLevelUpEffect() {
   tick();
 }
 
+// ============================
+// ATTACK IMPACT PARTICLES
+// ============================
+function spawnAttackImpact(position, color = 0xFF5252) {
+  if (!position) return;
+  const particles = [];
+  for (let i = 0; i < 8; i++) {
+    const size = 0.05 + Math.random() * 0.08;
+    const geo = new THREE.BoxGeometry(size, size, size);
+    const mat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 1, depthWrite: false });
+    const p = new THREE.Mesh(geo, mat);
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 1 + Math.random() * 2;
+    p.position.copy(position);
+    p.position.y += 0.5;
+    p.userData.vx = Math.cos(angle) * speed;
+    p.userData.vy = 1 + Math.random() * 2;
+    p.userData.vz = Math.sin(angle) * speed;
+    p.renderOrder = 999;
+    state.scene.add(p);
+    particles.push(p);
+  }
+  const start = Date.now();
+  function tick() {
+    const elapsed = (Date.now() - start) / 1000;
+    if (elapsed > 0.5) {
+      particles.forEach(p => state.scene.remove(p));
+      return;
+    }
+    particles.forEach(p => {
+      p.position.x += p.userData.vx * 0.016;
+      p.position.y += p.userData.vy * 0.016;
+      p.position.z += p.userData.vz * 0.016;
+      p.userData.vy -= 4 * 0.016; // gravity
+      p.material.opacity = 1 - elapsed * 2;
+      p.rotation.x += 0.1;
+      p.rotation.z += 0.15;
+    });
+    requestAnimationFrame(tick);
+  }
+  tick();
+}
+
+// ============================
+// HIT REACTION (flinch when taking damage)
+// ============================
+function hitReaction(model) {
+  if (!model) return;
+  const body = model.getObjectByName('body');
+  if (body) {
+    const orig = body.rotation.x;
+    body.rotation.x = 0.2; // lean back
+    setTimeout(() => { body.rotation.x = -0.05; }, 80);
+    setTimeout(() => { body.rotation.x = orig; }, 150);
+  }
+  // Flash effect — brief red tint on body mesh
+  const bodyMesh = model.getObjectByName('body');
+  if (bodyMesh && bodyMesh.material) {
+    const origColor = bodyMesh.material.color.getHex();
+    bodyMesh.material.color.setHex(0xFF0000);
+    setTimeout(() => { bodyMesh.material.color.setHex(origColor); }, 100);
+  }
+}
+
+// ============================
+// SKILL VISUAL EFFECTS
+// ============================
+function spawnSkillEffect(position, classType) {
+  if (!position) return;
+  const colors = {
+    laborer: 0xFF8C00,  // orange smash
+    miner: 0x8D6E63,    // brown rock
+    gardener: 0x4CAF50,  // green vine
+    herbalist: 0x76FF03, // green heal glow
+    watchman: 0x42A5F5,  // blue shield
+  };
+  const color = colors[classType] || 0xFFFFFF;
+  const particles = [];
+  const count = classType === 'herbalist' ? 15 : 10;
+  for (let i = 0; i < count; i++) {
+    const size = 0.06 + Math.random() * 0.1;
+    const geo = new THREE.BoxGeometry(size, size, size);
+    const mat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.9, depthWrite: false });
+    const p = new THREE.Mesh(geo, mat);
+    if (classType === 'herbalist') {
+      // Heal: particles rise upward around player
+      const angle = Math.random() * Math.PI * 2;
+      const r = 0.3 + Math.random() * 0.5;
+      p.position.set(position.x + Math.cos(angle) * r, position.y + Math.random() * 0.5, position.z + Math.sin(angle) * r);
+      p.userData.vy = 1.5 + Math.random() * 1.5;
+      p.userData.vx = 0;
+      p.userData.vz = 0;
+    } else {
+      // Attack: particles burst outward toward monster
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 2 + Math.random() * 2;
+      p.position.copy(position);
+      p.position.y += 0.8;
+      p.userData.vx = Math.cos(angle) * speed;
+      p.userData.vy = 0.5 + Math.random() * 1;
+      p.userData.vz = Math.sin(angle) * speed;
+    }
+    p.renderOrder = 999;
+    state.scene.add(p);
+    particles.push(p);
+  }
+  const start = Date.now();
+  const dur = classType === 'herbalist' ? 0.8 : 0.4;
+  function tick() {
+    const elapsed = (Date.now() - start) / 1000;
+    if (elapsed > dur) {
+      particles.forEach(p => state.scene.remove(p));
+      return;
+    }
+    particles.forEach(p => {
+      p.position.x += p.userData.vx * 0.016;
+      p.position.y += p.userData.vy * 0.016;
+      p.position.z += p.userData.vz * 0.016;
+      if (classType === 'herbalist') p.userData.vy -= 0.5 * 0.016;
+      p.material.opacity = 1 - (elapsed / dur);
+      p.rotation.x += 0.1;
+    });
+    requestAnimationFrame(tick);
+  }
+  tick();
+}
+
+// ============================
+// MONSTER DEATH ANIMATION (fade + shrink)
+// ============================
+function animateMonsterDeath(model) {
+  if (!model) return;
+  const start = Date.now();
+  const dur = 0.5;
+  // Store original scale
+  const origScale = { x: model.scale.x, y: model.scale.y, z: model.scale.z };
+  function tick() {
+    const elapsed = (Date.now() - start) / 1000;
+    if (elapsed > dur) {
+      state.scene.remove(model);
+      return;
+    }
+    const progress = elapsed / dur;
+    // Shrink + rise + fade
+    model.scale.set(
+      origScale.x * (1 - progress),
+      origScale.y * (1 - progress),
+      origScale.z * (1 - progress)
+    );
+    model.position.y += 0.02;
+    // Fade all meshes
+    model.traverse(child => {
+      if (child.material) {
+        child.material.transparent = true;
+        child.material.opacity = 1 - progress;
+      }
+    });
+    requestAnimationFrame(tick);
+  }
+  tick();
+}
+
 function updatePlayerHP(hp, maxHp) {
   const fill = document.getElementById('hp-fill');
   const text = document.getElementById('hp-text');
@@ -1738,20 +1922,34 @@ canvas.addEventListener('click', (e) => {
     }
   }
 
-  // Grid snap — round to nearest integer (tile center)
-  const snapX = Math.round(point.x);
-  const snapZ = Math.round(point.z);
-
-  // Collision check
-  if (!isWalkable(snapX, snapZ)) return;
+  // Find nearest walkable tile to click point (don't need exact center)
+  let snapX = Math.round(point.x);
+  let snapZ = Math.round(point.z);
+  if (!isWalkable(snapX, snapZ)) {
+    // Search nearby tiles for nearest walkable
+    let found = false;
+    for (let r = 1; r <= 3 && !found; r++) {
+      for (let dx = -r; dx <= r && !found; dx++) {
+        for (let dz = -r; dz <= r && !found; dz++) {
+          if (Math.abs(dx) !== r && Math.abs(dz) !== r) continue;
+          if (isWalkable(snapX + dx, snapZ + dz)) {
+            snapX += dx;
+            snapZ += dz;
+            found = true;
+          }
+        }
+      }
+    }
+    if (!found) return;
+  }
 
   // Click ground = stop auto-attack but keep target locked
   state.autoAttacking = false;
   state.targetPos = null;
   state.pathWaypoints = null;
 
-  // Show click indicator
-  showClickIndicator(snapX, snapZ);
+  // Show click indicator at exact click point
+  showClickIndicator(point.x, point.z);
 
   // A* pathfinding — route around obstacles
   const model = state.players[state.playerId];
@@ -1761,10 +1959,15 @@ canvas.addEventListener('click', (e) => {
   const path = findPath(startX, startZ, snapX, snapZ);
 
   if (path && path.length > 1) {
-    state.pathWaypoints = path.slice(1); // skip current position
+    const waypoints = path.slice(1);
+    // Replace last waypoint with exact click position for smooth ending
+    if (waypoints.length > 0) {
+      waypoints[waypoints.length - 1] = { x: point.x, z: point.z };
+    }
+    state.pathWaypoints = waypoints;
     state.targetPos = new THREE.Vector3(state.pathWaypoints[0].x, 0, state.pathWaypoints[0].z);
   } else if (path && path.length === 1) {
-    state.targetPos = new THREE.Vector3(path[0].x, 0, path[0].z);
+    state.targetPos = new THREE.Vector3(point.x, 0, point.z);
   }
 });
 
@@ -1932,6 +2135,8 @@ function performAttack() {
     model.lookAt(state.lastFacing);
     // Swing animation — class-specific
     classAttackAnim(model, state.player?.class || 'laborer');
+    // Attack impact particles on monster
+    spawnAttackImpact(mob.position.clone());
     // Send attack to server (Cahaya v2: just targetId)
     wsSend(JSON.stringify({ type: 'attack', monsterId: mobId }));
   } else {
@@ -2241,6 +2446,12 @@ function useSkill() {
 
   // Heal skill (no target needed)
   if (skill.healMulti) {
+    // Heal VFX — green particles rising around player
+    const myModel = state.players[state.playerId];
+    if (myModel) {
+      spawnSkillEffect(myModel.position.clone(), 'herbalist');
+      classAttackAnim(myModel, 'herbalist');
+    }
     wsSend(JSON.stringify({ type: 'use_skill', skillId: classType }));
     skillCooldownEnd = now + skill.cooldown;
     startSkillCooldownUI(skill.cooldown);
@@ -2301,6 +2512,10 @@ function executeSkill(classType, skill, mob) {
   state.lastFacing = model.position.clone().add(faceDir);
   model.lookAt(state.lastFacing);
   classAttackAnim(model, classType);
+  // Skill visual effect
+  spawnSkillEffect(model.position.clone(), classType);
+  // Attack impact on monster
+  spawnAttackImpact(mob.position.clone(), {laborer:0xFF8C00,miner:0x8D6E63,gardener:0x4CAF50,watchman:0x42A5F5}[classType] || 0xFFFFFF);
 
   // Send to server
   wsSend(JSON.stringify({ type: 'use_skill', skillId: classType, monsterId: mob.id }));
@@ -2506,10 +2721,9 @@ function lerpColor(a, b, t) {
 }
 
 function updateDayNight(dt) {
-  // Only auto-advance if not connected to server (single-player mode)
-  if (!state.connected) {
-    state.dayTime = (state.dayTime + dt * state.daySpeed) % 1.0;
-  }
+  // Always advance locally for smooth real-time feel
+  // Server sync corrects drift every 30s via smooth interpolation
+  state.dayTime = (state.dayTime + dt * state.daySpeed) % 1.0;
   const t = state.dayTime;
 
   // Sun angle: t=0.25 → east (sunrise), t=0.5 → top (noon), t=0.75 → sunset

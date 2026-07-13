@@ -777,12 +777,19 @@ export function animateWalk(model, dt) {
   if (!model) return;
   const leftLeg = model.getObjectByName('leftLeg');
   const rightLeg = model.getObjectByName('rightLeg');
+  const leftArm = model.getObjectByName('leftArm');
+  const rightArm = model.getObjectByName('rightArm');
+  const body = model.getObjectByName('body');
 
-  if (leftLeg && rightLeg) {
-    const time = Date.now() * 0.005;
-    leftLeg.rotation.x = Math.sin(time) * 0.3;
-    rightLeg.rotation.x = -Math.sin(time) * 0.3;
-  }
+  const time = Date.now() * 0.005;
+  // Legs swing
+  if (leftLeg) leftLeg.rotation.x = Math.sin(time) * 0.3;
+  if (rightLeg) rightLeg.rotation.x = -Math.sin(time) * 0.3;
+  // Arms swing opposite to legs (natural walk)
+  if (leftArm) leftArm.rotation.x = -Math.sin(time) * 0.25;
+  if (rightArm) rightArm.rotation.x = Math.sin(time) * 0.25;
+  // Slight body bob
+  if (body) body.position.y = 0.8 + Math.abs(Math.sin(time * 2)) * 0.03;
 }
 
 // --- Blink Animation ---
@@ -839,6 +846,14 @@ export function stopWalk(model) {
   model.children.forEach(c => {
     if (c.position.y < 0.4) c.rotation.x = 0;
   });
+  // Reset arms
+  const leftArm = model.getObjectByName('leftArm');
+  const rightArm = model.getObjectByName('rightArm');
+  if (leftArm) leftArm.rotation.x = 0;
+  if (rightArm) rightArm.rotation.x = 0;
+  // Reset body bob
+  const body = model.getObjectByName('body');
+  if (body) body.position.y = 0.8;
 }
 
 // --- Equipment Visuals ---
