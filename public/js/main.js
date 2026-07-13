@@ -56,6 +56,7 @@ const state = {
   targetIndicator: null,  // visual ring mesh
   lastAttackTime: 0,      // client-side cooldown tracking
   autoAttacking: false,   // auto-attack loop active
+  skillArmed: null,       // { classType, skill } — skill ready to cast, waiting for target click
   isDead: false,          // death screen active
   // Day/night cycle
   dayTime: 0.25,         // 0-1, 0 = midnight, 0.25 = sunrise, 0.5 = noon, 0.75 = sunset
@@ -1925,7 +1926,34 @@ canvas.addEventListener('click', (e) => {
   for (const mob of Object.values(state.monsters)) {
     if (mob.position.distanceTo(point) < 2) {
       setTarget(mob.userData.id); // sets target + visual indicator
-      performAttack(); // attack immediately if in range
+
+      // If skill is armed — walk to skill range, then cast
+      if (state.skillArmed) {
+        const model = state.players[state.playerId];
+        if (model) {
+          const skill = state.skillArmed.skill;
+          const dist = model.position.distanceTo(mob.position);
+          if (dist > skill.range) {
+            // Walk to monster — but stop at skill range distance
+            // Use pathfinding to monster, we'll stop when close enough
+            const startX = Math.round(model.position.x);
+            const startZ = Math.round(model.position.z);
+            const targetX = Math.round(mob.position.x);
+            const targetZ = Math.round(mob.position.z);
+            const path = findPath(startX, startZ, targetX, targetZ);
+            if (path && path.length > 1) {
+              state.pathWaypoints = path.slice(1);
+              state.targetPos = new THREE.Vector3(state.pathWaypoints[0].x, 0, state.pathWaypoints[0].z);
+            }
+            addChatMessage('Skill', `Walking to ${skill.name} range...`);
+          } else {
+            // Already in range — cast now
+            executeSkill(state.skillArmed.classType, skill, mob);
+          }
+        }
+      } else {
+        performAttack(); // attack immediately if in range
+      }
       return;
     }
   }
@@ -1951,8 +1979,9 @@ canvas.addEventListener('click', (e) => {
     if (!found) return;
   }
 
-  // Click ground = stop auto-attack but keep target locked
+  // Click ground = stop auto-attack + disarm skill, keep target locked
   state.autoAttacking = false;
+  disarmSkill();
   state.targetPos = null;
   state.pathWaypoints = null;
 
@@ -2018,6 +2047,31 @@ function updateMovement() {
           const dist = model.position.distanceTo(mob.position);
           if (dist <= pendingSkill.skill.range) {
             executeSkill(pendingSkill.classType, pendingSkill.skill, mob);
+          }
+        }
+      }
+      // Execute armed skill when arriving at monster
+      if (state.skillArmed && state.targetedMonster) {
+        const mob = state.monsters[state.targetedMonster];
+        if (mob) {
+          const dist = model.position.distanceTo(mob.position);
+          if (dist <= state.skillArmed.skill.range) {
+            executeSkill(state.skillArmed.classType, state.skillArmed.skill, mob);
+          } else {
+            // Not in range yet — keep walking toward monster
+            const startX = Math.round(model.position.x);
+            const startZ = Math.round(model.position.z);
+            const targetX = Math.round(mob.position.x);
+            const targetZ = Math.round(mob.position.z);
+            const path = findPath(startX, startZ, targetX, targetZ);
+            if (path && path.length > 1) {
+              state.pathWaypoints = path.slice(1);
+              state.targetPos = new THREE.Vector3(state.pathWaypoints[0].x, 0, state.pathWaypoints[0].z);
+            } else {
+              // No path found — try direct walk toward monster (for adjacent tiles)
+              const dir = mob.position.clone().sub(model.position).normalize();
+              state.targetPos = model.position.clone().add(dir.multiplyScalar(1.5));
+            }
           }
         }
       }
@@ -2297,6 +2351,7 @@ document.addEventListener('keydown', (e) => {
 
   if (e.key === 'Escape') {
     cancelTarget();
+    disarmSkill();
     return;
   }
 
@@ -2447,6 +2502,12 @@ function useSkill() {
 
   const now = Date.now();
 
+  // If same skill already armed → disarm (toggle off)
+  if (state.skillArmed && state.skillArmed.classType === classType) {
+    disarmSkill();
+    return;
+  }
+
   // Cooldown check
   if (now < skillCooldownEnd) {
     const sec = Math.ceil((skillCooldownEnd - now) / 1000);
@@ -2460,9 +2521,8 @@ function useSkill() {
     return;
   }
 
-  // Heal skill (no target needed)
+  // Heal skill — cast immediately (no target needed)
   if (skill.healMulti) {
-    // Heal VFX — green particles rising around player
     const myModel = state.players[state.playerId];
     if (myModel) {
       spawnSkillEffect(myModel.position.clone(), 'herbalist');
@@ -2474,41 +2534,26 @@ function useSkill() {
     return;
   }
 
-  // Attack skill — auto-target if none
-  if (!state.targetedMonster) {
-    const nearest = findNearestMonster();
-    if (!nearest) {
-      addChatMessage('Skill', `No monsters nearby!`);
-      return;
-    }
-    setTarget(nearest.userData.id);
+  // Arm the skill — now waiting for player to click a monster
+  state.skillArmed = { classType, skill };
+  // Stop auto-attack so player can pick target
+  state.autoAttacking = false;
+
+  // Visual feedback — glow the skill icon
+  const slot = document.getElementById('skill-slot-1');
+  slot.classList.add('skill-armed');
+  addChatMessage('Skill', `${skill.name} ready — click a monster to cast`);
+}
+
+function disarmSkill() {
+  if (!state.skillArmed) return;
+  state.skillArmed = null;
+  const slot = document.getElementById('skill-slot-1');
+  if (slot) slot.classList.remove('skill-armed');
+  // Resume auto-attack if we have a target
+  if (state.targetedMonster) {
+    state.autoAttacking = true;
   }
-
-  const mob = state.monsters[state.targetedMonster];
-  if (!mob) { cancelTarget(); return; }
-
-  const model = state.players[state.playerId];
-  if (!model) return;
-
-  const dist = model.position.distanceTo(mob.position);
-  if (dist > skill.range) {
-    // Too far — store pending skill and walk to monster
-    pendingSkill = { classType, skill };
-    // Walk to monster via pathfinding
-    const startX = Math.round(model.position.x);
-    const startZ = Math.round(model.position.z);
-    const targetX = Math.round(mob.position.x);
-    const targetZ = Math.round(mob.position.z);
-    const path = findPath(startX, startZ, targetX, targetZ);
-    if (path && path.length > 1) {
-      state.pathWaypoints = path.slice(1);
-      state.targetPos = new THREE.Vector3(state.pathWaypoints[0].x, 0, state.pathWaypoints[0].z);
-    }
-    return;
-  }
-
-  // In range — execute skill now
-  executeSkill(classType, skill, mob);
 }
 
 function executeSkill(classType, skill, mob) {
@@ -2519,6 +2564,7 @@ function executeSkill(classType, skill, mob) {
 
   // Re-check cooldown (might have changed while walking)
   if (now < skillCooldownEnd) {
+    disarmSkill();
     pendingSkill = null;
     return;
   }
@@ -2537,6 +2583,7 @@ function executeSkill(classType, skill, mob) {
   wsSend(JSON.stringify({ type: 'use_skill', skillId: classType, monsterId: mob.id }));
   skillCooldownEnd = now + skill.cooldown;
   startSkillCooldownUI(skill.cooldown);
+  disarmSkill();
   pendingSkill = null;
 }
 
@@ -3148,8 +3195,8 @@ function gameLoop() {
         const pulse = 1 + Math.sin(time * 4) * 0.15;
         state.targetIndicator.scale.set(pulse, pulse, 1);
       }
-      // Auto-attack
-      if (state.autoAttacking && !state.targetPos) {
+      // Auto-attack (skip if skill is armed — skill handles its own walk+cast)
+      if (state.autoAttacking && !state.targetPos && !state.skillArmed) {
         const model = state.players[state.playerId];
         if (model) {
           const dist = model.position.distanceTo(mob.position);
