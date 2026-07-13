@@ -1745,8 +1745,10 @@ canvas.addEventListener('click', (e) => {
   // Collision check
   if (!isWalkable(snapX, snapZ)) return;
 
-  // Click jalan = cancel auto-attack
-  cancelTarget();
+  // Click ground = stop auto-attack but keep target locked
+  state.autoAttacking = false;
+  state.targetPos = null;
+  state.pathWaypoints = null;
 
   // Show click indicator
   showClickIndicator(snapX, snapZ);
@@ -1797,6 +1799,16 @@ function updateMovement() {
           model.lookAt(model.position.clone().add(faceDir));
         }
         wsSend(JSON.stringify({ type: 'interact_npc', npcId: target.id }));
+      }
+      // Execute pending skill when arriving at monster
+      if (pendingSkill && state.targetedMonster) {
+        const mob = state.monsters[state.targetedMonster];
+        if (mob) {
+          const dist = model.position.distanceTo(mob.position);
+          if (dist <= pendingSkill.skill.range) {
+            executeSkill(pendingSkill.classType, pendingSkill.skill, mob);
+          }
+        }
       }
     }
     return;
@@ -1918,8 +1930,8 @@ function performAttack() {
     const faceDir = mob.position.clone().sub(model.position).normalize();
     state.lastFacing = model.position.clone().add(faceDir);
     model.lookAt(state.lastFacing);
-    // Swing animation
-    attackSwing(model);
+    // Swing animation — class-specific
+    classAttackAnim(model, state.player?.class || 'laborer');
     // Send attack to server (Cahaya v2: just targetId)
     wsSend(JSON.stringify({ type: 'attack', monsterId: mobId }));
   } else {
@@ -1944,6 +1956,116 @@ function attackSwing(model) {
     const origRot = rightArm.rotation.x;
     rightArm.rotation.x = -1.2; // swing forward
     setTimeout(() => { rightArm.rotation.x = origRot; }, 200);
+  }
+}
+
+// Class-specific attack animation
+function classAttackAnim(model, classType) {
+  if (!model) return;
+  const rightArm = model.getObjectByName('rightArm');
+  const leftArm = model.getObjectByName('leftArm');
+  const body = model.getObjectByName('body');
+
+  switch (classType) {
+    case 'laborer': {
+      // Heavy overhead smash — both arms raise then slam down
+      if (rightArm) {
+        const orig = rightArm.rotation.x;
+        rightArm.rotation.x = -2.0; // raise high
+        setTimeout(() => { rightArm.rotation.x = 0.8; }, 150); // slam down
+        setTimeout(() => { rightArm.rotation.x = orig; }, 350);
+      }
+      if (leftArm) {
+        const orig = leftArm.rotation.x;
+        leftArm.rotation.x = -1.5; // raise together
+        setTimeout(() => { leftArm.rotation.x = 0.5; }, 150);
+        setTimeout(() => { leftArm.rotation.x = orig; }, 350);
+      }
+      // Slight body lunge forward
+      if (body) {
+        const orig = body.rotation.x;
+        body.rotation.x = 0.15;
+        setTimeout(() => { body.rotation.x = orig; }, 300);
+      }
+      break;
+    }
+    case 'miner': {
+      // Quick dual slash — right then left, fast
+      if (rightArm) {
+        const orig = rightArm.rotation.x;
+        rightArm.rotation.z = -0.8; // swing right
+        rightArm.rotation.x = -0.5;
+        setTimeout(() => { rightArm.rotation.z = 0; rightArm.rotation.x = orig; }, 150);
+      }
+      if (leftArm) {
+        const orig = leftArm.rotation.x;
+        setTimeout(() => {
+          leftArm.rotation.z = 0.8; // swing left
+          leftArm.rotation.x = -0.5;
+          setTimeout(() => { leftArm.rotation.z = 0; leftArm.rotation.x = orig; }, 150);
+        }, 100);
+      }
+      break;
+    }
+    case 'gardener': {
+      // Ranged cast — right arm extends forward, left arm supports
+      if (rightArm) {
+        const orig = rightArm.rotation.x;
+        rightArm.rotation.x = -1.0; // extend forward
+        setTimeout(() => { rightArm.rotation.x = orig; }, 400);
+      }
+      if (leftArm) {
+        const orig = leftArm.rotation.x;
+        leftArm.rotation.x = -0.6; // support pose
+        setTimeout(() => { leftArm.rotation.x = orig; }, 400);
+      }
+      // Slight lean forward
+      if (body) {
+        const orig = body.rotation.x;
+        body.rotation.x = 0.1;
+        setTimeout(() => { body.rotation.x = orig; }, 400);
+      }
+      break;
+    }
+    case 'herbalist': {
+      // Heal — arms open wide, slight glow pose
+      if (rightArm) {
+        const orig = rightArm.rotation.z;
+        rightArm.rotation.z = -0.6; // open right
+        setTimeout(() => { rightArm.rotation.z = orig; }, 500);
+      }
+      if (leftArm) {
+        const orig = leftArm.rotation.z;
+        leftArm.rotation.z = 0.6; // open left
+        setTimeout(() => { leftArm.rotation.z = orig; }, 500);
+      }
+      // Slight lift
+      if (body) {
+        const origY = model.position.y;
+        model.position.y += 0.1;
+        setTimeout(() => { model.position.y = origY; }, 500);
+      }
+      break;
+    }
+    case 'watchman': {
+      // Quick thrust — fast forward jab
+      if (rightArm) {
+        const orig = rightArm.rotation.x;
+        rightArm.rotation.x = -1.5; // thrust forward
+        rightArm.rotation.z = -0.2;
+        setTimeout(() => { rightArm.rotation.x = -0.3; }, 100); // recoil
+        setTimeout(() => { rightArm.rotation.x = orig; rightArm.rotation.z = 0; }, 250);
+      }
+      // Body lunge
+      if (body) {
+        const orig = body.rotation.x;
+        body.rotation.x = 0.2;
+        setTimeout(() => { body.rotation.x = orig; }, 200);
+      }
+      break;
+    }
+    default:
+      attackSwing(model);
   }
 }
 
@@ -1972,8 +2094,8 @@ document.addEventListener('keydown', (e) => {
         setTarget(nearest.userData.id);
       }
     } else {
-      // Already targeted — attack
-      performAttack();
+      // Already targeted — resume auto-attack
+      state.autoAttacking = true;
     }
   }
 });
@@ -2078,6 +2200,7 @@ document.getElementById('loot-pickup-all').addEventListener('click', () => {
 // SKILL SYSTEM
 // ============================
 let skillCooldownEnd = 0;
+let pendingSkill = null; // { classType, skill } — waiting to walk to monster
 
 function initSkillUI() {
   const classType = state.player?.class || 'laborer';
@@ -2124,10 +2247,14 @@ function useSkill() {
     return;
   }
 
-  // Attack skill — need target
+  // Attack skill — auto-target if none
   if (!state.targetedMonster) {
-    addChatMessage('Skill', `Target a monster first!`);
-    return;
+    const nearest = findNearestMonster();
+    if (!nearest) {
+      addChatMessage('Skill', `No monsters nearby!`);
+      return;
+    }
+    setTarget(nearest.userData.id);
   }
 
   const mob = state.monsters[state.targetedMonster];
@@ -2138,20 +2265,48 @@ function useSkill() {
 
   const dist = model.position.distanceTo(mob.position);
   if (dist > skill.range) {
-    addChatMessage('Skill', `Too far! Move closer.`);
+    // Too far — store pending skill and walk to monster
+    pendingSkill = { classType, skill };
+    // Walk to monster via pathfinding
+    const startX = Math.round(model.position.x);
+    const startZ = Math.round(model.position.z);
+    const targetX = Math.round(mob.position.x);
+    const targetZ = Math.round(mob.position.z);
+    const path = findPath(startX, startZ, targetX, targetZ);
+    if (path && path.length > 1) {
+      state.pathWaypoints = path.slice(1);
+      state.targetPos = new THREE.Vector3(state.pathWaypoints[0].x, 0, state.pathWaypoints[0].z);
+    }
     return;
   }
 
-  // Face + swing
+  // In range — execute skill now
+  executeSkill(classType, skill, mob);
+}
+
+function executeSkill(classType, skill, mob) {
+  const model = state.players[state.playerId];
+  if (!model) return;
+
+  const now = Date.now();
+
+  // Re-check cooldown (might have changed while walking)
+  if (now < skillCooldownEnd) {
+    pendingSkill = null;
+    return;
+  }
+
+  // Face + attack animation
   const faceDir = mob.position.clone().sub(model.position).normalize();
   state.lastFacing = model.position.clone().add(faceDir);
   model.lookAt(state.lastFacing);
-  attackSwing(model);
+  classAttackAnim(model, classType);
 
   // Send to server
-  wsSend(JSON.stringify({ type: 'use_skill', skillId: classType, monsterId: state.targetedMonster }));
+  wsSend(JSON.stringify({ type: 'use_skill', skillId: classType, monsterId: mob.id }));
   skillCooldownEnd = now + skill.cooldown;
   startSkillCooldownUI(skill.cooldown);
+  pendingSkill = null;
 }
 
 function startSkillCooldownUI(durationMs) {
