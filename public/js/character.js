@@ -774,7 +774,7 @@ export function createNPCModel(npc) {
 }
 
 // --- Walk Animation ---
-export function animateWalk(model, dt, skipArms) {
+export function animateWalk(model, dt) {
   if (!model) return;
   const leftLeg = model.getObjectByName('leftLeg');
   const rightLeg = model.getObjectByName('rightLeg');
@@ -783,15 +783,13 @@ export function animateWalk(model, dt, skipArms) {
   const body = model.getObjectByName('body');
 
   const time = Date.now() * 0.005;
-  // Legs swing
+  // Legs swing (bigger amplitude for visibility)
   if (leftLeg) leftLeg.rotation.x = Math.sin(time) * 0.6;
   if (rightLeg) rightLeg.rotation.x = -Math.sin(time) * 0.6;
-  // Arms swing opposite to legs (skip if attacking)
-  if (!skipArms) {
-    if (leftArm) leftArm.rotation.x = -Math.sin(time) * 0.5;
-    if (rightArm) rightArm.rotation.x = Math.sin(time) * 0.5;
-  }
-  // Body bob
+  // Arms swing opposite to legs (natural walk, bigger swing)
+  if (leftArm) leftArm.rotation.x = -Math.sin(time) * 0.5;
+  if (rightArm) rightArm.rotation.x = Math.sin(time) * 0.5;
+  // Body bob (more pronounced)
   if (body) body.position.y = 0.8 + Math.abs(Math.sin(time * 2)) * 0.06;
 }
 
@@ -844,20 +842,16 @@ export function idleArms(model, time) {
   if (rightArm) rightArm.rotation.x = -Math.sin(time * 1.5) * 0.1;
 }
 
-export function stopWalk(model, skipArms) {
+export function stopWalk(model) {
   if (!model) return;
-  // Reset leg rotations only
-  const leftLeg = model.getObjectByName('leftLeg');
-  const rightLeg = model.getObjectByName('rightLeg');
-  if (leftLeg) leftLeg.rotation.x = 0;
-  if (rightLeg) rightLeg.rotation.x = 0;
-  // Reset arms (skip if attacking)
-  if (!skipArms) {
-    const leftArm = model.getObjectByName('leftArm');
-    const rightArm = model.getObjectByName('rightArm');
-    if (leftArm) leftArm.rotation.x = 0;
-    if (rightArm) rightArm.rotation.x = 0;
-  }
+  model.children.forEach(c => {
+    if (c.position.y < 0.4) c.rotation.x = 0;
+  });
+  // Reset arms
+  const leftArm = model.getObjectByName('leftArm');
+  const rightArm = model.getObjectByName('rightArm');
+  if (leftArm) leftArm.rotation.x = 0;
+  if (rightArm) rightArm.rotation.x = 0;
   // Reset body bob
   const body = model.getObjectByName('body');
   if (body) body.position.y = 0.8;

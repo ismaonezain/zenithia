@@ -1582,24 +1582,14 @@ function spawnAttackImpact(position, color = 0xFF5252) {
 // ============================
 // HIT REACTION (flinch when taking damage)
 // ============================
-let _hitReactionTimer = null;
 function hitReaction(model) {
   if (!model) return;
-  // Cancel previous hit reaction if still playing
-  if (_hitReactionTimer) {
-    clearTimeout(_hitReactionTimer);
-    clearTimeout(_hitReactionTimer._t2);
-    clearTimeout(_hitReactionTimer._t3);
-    _hitReactionTimer = null;
-  }
   const body = model.getObjectByName('body');
   if (body) {
     const orig = body.rotation.x;
-    body.rotation.x = 0.15;
-    const t1 = setTimeout(() => { body.rotation.x = -0.03; }, 80);
-    const t2 = setTimeout(() => { body.rotation.x = orig; _hitReactionTimer = null; }, 150);
-    t1._t2 = t2; t1._t3 = null;
-    _hitReactionTimer = t1;
+    body.rotation.x = 0.2; // lean back
+    setTimeout(() => { body.rotation.x = -0.05; }, 80);
+    setTimeout(() => { body.rotation.x = orig; }, 150);
   }
   // Flash effect — brief red tint on body mesh
   const bodyMesh = model.getObjectByName('body');
@@ -2248,7 +2238,7 @@ function classAttackAnim(model, classType) {
 
   // Mark attacking so game loop doesn't overwrite arm rotations
   state.isAttacking = true;
-  state.attackEndTime = Date.now() + 400; // max anim duration
+  state.attackEndTime = Date.now() + 400;
 
   // Helper: animate property
   const anim = (obj, prop, val, dur) => {
@@ -2260,7 +2250,6 @@ function classAttackAnim(model, classType) {
 
   switch (classType) {
     case 'laborer': {
-      // Heavy overhead smash — both arms raise then slam down
       if (rightArm) {
         anim(rightArm, 'rotation.x', -2.2, 150);
         setTimeout(() => anim(rightArm, 'rotation.x', 1.0, 100), 150);
@@ -2274,7 +2263,6 @@ function classAttackAnim(model, classType) {
       break;
     }
     case 'miner': {
-      // Quick dual slash — right then left
       if (rightArm) {
         anim(rightArm, 'rotation.z', -1.0, 100);
         anim(rightArm, 'rotation.x', -0.8, 100);
@@ -2290,7 +2278,6 @@ function classAttackAnim(model, classType) {
       break;
     }
     case 'gardener': {
-      // Ranged cast — extend arm forward
       if (rightArm) {
         anim(rightArm, 'rotation.x', -1.4, 200);
         setTimeout(() => anim(rightArm, 'rotation.x', 0, 300), 400);
@@ -2302,7 +2289,6 @@ function classAttackAnim(model, classType) {
       break;
     }
     case 'herbalist': {
-      // Heal — arms open wide
       if (rightArm) anim(rightArm, 'rotation.z', -0.8, 200);
       if (leftArm) anim(leftArm, 'rotation.z', 0.8, 200);
       setTimeout(() => {
@@ -2312,7 +2298,6 @@ function classAttackAnim(model, classType) {
       break;
     }
     case 'watchman': {
-      // Quick thrust — fast forward jab
       if (rightArm) {
         anim(rightArm, 'rotation.x', -1.8, 80);
         anim(rightArm, 'rotation.z', -0.3, 80);
@@ -2326,10 +2311,7 @@ function classAttackAnim(model, classType) {
       break;
     }
     default: {
-      // Simple arm swing
-      if (rightArm) {
-        anim(rightArm, 'rotation.x', -1.2, 200);
-      }
+      if (rightArm) anim(rightArm, 'rotation.x', -1.2, 200);
     }
   }
 }
@@ -3144,17 +3126,37 @@ function gameLoop() {
   const playerModel = state.players[state.playerId];
   const time = Date.now() * 0.001;
 
+  // Clear attacking flag when anim done
+  if (state.isAttacking && Date.now() >= state.attackEndTime) {
+    state.isAttacking = false;
+  }
+
   if (state.targetPos) {
-    animateWalk(playerModel, 1, state.isAttacking);
-  } else {
-    stopWalk(playerModel, state.isAttacking);
-    // Idle animation when not walking (skip arms if attacking)
-    if (playerModel) {
-      if (Date.now() >= state.attackEndTime) {
-        state.isAttacking = false;
-        animateIdle(playerModel, time);
-      }
+    // Walking — skip arm overrides if attacking
+    const leftArm = playerModel?.getObjectByName('leftArm');
+    const rightArm = playerModel?.getObjectByName('rightArm');
+    if (!state.isAttacking) {
+      animateWalk(playerModel, 1);
+    } else {
+      // Only animate legs + body, leave arms alone
+      const leftLeg = playerModel?.getObjectByName('leftLeg');
+      const rightLeg = playerModel?.getObjectByName('rightLeg');
+      const body = playerModel?.getObjectByName('body');
+      const t = Date.now() * 0.005;
+      if (leftLeg) leftLeg.rotation.x = Math.sin(t) * 0.6;
+      if (rightLeg) rightLeg.rotation.x = -Math.sin(t) * 0.6;
+      if (body) body.position.y = 0.8 + Math.abs(Math.sin(t * 2)) * 0.06;
     }
+  } else {
+    // Idle — reset legs, but skip arm reset if attacking
+    const leftLeg = playerModel?.getObjectByName('leftLeg');
+    const rightLeg = playerModel?.getObjectByName('rightLeg');
+    const body = playerModel?.getObjectByName('body');
+    if (leftLeg) leftLeg.rotation.x = 0;
+    if (rightLeg) rightLeg.rotation.x = 0;
+    if (body) body.position.y = 0.8;
+    // Idle arm sway — skip if attacking
+    if (playerModel && !state.isAttacking) animateIdle(playerModel, time);
   }
 
   // Auto blink (every 3-6 seconds)
