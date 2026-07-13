@@ -421,6 +421,7 @@ export function createPlayerModel(options = {}) {
 
   // === BODY ===
   const body = new THREE.Mesh(new THREE.BoxGeometry(bodyW * scale, 0.8 * scale, 0.4 * scale), bodyMat);
+  body.name = 'body';
   body.position.y = 0.8 * scale;
   body.castShadow = true;
   group.add(body);

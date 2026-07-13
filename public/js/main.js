@@ -2536,9 +2536,41 @@ function useSkill() {
     return;
   }
 
-  // Arm the skill — now waiting for player to click a monster
+  // Arm the skill
   state.skillArmed = { classType, skill };
-  // Stop auto-attack so player can pick target
+
+  // If already targeting a monster (auto-attack active) → use that target
+  if (state.targetedMonster) {
+    const mob = state.monsters[state.targetedMonster];
+    const model = state.players[state.playerId];
+    if (mob && model) {
+      const dist = model.position.distanceTo(mob.position);
+      if (dist <= skill.range) {
+        // In range — cast now
+        executeSkill(classType, skill, mob);
+        return;
+      } else {
+        // Out of range — walk to monster
+        state.autoAttacking = false;
+        const startX = Math.round(model.position.x);
+        const startZ = Math.round(model.position.z);
+        const targetX = Math.round(mob.position.x);
+        const targetZ = Math.round(mob.position.z);
+        const path = findPath(startX, startZ, targetX, targetZ);
+        if (path && path.length > 1) {
+          state.pathWaypoints = path.slice(1);
+          state.targetPos = new THREE.Vector3(state.pathWaypoints[0].x, 0, state.pathWaypoints[0].z);
+        }
+        // Visual feedback
+        const slot = document.getElementById('skill-slot-1');
+        slot.classList.add('skill-armed');
+        addChatMessage('Skill', `${skill.name} — walking to range...`);
+        return;
+      }
+    }
+  }
+
+  // No target — wait for player to click a monster
   state.autoAttacking = false;
 
   // Visual feedback — glow the skill icon
@@ -2582,7 +2614,7 @@ function executeSkill(classType, skill, mob) {
   spawnAttackImpact(mob.position.clone(), {laborer:0xFF8C00,miner:0x8D6E63,gardener:0x4CAF50,watchman:0x42A5F5}[classType] || 0xFFFFFF);
 
   // Send to server
-  wsSend(JSON.stringify({ type: 'use_skill', skillId: classType, monsterId: mob.id }));
+  wsSend(JSON.stringify({ type: 'use_skill', skillId: classType, monsterId: mob.userData.id }));
   skillCooldownEnd = now + skill.cooldown;
   startSkillCooldownUI(skill.cooldown);
   disarmSkill();
