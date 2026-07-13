@@ -619,33 +619,33 @@ export function createPlayerModel(options = {}) {
   rightLeg.castShadow = true;
   group.add(rightLeg);
 
-  // Knee pads — parented to legs
+  // Knee pads
   const kneeGeo = new THREE.BoxGeometry(0.22 * scale, 0.1 * scale, 0.06 * scale);
   const kneeMat = new THREE.MeshLambertMaterial({ color: trimColor });
   const leftKnee = new THREE.Mesh(kneeGeo, kneeMat);
-  leftKnee.position.set(0, 0, 0.16 * scale);
-  leftLeg.add(leftKnee);
+  leftKnee.position.set(-0.15 * scale, 0.28 * scale, 0.16 * scale);
+  group.add(leftKnee);
   const rightKnee = new THREE.Mesh(kneeGeo, kneeMat);
-  rightKnee.position.set(0, 0, 0.16 * scale);
-  rightLeg.add(rightKnee);
+  rightKnee.position.set(0.15 * scale, 0.28 * scale, 0.16 * scale);
+  group.add(rightKnee);
 
-  // === FEET / BOOTS — parented to legs ===
+  // === FEET / BOOTS ===
   const bootMat = new THREE.MeshLambertMaterial({ color: 0x3E2723 });
+  // Boot tops (slightly lighter)
   const bootTopMat = new THREE.MeshLambertMaterial({ color: 0x5D4037 });
-  // Boot tops
   const leftBootTop = new THREE.Mesh(new THREE.BoxGeometry(0.22 * scale, 0.08 * scale, 0.32 * scale), bootTopMat);
-  leftBootTop.position.set(0, -0.2 * scale, 0);
-  leftLeg.add(leftBootTop);
+  leftBootTop.position.set(-0.15 * scale, 0.1 * scale, 0);
+  group.add(leftBootTop);
   const rightBootTop = new THREE.Mesh(new THREE.BoxGeometry(0.22 * scale, 0.08 * scale, 0.32 * scale), bootTopMat);
-  rightBootTop.position.set(0, -0.2 * scale, 0);
-  rightLeg.add(rightBootTop);
+  rightBootTop.position.set(0.15 * scale, 0.1 * scale, 0);
+  group.add(rightBootTop);
   // Boot soles
   const leftFoot = new THREE.Mesh(new THREE.BoxGeometry(0.24 * scale, 0.08 * scale, 0.36 * scale), bootMat);
-  leftFoot.position.set(0, -0.3 * scale, 0.02 * scale);
-  leftLeg.add(leftFoot);
+  leftFoot.position.set(-0.15 * scale, 0.04 * scale, 0.02 * scale);
+  group.add(leftFoot);
   const rightFoot = new THREE.Mesh(new THREE.BoxGeometry(0.24 * scale, 0.08 * scale, 0.36 * scale), bootMat);
-  rightFoot.position.set(0, -0.3 * scale, 0.02 * scale);
-  rightLeg.add(rightFoot);
+  rightFoot.position.set(0.15 * scale, 0.04 * scale, 0.02 * scale);
+  group.add(rightFoot);
 
   // === ARMS ===
   const armMat = new THREE.MeshLambertMaterial({ color: bodyColor });
