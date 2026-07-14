@@ -994,9 +994,12 @@ function handleServerMessage(msg) {
         // Hit reaction — flinch + red flash
         const myModel = state.players[state.playerId];
         if (myModel) hitReaction(myModel);
-        // Screen shake (Cahaya v2 pattern)
-        document.body.style.transform = `translate(${Math.random()*6-3}px, ${Math.random()*6-3}px)`;
-        setTimeout(() => document.body.style.transform = '', 100);
+        // Screen shake — canvas only (body transform breaks fixed UI panels)
+        const gc = document.getElementById('game-canvas');
+        if (gc) {
+          gc.style.transform = `translate(${Math.random()*6-3}px, ${Math.random()*6-3}px)`;
+          setTimeout(() => { gc.style.transform = ''; }, 100);
+        }
       }
       break;
     }
