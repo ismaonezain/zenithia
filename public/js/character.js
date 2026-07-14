@@ -1178,4 +1178,14 @@ export function removeEquipment(model) {
       });
     }
   });
+  // Remove weapon from rightHand
+  const rh = model.getObjectByName('rightHand');
+  if (rh) rh.children.forEach(c => { if (c.name === 'eq_weapon') rh.remove(c); });
+  // Remove shield from leftHand
+  const lh = model.getObjectByName('leftHand');
+  if (lh) lh.children.forEach(c => { if (c.name === 'eq_shield') lh.remove(c); });
+  // Remove ring + gem from leftHand
+  if (lh) lh.children.forEach(c => {
+    if (c.name === 'eq_ring' || c.name === 'eq_ring_gem') lh.remove(c);
+  });
 }
