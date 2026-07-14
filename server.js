@@ -397,7 +397,11 @@ setInterval(() => {
         console.log(`[COMBAT] Monster ${m.id}(${m.type}) HIT player ${closestPlayer.id} dmg=${dmg} hp=${closestPlayer.hp}/${closestPlayer.maxHp} def=${closestPlayer.def} atk=${m.atk}`);
         broadcast({ type: 'monster_attack', monsterId: m.id, targetId: closestPlayer.id, damage: dmg });
         if (closestPlayer.hp <= 0) {
-          broadcast({ type: 'player_died', targetId: closestPlayer.id });
+          // XP penalty: lose 10% of current XP (min 0)
+          const xpLoss = Math.max(1, Math.floor(closestPlayer.xp * 0.1));
+          closestPlayer.xp = Math.max(0, closestPlayer.xp - xpLoss);
+          broadcast({ type: 'player_died', targetId: closestPlayer.id, xpLoss });
+          ws.send(JSON.stringify({ type: 'xp_penalty', xpLoss, xp: closestPlayer.xp }));
           setTimeout(() => {
             closestPlayer.hp = closestPlayer.maxHp;
             closestPlayer.mp = closestPlayer.maxMp;

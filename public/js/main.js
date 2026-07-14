@@ -60,6 +60,9 @@ const state = {
   isAttacking: false,     // attack animation playing — skip walk/idle arm overrides
   attackEndTime: 0,       // when attack anim finishes
   isDead: false,          // death screen active
+  // Flashlight
+  flashlightOn: false,
+  flashlight: null,
   // Day/night cycle
   dayTime: 0.25,         // 0-1, 0 = midnight, 0.25 = sunrise, 0.5 = noon, 0.75 = sunset
   daySpeed: 1 / 1200,    // full cycle = 1200 seconds (20 min, matches server)
@@ -983,6 +986,12 @@ function handleServerMessage(msg) {
       addChatMessage('System', 'You died! Respawning in 5 seconds...');
       const deathEl = document.getElementById('death-screen');
       if (deathEl) deathEl.style.display = 'flex';
+      break;
+    }
+
+    case 'xp_penalty': {
+      state.player.xp = msg.xp;
+      addChatMessage('System', `💀 XP penalty: -${msg.xpLoss} XP`);
       break;
     }
 
@@ -2335,6 +2344,43 @@ function classAttackAnim(model, classType) {
   }
 }
 
+// ============================
+// POTION SHORTCUT
+// ============================
+function usePotion() {
+  if (!state.connected || !state.player || state.isDead) return;
+  const inv = state.player.inventory || [];
+  // Find first consumable (potion_small, potion_medium, mp_potion_small, antidote)
+  const potion = inv.find(i => {
+    const id = i.id;
+    return id === 'potion_small' || id === 'potion_medium' || id === 'mp_potion_small' || id === 'antidote';
+  });
+  if (!potion) {
+    addChatMessage('System', 'No potion in inventory!');
+    return;
+  }
+  wsSend(JSON.stringify({ type: 'use_item', itemId: potion.id }));
+  addChatMessage('System', `Using ${potion.id.replace(/_/g, ' ')}...`);
+}
+
+// ============================
+// FLASHLIGHT
+// ============================
+function toggleFlashlight() {
+  state.flashlightOn = !state.flashlightOn;
+  if (state.flashlightOn) {
+    if (!state.flashlight) {
+      state.flashlight = new THREE.PointLight(0xFFF3D4, 1.5, 15);
+      state.scene.add(state.flashlight);
+    }
+    state.flashlight.visible = true;
+    addChatMessage('System', '🔦 Flashlight ON');
+  } else {
+    if (state.flashlight) state.flashlight.visible = false;
+    addChatMessage('System', 'Flashlight OFF');
+  }
+}
+
 // Global keyboard handler
 document.addEventListener('keydown', (e) => {
   // Don't process if typing in chat or any input
@@ -2349,6 +2395,20 @@ document.addEventListener('keydown', (e) => {
   if (e.key === '1') {
     e.preventDefault();
     useSkill();
+    return;
+  }
+
+  // Key 2 — use first potion in inventory
+  if (e.key === '2') {
+    e.preventDefault();
+    usePotion();
+    return;
+  }
+
+  // Key F — toggle flashlight
+  if (e.key === 'f' || e.key === 'F') {
+    e.preventDefault();
+    toggleFlashlight();
     return;
   }
 
@@ -3242,6 +3302,10 @@ function gameLoop() {
 
   // Day/night cycle + compass
   updateDayNight(dt);
+  // Flashlight follows player
+  if (state.flashlightOn && state.flashlight && playerModel) {
+    state.flashlight.position.set(playerModel.position.x, playerModel.position.y + 2.5, playerModel.position.z);
+  }
   updateCompass();
   updateTargetHPBar();
   updateMinimap();
