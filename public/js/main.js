@@ -2711,6 +2711,29 @@ function renderHotbar() {
       showHotbarPicker(i, e.clientX, e.clientY);
     });
 
+    // Drop target — accept potion from inventory drag
+    div.addEventListener('dragover', (e) => {
+      if (e.dataTransfer.types.includes('application/x-zenithia-potion')) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'copy';
+        div.classList.add('drop-target');
+      }
+    });
+    div.addEventListener('dragleave', () => {
+      div.classList.remove('drop-target');
+    });
+    div.addEventListener('drop', (e) => {
+      e.preventDefault();
+      div.classList.remove('drop-target');
+      const potionId = e.dataTransfer.getData('application/x-zenithia-potion');
+      if (potionId) {
+        state.hotbar[i] = { type: 'potion', id: potionId };
+        saveHotbar();
+        renderHotbar();
+        addChatMessage('Hotbar', `🧪 Assigned to slot ${keys[i]}`);
+      }
+    });
+
     container.appendChild(div);
   }
 }

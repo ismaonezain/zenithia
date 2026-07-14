@@ -118,7 +118,7 @@ export class InventoryUI {
       slot.addEventListener('mouseleave', () => this.hideTooltip());
     });
 
-    // Bind bag slot clicks
+    // Bind bag slot clicks + drag
     this.container.querySelectorAll('.inv-bag-slot').forEach(slot => {
       slot.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -128,7 +128,10 @@ export class InventoryUI {
         const isConsumable = item.type === 'consumable';
         const isEquipment = item.type === 'equipment';
         const menuItems = [];
-        if (isConsumable) menuItems.push({ label: 'Use', action: () => this.useItem(item.id) });
+        if (isConsumable) {
+          menuItems.push({ label: 'Use', action: () => this.useItem(item.id) });
+          menuItems.push({ label: 'Assign to Hotbar', action: () => this.assignToHotbar(item.id) });
+        }
         if (isEquipment) menuItems.push({ label: 'Equip', action: () => this.equipItem(item.id) });
         menuItems.push({ label: 'Drop', action: () => this.dropItem(item.id) });
         this.showContextMenu(e.clientX, e.clientY, menuItems);
@@ -139,6 +142,26 @@ export class InventoryUI {
         if (item) this.showTooltip(e, item, false);
       });
       slot.addEventListener('mouseleave', () => this.hideTooltip());
+
+      // Drag support — only for consumables
+      slot.setAttribute('draggable', 'false');
+      const idx = parseInt(slot.dataset.index);
+      const item = inv[idx];
+      if (item && item.type === 'consumable') {
+        slot.setAttribute('draggable', 'true');
+        slot.addEventListener('dragstart', (e) => {
+          e.dataTransfer.setData('application/x-zenithia-potion', item.id);
+          e.dataTransfer.effectAllowed = 'copy';
+          slot.style.opacity = '0.5';
+          window._draggingPotion = item.id;
+        });
+        slot.addEventListener('dragend', () => {
+          slot.style.opacity = '1';
+          window._draggingPotion = null;
+          // Remove drop-target highlight from all hotbar slots
+          document.querySelectorAll('#skill-hotbar .skill-slot.drop-target').forEach(s => s.classList.remove('drop-target'));
+        });
+      }
     });
   }
 
@@ -258,6 +281,35 @@ export class InventoryUI {
 
   unequipItem(slot) {
     if (this.ws) this.ws.send(JSON.stringify({ type: 'unequip_item', slot }));
+  }
+
+  assignToHotbar(itemId) {
+    // Find first empty hotbar slot, or slot 1 (default potion slot)
+    if (typeof state === 'undefined' || !state.hotbar) return;
+    let targetIdx = -1;
+    // Check if already assigned — if so, just flash it
+    for (let i = 0; i < 10; i++) {
+      const s = state.hotbar[i];
+      if (s && s.type === 'potion' && s.id === itemId) {
+        targetIdx = i;
+        break;
+      }
+    }
+    if (targetIdx === -1) {
+      // Find first empty slot
+      for (let i = 0; i < 10; i++) {
+        if (!state.hotbar[i] || !state.hotbar[i].type) { targetIdx = i; break; }
+      }
+    }
+    if (targetIdx === -1) {
+      // All full — use slot index 1 (key "2")
+      targetIdx = 1;
+    }
+    state.hotbar[targetIdx] = { type: 'potion', id: itemId };
+    if (typeof saveHotbar === 'function') saveHotbar();
+    if (typeof renderHotbar === 'function') renderHotbar();
+    const keyLabel = targetIdx + 1 === 10 ? '0' : targetIdx + 1;
+    if (typeof addChatMessage === 'function') addChatMessage('Hotbar', `🧪 Assigned to slot ${keyLabel}`);
   }
 
   dropItem(itemId) {
