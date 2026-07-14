@@ -867,6 +867,7 @@ function handleServerMessage(msg) {
       break;
 
     case 'monster_killed': {
+      window.ZenSFX?.monsterDeath();
       // Server confirmed kill — update loot, XP, etc.
       const lootText = msg.loot?.length > 0 ? msg.loot.map(l => `${l.name} x${l.quantity}`).join(', ') : 'Nothing';
       addChatMessage('System', `Defeated! +${msg.xp} XP | Loot: ${lootText}`);
@@ -985,6 +986,7 @@ function handleServerMessage(msg) {
       const attackerMob = state.monsters[msg.monsterId];
       if (attackerMob) monsterAttackAnim(attackerMob);
       if (msg.targetId === state.playerId) {
+        window.ZenSFX?.damageTaken();
         state.player.hp = Math.max(0, (state.player.hp || 0) - msg.damage);
         updatePlayerHP(state.player.hp, state.player.maxHp);
         showDamageNumber(null, msg.damage, false, state.playerId);
@@ -1066,6 +1068,7 @@ function handleServerMessage(msg) {
     }
 
     case 'level_up': {
+      window.ZenSFX?.levelUp();
       state.player.level = msg.level;
       state.player.maxHp = msg.maxHp;
       state.player.maxMp = msg.maxMp;
@@ -1129,11 +1132,13 @@ function handleServerMessage(msg) {
       state.player.mp = msg.mp;
       updatePlayerMP(msg.mp, state.player.maxMp);
       if (msg.heal) {
+        window.ZenSFX?.heal();
         state.player.hp = msg.hp;
         updatePlayerHP(msg.hp, state.player.maxHp);
         addChatMessage('Skill', `💚 ${msg.skillName || 'Heal'} — Healed ${msg.heal} HP!`);
       } else if (msg.buff) {
-        addChatMessage('Skill', `⚡ ${msg.skillName || 'Buff'} — ${msg.buff.stat.toUpperCase()} buff active!`);
+        window.ZenSFX?.buff();
+        addChatMessage
       } else {
         addChatMessage('Skill', `⚔️ ${msg.skillName || 'Skill'} used!`);
       }
@@ -1501,6 +1506,9 @@ function showDamageNumber(monsterId, damage, isCrit, targetId) {
   } else {
     return;
   }
+
+  // Play hit sound
+  window.ZenSFX?.crit();
 
   // Random X offset so stacked numbers don't overlap
   pos.x += (Math.random() - 0.5) * 0.4;
@@ -2068,6 +2076,7 @@ canvas.addEventListener('click', (e) => {
           state.lastFacing = model.position.clone().add(faceDir);
           model.lookAt(state.lastFacing);
           wsSend(JSON.stringify({ type: 'interact_npc', npcId: ud.id }));
+          window.ZenSFX?.npcInteract();
         } else {
           state.interactTarget = { type: 'npc', id: ud.id, position: npc.position.clone() };
           const dx = npc.position.x - model.position.x;
@@ -2364,6 +2373,7 @@ function performAttack() {
     model.lookAt(state.lastFacing);
     // Swing animation — class-specific
     classAttackAnim(model, state.player?.class || 'laborer');
+    window.ZenSFX?.attack();
     // Attack impact particles on monster
     spawnAttackImpact(mob.position.clone());
     // Send attack to server (Cahaya v2: just targetId)
@@ -2657,6 +2667,7 @@ function showLootPopup(loot) {
 document.getElementById('loot-pickup-all').addEventListener('click', () => {
   if (pendingLoot.length > 0) {
     wsSend(JSON.stringify({ type: 'pickup_loot' }));
+    window.ZenSFX?.pickup();
     pendingLoot = [];
     document.getElementById('loot-popup').style.display = 'none';
     addChatMessage('System', '📦 Loot collected!');
@@ -3119,6 +3130,7 @@ function useSkill(skillTier = 'tier1') {
       classAttackAnim(myModel, classType);
     }
     wsSend(JSON.stringify({ type: 'use_skill', skillTier, skillId: classType }));
+    window.ZenSFX?.skillCast();
     skillCooldownEnd = now + skill.cooldown;
     startSkillCooldownUI(skill.cooldown, skillTier);
     return;
@@ -3132,6 +3144,7 @@ function useSkill(skillTier = 'tier1') {
       classAttackAnim(myModel, 'herbalist');
     }
     wsSend(JSON.stringify({ type: 'use_skill', skillTier, skillId: classType }));
+    window.ZenSFX?.skillCast();
     skillCooldownEnd = now + skill.cooldown;
     startSkillCooldownUI(skill.cooldown, skillTier);
     return;
@@ -3219,6 +3232,7 @@ function executeSkill(classType, skill, mob, skillTier = 'tier1') {
 
   // Send to server
   wsSend(JSON.stringify({ type: 'use_skill', skillTier, skillId: classType, monsterId: mob.userData.id }));
+  window.ZenSFX?.skillCast();
   skillCooldownEnd = now + skill.cooldown;
   startSkillCooldownUI(skill.cooldown, skillTier);
   disarmSkill();
