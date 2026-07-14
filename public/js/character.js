@@ -988,140 +988,144 @@ export function applyEquipment(model, equipment) {
     }
   }
 
-  // === WEAPON — blade + handle in right hand ===
+  // === WEAPON — blade + handle, parented to rightHand so it moves with arm ===
   if (equipment.weapon) {
-    const t = getEQTheme(equipment.weapon.id);
-    const wGroup = new THREE.Group();
-    wGroup.name = 'eq_weapon';
+    const rightHand = model.getObjectByName('rightHand');
+    if (rightHand) {
+      const t = getEQTheme(equipment.weapon.id);
+      const wGroup = new THREE.Group();
+      wGroup.name = 'eq_weapon';
 
-    // Determine weapon style from name
-    const wid = equipment.weapon.id || '';
-    const isStaff = wid.includes('staff') || wid.includes('rod') || wid.includes('focus') || wid.includes('scepter');
-    const isDagger = wid.includes('dagger') || wid.includes('fang') || wid.includes('edge');
-    const isCleaver = wid.includes('cleaver');
-    const isCurved = wid.includes('cutter') || wid.includes('slicer');
+      const wid = equipment.weapon.id || '';
+      const isStaff = wid.includes('staff') || wid.includes('rod') || wid.includes('focus') || wid.includes('scepter') || wid.includes('lightbringer');
+      const isDagger = wid.includes('dagger') || wid.includes('fang') || wid.includes('edge');
+      const isCleaver = wid.includes('cleaver');
+      const isCurved = wid.includes('cutter') || wid.includes('slicer');
 
-    if (isStaff || wid.includes('lightbringer')) {
-      // Staff — long vertical rod with orb on top
-      const rodGeo = new THREE.BoxGeometry(0.04, 0.9, 0.04);
-      const rodMat = new THREE.MeshLambertMaterial({ color: t.secondary || 0x5D4037 });
-      const rod = new THREE.Mesh(rodGeo, rodMat);
-      rod.position.set(0, 0.35, 0);
-      wGroup.add(rod);
-      // Orb
-      const orbGeo = new THREE.SphereGeometry(0.06, 8, 8);
-      const orbMat = new THREE.MeshBasicMaterial({ color: t.accent || t.primary });
-      const orb = new THREE.Mesh(orbGeo, orbMat);
-      orb.position.set(0, 0.85, 0);
-      wGroup.add(orb);
-      // Glow
-      const glowGeo = new THREE.SphereGeometry(0.1, 8, 8);
-      const glowMat = new THREE.MeshBasicMaterial({ color: t.accent || t.primary, transparent: true, opacity: 0.2 });
-      const glow = new THREE.Mesh(glowGeo, glowMat);
-      glow.position.set(0, 0.85, 0);
-      wGroup.add(glow);
-    } else if (isCleaver) {
-      // Wide blade
-      const bladeGeo = new THREE.BoxGeometry(0.15, 0.35, 0.04);
-      const bladeMat = new THREE.MeshLambertMaterial({ color: t.primary });
-      const blade = new THREE.Mesh(bladeGeo, bladeMat);
-      blade.position.set(0, 0.35, 0);
-      wGroup.add(blade);
-    } else {
-      // Standard blade (short sword / dagger)
-      const len = isDagger ? 0.25 : 0.4;
-      const bladeGeo = new THREE.BoxGeometry(isDagger ? 0.04 : 0.06, len, 0.03);
-      const bladeMat = new THREE.MeshLambertMaterial({ color: t.primary });
-      const blade = new THREE.Mesh(bladeGeo, bladeMat);
-      blade.position.set(0, isDagger ? 0.2 : 0.3, 0);
-      wGroup.add(blade);
-      // Edge highlight
-      const edgeGeo = new THREE.BoxGeometry(0.01, len * 0.9, 0.02);
-      const edgeMat = new THREE.MeshBasicMaterial({ color: t.accent || 0xD5D5D5 });
-      const edge = new THREE.Mesh(edgeGeo, edgeMat);
-      edge.position.set(isDagger ? -0.025 : -0.035, isDagger ? 0.2 : 0.3, 0.02);
-      wGroup.add(edge);
-    }
-
-    // Handle (shared)
-    const handleGeo = new THREE.BoxGeometry(0.04, 0.12, 0.04);
-    const handleMat = new THREE.MeshLambertMaterial({ color: 0x5D4037 });
-    const handle = new THREE.Mesh(handleGeo, handleMat);
-    handle.position.set(0, -0.02, 0);
-    wGroup.add(handle);
-    // Guard
-    const guardGeo = new THREE.BoxGeometry(0.1, 0.025, 0.06);
-    const guardMat = new THREE.MeshLambertMaterial({ color: 0x8D6E63 });
-    const guard = new THREE.Mesh(guardGeo, guardMat);
-    guard.position.set(0, 0.05, 0);
-    wGroup.add(guard);
-
-    // Position at right hand
-    wGroup.position.set(0.42, 0.55, 0.05);
-    wGroup.rotation.z = -0.3;
-    eqGroup.add(wGroup);
-  }
-
-  // === SHIELD — on left hand ===
-  if (equipment.shield) {
-    const t = getEQTheme(equipment.shield.id);
-    const sGroup = new THREE.Group();
-    sGroup.name = 'eq_shield';
-
-    const wid = equipment.shield.id || '';
-    const isHex = wid.includes('turtle') || wid.includes('iron') || wid.includes('lightward');
-
-    if (isHex) {
-      // Hexagonal shield
-      const shape = new THREE.Shape();
-      const r = 0.18;
-      for (let i = 0; i < 6; i++) {
-        const a = (Math.PI / 3) * i - Math.PI / 6;
-        if (i === 0) shape.moveTo(Math.cos(a) * r, Math.sin(a) * r);
-        else shape.lineTo(Math.cos(a) * r, Math.sin(a) * r);
+      if (isStaff) {
+        const rodGeo = new THREE.BoxGeometry(0.04, 0.9, 0.04);
+        const rodMat = new THREE.MeshLambertMaterial({ color: t.secondary || 0x5D4037 });
+        const rod = new THREE.Mesh(rodGeo, rodMat);
+        rod.position.set(0, 0.35, 0);
+        wGroup.add(rod);
+        const orbGeo = new THREE.SphereGeometry(0.06, 8, 8);
+        const orbMat = new THREE.MeshBasicMaterial({ color: t.accent || t.primary });
+        const orb = new THREE.Mesh(orbGeo, orbMat);
+        orb.position.set(0, 0.85, 0);
+        wGroup.add(orb);
+        const glowGeo = new THREE.SphereGeometry(0.1, 8, 8);
+        const glowMat = new THREE.MeshBasicMaterial({ color: t.accent || t.primary, transparent: true, opacity: 0.2 });
+        const glow = new THREE.Mesh(glowGeo, glowMat);
+        glow.position.set(0, 0.85, 0);
+        wGroup.add(glow);
+      } else if (isCleaver) {
+        const bladeGeo = new THREE.BoxGeometry(0.15, 0.35, 0.04);
+        const bladeMat = new THREE.MeshLambertMaterial({ color: t.primary });
+        const blade = new THREE.Mesh(bladeGeo, bladeMat);
+        blade.position.set(0, 0.3, 0);
+        wGroup.add(blade);
+      } else if (isCurved) {
+        const len = 0.38;
+        const bladeGeo = new THREE.BoxGeometry(0.05, len, 0.03);
+        const bladeMat = new THREE.MeshLambertMaterial({ color: t.primary });
+        const blade = new THREE.Mesh(bladeGeo, bladeMat);
+        blade.position.set(0.02, len / 2 + 0.02, 0);
+        blade.rotation.z = 0.15;
+        wGroup.add(blade);
+      } else {
+        const len = isDagger ? 0.22 : 0.38;
+        const bladeGeo = new THREE.BoxGeometry(isDagger ? 0.04 : 0.055, len, 0.025);
+        const bladeMat = new THREE.MeshLambertMaterial({ color: t.primary });
+        const blade = new THREE.Mesh(bladeGeo, bladeMat);
+        blade.position.set(0, len / 2 + 0.02, 0);
+        wGroup.add(blade);
+        const edgeGeo = new THREE.BoxGeometry(0.008, len * 0.9, 0.015);
+        const edgeMat = new THREE.MeshBasicMaterial({ color: t.accent || 0xD5D5D5 });
+        const edge = new THREE.Mesh(edgeGeo, edgeMat);
+        edge.position.set(isDagger ? -0.024 : -0.032, len / 2 + 0.02, 0.016);
+        wGroup.add(edge);
       }
-      shape.closePath();
-      const shieldGeo = new THREE.ExtrudeGeometry(shape, { depth: 0.04, bevelEnabled: false });
-      const shieldMat = new THREE.MeshLambertMaterial({ color: t.primary });
-      const shield = new THREE.Mesh(shieldGeo, shieldMat);
-      sGroup.add(shield);
-    } else {
-      // Round/kite shield
-      const shieldGeo = new THREE.BoxGeometry(0.05, 0.32, 0.28);
-      const shieldMat = new THREE.MeshLambertMaterial({ color: t.primary });
-      const shield = new THREE.Mesh(shieldGeo, shieldMat);
-      sGroup.add(shield);
+
+      // Handle sits in palm
+      const handleGeo = new THREE.BoxGeometry(0.035, 0.1, 0.035);
+      const handleMat = new THREE.MeshLambertMaterial({ color: 0x5D4037 });
+      const handle = new THREE.Mesh(handleGeo, handleMat);
+      handle.position.set(0, -0.05, 0);
+      wGroup.add(handle);
+      // Guard
+      const guardGeo = new THREE.BoxGeometry(0.09, 0.022, 0.05);
+      const guardMat = new THREE.MeshLambertMaterial({ color: 0x8D6E63 });
+      const guard = new THREE.Mesh(guardGeo, guardMat);
+      guard.position.set(0, 0.01, 0);
+      wGroup.add(guard);
+
+      // Parent to rightHand — weapon follows arm rotations during attack
+      rightHand.add(wGroup);
     }
-
-    // Emblem
-    const emGeo = new THREE.BoxGeometry(0.08, 0.08, 0.06);
-    const emMat = new THREE.MeshBasicMaterial({ color: t.accent });
-    const emblem = new THREE.Mesh(emGeo, emMat);
-    emblem.position.set(0.03, 0, 0);
-    sGroup.add(emblem);
-
-    // Position at left hand
-    sGroup.position.set(-0.42, 0.65, 0.12);
-    eqGroup.add(sGroup);
   }
 
-  // === RING — subtle glow on left hand ===
+  // === SHIELD — parented to leftHand so it moves with arm ===
+  if (equipment.shield) {
+    const leftHand = model.getObjectByName('leftHand');
+    if (leftHand) {
+      const t = getEQTheme(equipment.shield.id);
+      const sGroup = new THREE.Group();
+      sGroup.name = 'eq_shield';
+
+      const wid = equipment.shield.id || '';
+      const isHex = wid.includes('turtle') || wid.includes('iron') || wid.includes('lightward');
+
+      if (isHex) {
+        const shape = new THREE.Shape();
+        const r = 0.18;
+        for (let i = 0; i < 6; i++) {
+          const a = (Math.PI / 3) * i - Math.PI / 6;
+          if (i === 0) shape.moveTo(Math.cos(a) * r, Math.sin(a) * r);
+          else shape.lineTo(Math.cos(a) * r, Math.sin(a) * r);
+        }
+        shape.closePath();
+        const shieldGeo = new THREE.ExtrudeGeometry(shape, { depth: 0.04, bevelEnabled: false });
+        const shieldMat = new THREE.MeshLambertMaterial({ color: t.primary });
+        const shield = new THREE.Mesh(shieldGeo, shieldMat);
+        sGroup.add(shield);
+      } else {
+        const shieldGeo = new THREE.BoxGeometry(0.05, 0.32, 0.28);
+        const shieldMat = new THREE.MeshLambertMaterial({ color: t.primary });
+        const shield = new THREE.Mesh(shieldGeo, shieldMat);
+        sGroup.add(shield);
+      }
+
+      const emGeo = new THREE.BoxGeometry(0.08, 0.08, 0.06);
+      const emMat = new THREE.MeshBasicMaterial({ color: t.accent });
+      const emblem = new THREE.Mesh(emGeo, emMat);
+      emblem.position.set(0.03, 0, 0);
+      sGroup.add(emblem);
+
+      // Parent to leftHand
+      sGroup.position.set(0, 0.05, 0.08);
+      leftHand.add(sGroup);
+    }
+  }
+
+  // === RING — on leftHand finger ===
   if (equipment.ring) {
-    const t = getEQTheme(equipment.ring.id);
-    const ringGeo = new THREE.TorusGeometry(0.04, 0.012, 8, 16);
-    const ringMat = new THREE.MeshBasicMaterial({ color: t.primary });
-    const ring = new THREE.Mesh(ringGeo, ringMat);
-    ring.position.set(-0.42, 0.42, 0.08);
-    ring.rotation.x = Math.PI / 2;
-    ring.name = 'eq_ring';
-    eqGroup.add(ring);
-    // Gem
-    const gemGeo = new THREE.SphereGeometry(0.018, 6, 6);
-    const gemMat = new THREE.MeshBasicMaterial({ color: t.accent });
-    const gem = new THREE.Mesh(gemGeo, gemMat);
-    gem.position.set(-0.42, 0.42, 0.12);
-    gem.name = 'eq_ring_gem';
-    eqGroup.add(gem);
+    const leftHand = model.getObjectByName('leftHand');
+    if (leftHand) {
+      const t = getEQTheme(equipment.ring.id);
+      const ringGeo = new THREE.TorusGeometry(0.035, 0.01, 8, 16);
+      const ringMat = new THREE.MeshBasicMaterial({ color: t.primary });
+      const ring = new THREE.Mesh(ringGeo, ringMat);
+      ring.position.set(0, 0.06, 0);
+      ring.rotation.x = Math.PI / 2;
+      ring.name = 'eq_ring';
+      leftHand.add(ring);
+      const gemGeo = new THREE.SphereGeometry(0.015, 6, 6);
+      const gemMat = new THREE.MeshBasicMaterial({ color: t.accent });
+      const gem = new THREE.Mesh(gemGeo, gemMat);
+      gem.position.set(0, 0.06, 0.04);
+      gem.name = 'eq_ring_gem';
+      leftHand.add(gem);
+    }
   }
 
   // === ACCESSORY — pendant glow / cape ===
