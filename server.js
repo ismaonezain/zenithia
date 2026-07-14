@@ -259,6 +259,22 @@ function getOrCreatePlayer(playerId, name, wallet, customization, persistentId) 
   return player;
 }
 
+// --- Inventory Hydration ---
+// Merge latest item definitions (icon.image, description, etc.) into saved inventory
+function hydrateInventory(player) {
+  if (!player.inventory) return;
+  for (const item of player.inventory) {
+    const def = ITEMS[item.id];
+    if (def) {
+      // Merge new fields from definition without overwriting user data
+      if (def.icon?.image && !item.icon?.image) {
+        item.icon = { ...def.icon, ...(item.icon || {}) };
+      }
+      if (def.description && !item.description) item.description = def.description;
+    }
+  }
+}
+
 // --- Monster Spawning ---
 let monsterIdCounter = 0;
 
@@ -648,6 +664,7 @@ function handleMessage(ws, playerId, msg) {
     case 'join': {
       const isNew = !world.players[Object.keys(world.players).find(k => world.players[k].wallet === msg.wallet)] && msg.wallet;
       const player = getOrCreatePlayer(playerId, msg.name, msg.wallet, msg.customization, msg.persistentId);
+      hydrateInventory(player); // merge latest item defs (icons, descriptions)
       connectedPlayers[ws] = player;
       player._ws = ws; // back-reference for monster AI to send messages
       ws.playerId = playerId;
