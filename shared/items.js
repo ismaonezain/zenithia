@@ -5,32 +5,32 @@ const ITEMS = {
   // ═══════════════════════════════════════
   // CONSUMABLES
   // ═══════════════════════════════════════
-  potion_small:      { name: 'Herb Potion',     type: 'consumable', description: 'Ramuan herbal sederhana dari Willowmere. Memulihkan 30 HP.',  healAmount: 30,  price: 50,  icon: { bg: 0xF44336, fg: 0xFFFFFF, symbol: '+' } },
-  potion_medium:     { name: 'Healing Tonic',    type: 'consumable', description: 'Tonik penyembuh dari resep Herbalist Sari. Memulihkan 80 HP.',  healAmount: 80,  price: 200, icon: { bg: 0xE53935, fg: 0xFFFFFF, symbol: '++' } },
-  mp_potion_small:   { name: 'Aether Dew',       type: 'consumable', description: 'Embun yang mengandung sedikit Aether. Memulihkan 20 MP.',  manaAmount: 20,  price: 60,  icon: { bg: 0x2196F3, fg: 0xFFFFFF, symbol: '+' } },
-  antidote:          { name: 'Antidote',         type: 'consumable', description: 'Obat racun dari campuran herbal. Menawarkan racun.',    curePoison: true, price: 40, icon: { bg: 0x4CAF50, fg: 0xFFFFFF, symbol: '!' } },
-  willow_rice:       { name: 'Willowmere Rice',  type: 'consumable', description: 'Nasi goreng khas Willowmere. HP+25, ATK+5% selama 60 detik.', healAmount: 25, buff: { stat: 'atk', value: 0.05, duration: 60 }, price: 30, icon: { bg: 0xFF9800, fg: 0xFFF9C4, symbol: '~' } },
-  chicken_stew:      { name: 'Chicken Stew',     type: 'consumable', description: 'Sup ayam hangat buatan Mrs Ningsih. HP+40, DEF+5% selama 60 detik.', healAmount: 40, buff: { stat: 'def', value: 0.05, duration: 60 }, price: 50, icon: { bg: 0xFFC107, fg: 0xFFFFFF, symbol: '~' } },
+  potion_small:      { name: 'Herb Potion',     type: 'consumable', description: 'Ramuan herbal sederhana dari Willowmere. Memulihkan 30 HP.',  healAmount: 30,  price: 50,  icon: { bg: 0xF44336, fg: 0xFFFFFF, symbol: '+', image: '/assets/icons/potion_small.png' } },
+  potion_medium:     { name: 'Healing Tonic',    type: 'consumable', description: 'Tonik penyembuh dari resep Herbalist Sari. Memulihkan 80 HP.',  healAmount: 80,  price: 200, icon: { bg: 0xE53935, fg: 0xFFFFFF, symbol: '++', image: '/assets/icons/potion_medium.png' } },
+  mp_potion_small:   { name: 'Aether Dew',       type: 'consumable', description: 'Embun yang mengandung sedikit Aether. Memulihkan 20 MP.',  manaAmount: 20,  price: 60,  icon: { bg: 0x2196F3, fg: 0xFFFFFF, symbol: '+', image: '/assets/icons/mp_potion_small.png' } },
+  antidote:          { name: 'Antidote',         type: 'consumable', description: 'Obat racun dari campuran herbal. Menawarkan racun.',    curePoison: true, price: 40, icon: { bg: 0x4CAF50, fg: 0xFFFFFF, symbol: '!', image: '/assets/icons/antidote.png' } },
+  willow_rice:       { name: 'Willowmere Rice',  type: 'consumable', description: 'Nasi goreng khas Willowmere. HP+25, ATK+5% selama 60 detik.', healAmount: 25, buff: { stat: 'atk', value: 0.05, duration: 60 }, price: 30, icon: { bg: 0xFF9800, fg: 0xFFF9C4, symbol: '~', image: '/assets/icons/willow_rice.png' } },
+  chicken_stew:      { name: 'Chicken Stew',     type: 'consumable', description: 'Sup ayam hangat buatan Mrs Ningsih. HP+40, DEF+5% selama 60 detik.', healAmount: 40, buff: { stat: 'def', value: 0.05, duration: 60 }, price: 50, icon: { bg: 0xFFC107, fg: 0xFFFFFF, symbol: '~', image: '/assets/icons/chicken_stew.png' } },
 
   // ═══════════════════════════════════════
   // MATERIALS
   // ═══════════════════════════════════════
-  moss_shell:      { name: 'Moss Shell',      type: 'material', description: 'Cangkang keras dari Moss Beetle. Bisa dipakai buat crafting armor awal.',     price: 8,  icon: { bg: 0x4CAF50, fg: 0x81C784, symbol: '◆' } },
-  thorn:           { name: 'Thorn',            type: 'material', description: 'Duri tajam dari punggung Thorn Lizard. Bahan crafting weapon tier awal.',    price: 12, icon: { bg: 0x689F38, fg: 0xCDDC39, symbol: '▲' } },
-  dust_pouch:      { name: 'Dust Pouch',       type: 'material', description: 'Kantung debu dari Dust Mouse. Kadang meledak kalau dipegang kasar.',   price: 5,  icon: { bg: 0xBCAAA4, fg: 0xEFEBE9, symbol: '○' } },
-  frog_leg:        { name: 'Frog Leg',         type: 'material', description: 'Kaki Puddle Frog. Bisa dimasak jadi makanan buff.',            price: 10, icon: { bg: 0x00BCD4, fg: 0xE0F7FA, symbol: '▬' } },
-  wind_essence:    { name: 'Wind Essence',     type: 'material', description: 'Esensi angin dari Wind Sprite. Mengandung Aether terkristalisasi. Tidak bisa didapat dari serangan melee.', price: 20, icon: { bg: 0x81D4FA, fg: 0xFFFFFF, symbol: '✦' } },
-  stone_fragment:  { name: 'Stone Fragment',   type: 'material', description: 'Pecahan batu dari Rock Crawler. Mereka berpura-pura jadi batu tapi isinya mineral berharga.',       price: 15, icon: { bg: 0x9E9E9E, fg: 0xE0E0E0, symbol: '■' } },
-  boar_tusk:       { name: 'Boar Tusk',        type: 'material', description: 'Taring besar dari Bramble Boar. Cukup kuat buat jadi weapon.',     price: 30, icon: { bg: 0x5D4037, fg: 0xFFF9C4, symbol: '◄' } },
-  bramble_core:    { name: 'Bramble Core',     type: 'material', description: 'Inti langka dari Bramble Boar. Mengandung Aether yang sudah terkristalisasi.',      price: 50, icon: { bg: 0x33691E, fg: 0x76FF03, symbol: '◆' } },
-  turtle_shell:    { name: 'Turtle Shell',     type: 'material', description: 'Cangkang kura-kura raksasa dari Marsh Snapper. Sangat keras, cocok buat crafting shield.', price: 25, icon: { bg: 0x2E7D32, fg: 0xA5D6A7, symbol: '◎' } },
+  moss_shell:      { name: 'Moss Shell',      type: 'material', description: 'Cangkang keras dari Moss Beetle. Bisa dipakai buat crafting armor awal.',     price: 8,  icon: { bg: 0x4CAF50, fg: 0x81C784, symbol: '◆', image: '/assets/icons/moss_shell.png' } },
+  thorn:           { name: 'Thorn',            type: 'material', description: 'Duri tajam dari punggung Thorn Lizard. Bahan crafting weapon tier awal.',    price: 12, icon: { bg: 0x689F38, fg: 0xCDDC39, symbol: '▲', image: '/assets/icons/thorn.png' } },
+  dust_pouch:      { name: 'Dust Pouch',       type: 'material', description: 'Kantung debu dari Dust Mouse. Kadang meledak kalau dipegang kasar.',   price: 5,  icon: { bg: 0xBCAAA4, fg: 0xEFEBE9, symbol: '○', image: '/assets/icons/dust_pouch.png' } },
+  frog_leg:        { name: 'Frog Leg',         type: 'material', description: 'Kaki Puddle Frog. Bisa dimasak jadi makanan buff.',            price: 10, icon: { bg: 0x00BCD4, fg: 0xE0F7FA, symbol: '▬', image: '/assets/icons/frog_leg.png' } },
+  wind_essence:    { name: 'Wind Essence',     type: 'material', description: 'Esensi angin dari Wind Sprite. Mengandung Aether terkristalisasi. Tidak bisa didapat dari serangan melee.', price: 20, icon: { bg: 0x81D4FA, fg: 0xFFFFFF, symbol: '✦', image: '/assets/icons/wind_essence.png' } },
+  stone_fragment:  { name: 'Stone Fragment',   type: 'material', description: 'Pecahan batu dari Rock Crawler. Mereka berpura-pura jadi batu tapi isinya mineral berharga.',       price: 15, icon: { bg: 0x9E9E9E, fg: 0xE0E0E0, symbol: '■', image: '/assets/icons/stone_fragment.png' } },
+  boar_tusk:       { name: 'Boar Tusk',        type: 'material', description: 'Taring besar dari Bramble Boar. Cukup kuat buat jadi weapon.',     price: 30, icon: { bg: 0x5D4037, fg: 0xFFF9C4, symbol: '◄', image: '/assets/icons/boar_tusk.png' } },
+  bramble_core:    { name: 'Bramble Core',     type: 'material', description: 'Inti langka dari Bramble Boar. Mengandung Aether yang sudah terkristalisasi.',      price: 50, icon: { bg: 0x33691E, fg: 0x76FF03, symbol: '◆', image: '/assets/icons/bramble_core.png' } },
+  turtle_shell:    { name: 'Turtle Shell',     type: 'material', description: 'Cangkang kura-kura raksasa dari Marsh Snapper. Sangat keras, cocok buat crafting shield.', price: 25, icon: { bg: 0x2E7D32, fg: 0xA5D6A7, symbol: '◎', image: '/assets/icons/turtle_shell.png' } },
 
   // ═══════════════════════════════════════
   // WEAPONS — Per job, 3 tiers
   // ═══════════════════════════════════════
-  village_blade:    { name: 'Oath of the Valley',    type: 'equipment', slot: 'weapon', classReq: ['guardian'],     tier: 1, stats: { atk: 3 },                price: 80,  icon: { bg: 0x8D6E63, fg: 0xBCAAA4, symbol: '/' } },
-  ironclad_edge:    { name: 'Sundered Edge',    type: 'equipment', slot: 'weapon', classReq: ['guardian'],     tier: 2, stats: { atk: 6, def: 2 },         price: 250, icon: { bg: 0x607D8B, fg: 0xB0BEC5, symbol: '/' } },
-  guardian_cleaver: { name: 'Aegis Breaker', type: 'equipment', slot: 'weapon', classReq: ['guardian'],     tier: 3, stats: { atk: 10, def: 4, hp: 20 }, price: 600, icon: { bg: 0x455A64, fg: 0xE0E0E0, symbol: '/' } },
+  village_blade:    { name: 'Oath of the Valley',    type: 'equipment', slot: 'weapon', classReq: ['guardian'],     tier: 1, stats: { atk: 3 },                price: 80,  icon: { bg: 0x8D6E63, fg: 0xBCAAA4, symbol: '/', image: '/assets/icons/village_blade.png' } },
+  ironclad_edge:    { name: 'Sundered Edge',    type: 'equipment', slot: 'weapon', classReq: ['guardian'],     tier: 2, stats: { atk: 6, def: 2 },         price: 250, icon: { bg: 0x607D8B, fg: 0xB0BEC5, symbol: '/', image: '/assets/icons/ironclad_edge.png' } },
+  guardian_cleaver: { name: 'Aegis Breaker', type: 'equipment', slot: 'weapon', classReq: ['guardian'],     tier: 3, stats: { atk: 10, def: 4, hp: 20 }, price: 600, icon: { bg: 0x455A64, fg: 0xE0E0E0, symbol: '/', image: '/assets/icons/guardian_cleaver.png' } },
 
   wind_cutter:      { name: 'Whisper of the Plains',      type: 'equipment', slot: 'weapon', classReq: ['blade_dancer'], tier: 1, stats: { atk: 4, spd: 2 },          price: 120, icon: { bg: 0x00BCD4, fg: 0x80DEEA, symbol: '/' } },
   plains_slicer:    { name: 'Stormveil Blade',    type: 'equipment', slot: 'weapon', classReq: ['blade_dancer'], tier: 2, stats: { atk: 7, spd: 3, crit: 0.05 }, price: 350, icon: { bg: 0x00897B, fg: 0xB2DFDB, symbol: '/' } },
@@ -45,8 +45,8 @@ const ITEMS = {
   lightbringer_rod: { name: 'The Last Light', type: 'equipment', slot: 'weapon', classReq: ['cleric'],       tier: 3, stats: { atk: 7, mp: 45, hp: 35, def: 2 }, price: 680, icon: { bg: 0xFFF9C4, fg: 0xFFD600, symbol: '|' } },
 
   rusty_dagger:     { name: 'Whispering Fang',     type: 'equipment', slot: 'weapon', classReq: ['shadow'],       tier: 1, stats: { atk: 4, crit: 0.05 },      price: 80,  icon: { bg: 0x616161, fg: 0xBDBDBD, symbol: '\\' } },
-  nightfang:        { name: 'Fang of the Hollow King',        type: 'equipment', slot: 'weapon', classReq: ['shadow'],       tier: 2, stats: { atk: 8, crit: 0.10, spd: 3 }, price: 450, icon: { bg: 0x212121, fg: 0xCE93D8, symbol: '\\' } },
-  void_edge:        { name: 'Edge of the Fracture',        type: 'equipment', slot: 'weapon', classReq: ['shadow'],       tier: 3, stats: { atk: 12, crit: 0.15, spd: 5, def: 1 }, price: 800, icon: { bg: 0x0D0D0D, fg: 0x7B1FA2, symbol: '\\' } },
+  nightfang:        { name: 'Fang of the Hollow King',        type: 'equipment', slot: 'weapon', classReq: ['shadow'],       tier: 2, stats: { atk: 8, crit: 0.10, spd: 3 }, price: 450, icon: { bg: 0x212121, fg: 0xCE93D8, symbol: '\\', image: '/assets/icons/nightfang.png' } },
+  void_edge:        { name: 'Edge of the Fracture',        type: 'equipment', slot: 'weapon', classReq: ['shadow'],       tier: 3, stats: { atk: 12, crit: 0.15, spd: 5, def: 1 }, price: 800, icon: { bg: 0x0D0D0D, fg: 0x7B1FA2, symbol: '\\', image: '/assets/icons/void_edge.png' } },
 
   // ═══════════════════════════════════════
   // ARMOR (body) — Per job, 3 tiers

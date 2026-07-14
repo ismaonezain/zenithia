@@ -193,11 +193,14 @@ export class InventoryUI {
   renderBagGrid(items) {
     let html = '';
     items.forEach((item, idx) => {
-      const icon = item.icon?.symbol || '?';
+      const hasImg = item.icon?.image;
+      const iconHtml = hasImg
+        ? `<img class="bag-icon-img" src="${item.icon.image}" alt="${item.name}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><span class="bag-icon-fallback" style="display:none">${item.icon?.symbol || '?'}</span>`
+        : `<span class="bag-icon">${item.icon?.symbol || '?'}</span>`;
       const qty = item.quantity || 1;
       html += `
-        <div class="inv-bag-slot has-item" data-index="${idx}" title="${item.name}${qty > 1 ? ' x' + qty : ''}">
-          <span class="bag-icon">${icon}</span>
+        <div class="inv-bag-slot has-item" data-index="${idx}" title="${item.name}${qty > 1 ? ' x' + qty : ''}" draggable="true">
+          ${iconHtml}
           ${qty > 1 ? `<span class="bag-qty">x${qty}</span>` : ''}
         </div>
       `;

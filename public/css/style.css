@@ -1468,6 +1468,8 @@ body {
 .inv-bag-slot:hover { border-color: rgba(255,215,0,0.3); }
 .inv-bag-slot.has-item { border-color: rgba(255,255,255,0.15); }
 .inv-bag-slot .bag-icon { font-size: 1rem; }
+.bag-icon-img { width: 32px; height: 32px; object-fit: contain; image-rendering: pixelated; }
+.bag-icon-fallback { display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; font-size: 1rem; }
 .inv-bag-slot .bag-qty {
   position: absolute;
   bottom: 1px;
