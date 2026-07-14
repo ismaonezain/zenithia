@@ -1822,8 +1822,8 @@ function updatePlayerHP(hp, maxHp) {
 function updatePlayerXP(xp, maxXp) {
   const fill = document.getElementById('xp-fill');
   const text = document.getElementById('xp-text');
-  if (fill) fill.style.width = `${(xp / maxXp) * 100}%`;
-  if (text) text.textContent = `XP ${xp}/${maxXp}`;
+  if (fill) fill.style.width = `${Math.max(1, (xp / maxXp) * 100)}%`;
+  if (text) text.textContent = `${xp} / ${maxXp}`;
 }
 
 function updateSkillPointsUI() {
