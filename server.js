@@ -198,12 +198,11 @@ function getOrCreatePlayer(playerId, name, wallet, customization, persistentId) 
       if (!existing.unlockedSkills) {
         existing.unlockedSkills = ['tier1'];
       }
-      if (existing.skillPoints === undefined || existing.skillPoints === 0) {
-        // Retroactive: 1 SP per level above 1, minus what they already spent
-        const tier2Count = (existing.unlockedSkills || []).filter(s => s.startsWith('tier2')).length;
-        const totalEarned = Math.max(0, (existing.level || 1) - 1);
-        existing.skillPoints = Math.max(0, totalEarned - tier2Count);
-      }
+      // ALWAYS recalculate SP on login: earned (level-1) minus spent (tier2 count)
+      const tier2Count = (existing.unlockedSkills || []).filter(s => s.startsWith('tier2')).length;
+      const totalEarned = Math.max(0, (existing.level || 1) - 1);
+      existing.skillPoints = Math.max(0, totalEarned - tier2Count);
+      console.log(`[SKILL] ${existing.name} Lv.${existing.level} → SP: ${existing.skillPoints} (earned: ${totalEarned}, spent: ${tier2Count})`);
       world.players[playerId] = existing;
       // Remove old entry if different id
       Object.keys(world.players).forEach(k => {
