@@ -1603,3 +1603,15 @@ body {
 #hit-vignette.vignette-flash {
   animation: vignette-flash-anim 0.4s ease-out forwards;
 }
+
+/* Panel hit flash — red border pulse */
+@keyframes panel-hit-blink {
+  0%, 100% { border-color: inherit; box-shadow: none; }
+  30% { border-color: #ff1744 !important; box-shadow: 0 0 20px rgba(255, 23, 68, 0.5), inset 0 0 15px rgba(255, 23, 68, 0.15); }
+  60% { border-color: #ff5252 !important; box-shadow: 0 0 10px rgba(255, 82, 82, 0.3); }
+}
+
+.panel-hit-flash {
+  animation: panel-hit-blink 0.4s ease-out !important;
+  position: relative;
+}
