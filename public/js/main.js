@@ -1898,11 +1898,11 @@ canvas.addEventListener('click', (e) => {
   // Check NPC proximity — walk to NPC then interact
   for (const npc of Object.values(state.npcs)) {
     const dist = npc.position.distanceTo(point);
-    if (dist < 3) {
+    if (dist < 1.5) {
       const model = state.players[state.playerId];
       if (model) {
         const playerDist = model.position.distanceTo(npc.position);
-        if (playerDist < 2.5) {
+        if (playerDist < 2) {
           // Close enough — interact directly
           const faceDir = npc.position.clone().sub(model.position).normalize();
           state.lastFacing = model.position.clone().add(faceDir);
