@@ -1992,10 +1992,11 @@ canvas.addEventListener('click', (e) => {
 
   // A* pathfinding — route around obstacles
   const model = state.players[state.playerId];
-  if (!model) return;
+  if (!model) { console.log('[MOVE] no model'); return; }
   const startX = Math.round(model.position.x);
   const startZ = Math.round(model.position.z);
   const path = findPath(startX, startZ, snapX, snapZ);
+  console.log('[MOVE] click ground', {startX, startZ, snapX, snapZ, pathLen: path?.length, path});
 
   if (path && path.length > 1) {
     const waypoints = path.slice(1);
@@ -2005,8 +2006,12 @@ canvas.addEventListener('click', (e) => {
     }
     state.pathWaypoints = waypoints;
     state.targetPos = new THREE.Vector3(state.pathWaypoints[0].x, 0, state.pathWaypoints[0].z);
+    console.log('[MOVE] targetPos set', state.targetPos);
   } else if (path && path.length === 1) {
     state.targetPos = new THREE.Vector3(point.x, 0, point.z);
+    console.log('[MOVE] targetPos set (single)', state.targetPos);
+  } else {
+    console.log('[MOVE] NO PATH FOUND');
   }
 });
 
@@ -2023,6 +2028,7 @@ function updateMovement() {
   if (dir.length() < 0.1) {
     model.position.copy(state.targetPos);
     wsSend(JSON.stringify({ type: 'move', x: state.targetPos.x, y: 0, z: state.targetPos.z }));
+    console.log('[MOVE] reached waypoint', {x: state.targetPos.x, z: state.targetPos.z, wpLeft: state.pathWaypoints?.length});
 
     // Next waypoint
     if (state.pathWaypoints && state.pathWaypoints.length > 0) {
