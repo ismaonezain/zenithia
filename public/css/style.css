@@ -1278,6 +1278,24 @@ body {
   border-color: rgba(255,255,255,0.1);
   background: rgba(255,255,255,0.03);
 }
+.st-node.unlockable {
+  border-color: rgba(255,215,0,0.5);
+  cursor: pointer;
+  animation: unlockable-pulse 1.5s ease-in-out infinite;
+}
+.st-node.unlockable:hover {
+  border-color: rgba(255,215,0,0.9);
+  background: rgba(255,215,0,0.08);
+}
+@keyframes unlockable-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255,215,0,0); }
+  50% { box-shadow: 0 0 12px 2px rgba(255,215,0,0.3); }
+}
+.st-node.unlockable .st-node-name { color: #FFD600; }
+.st-node.unlockable .st-node-badge {
+  background: rgba(255,215,0,0.2);
+  color: #FFD600;
+}
 .st-node-icon {
   font-size: 1.6rem;
   width: 40px;
