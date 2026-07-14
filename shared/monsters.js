@@ -13,7 +13,7 @@ const MONSTERS = {
     color: 0x4CAF50,
     accentColor: 0x81C784,
     size: 0.6,
-    aggroRange: 5,
+    aggroRange: 8,
     attackRange: 1.5,
     attackSpeed: 1.5,
     behavior: 'passive', // only attacks if hit first
@@ -38,7 +38,7 @@ const MONSTERS = {
     color: 0xBCAAA4,
     accentColor: 0xD7CCC8,
     size: 0.35,
-    aggroRange: 3,
+    aggroRange: 5,
     attackRange: 1,
     attackSpeed: 0.8,
     behavior: 'skittish', // runs away, explodes if cornered
@@ -63,7 +63,7 @@ const MONSTERS = {
     color: 0x689F38,
     accentColor: 0x8BC34A,
     size: 0.7,
-    aggroRange: 6,
+    aggroRange: 10,
     attackRange: 1.5,
     attackSpeed: 1.2,
     behavior: 'pack', // attacks in groups of 2-3
@@ -88,7 +88,7 @@ const MONSTERS = {
     color: 0x00BCD4,
     accentColor: 0x4DD0E1,
     size: 0.55,
-    aggroRange: 4,
+    aggroRange: 7,
     attackRange: 2,
     attackSpeed: 1.0,
     behavior: 'ambush', // hides in water, jumps out
@@ -113,7 +113,7 @@ const MONSTERS = {
     color: 0x81D4FA,
     accentColor: 0xB3E5FC,
     size: 0.4,
-    aggroRange: 7,
+    aggroRange: 11,
     attackRange: 3,
     attackSpeed: 0.6,
     behavior: 'trickster', // steals items, immune to melee
@@ -139,7 +139,7 @@ const MONSTERS = {
     color: 0x9E9E9E,
     accentColor: 0xBDBDBD,
     size: 0.45,
-    aggroRange: 2,
+    aggroRange: 4,
     attackRange: 1.5,
     attackSpeed: 2.0,
     behavior: 'camouflaged', // looks like rock until approached
@@ -164,7 +164,7 @@ const MONSTERS = {
     color: 0x5D4037,
     accentColor: 0x8D6E63,
     size: 1.2,
-    aggroRange: 8,
+    aggroRange: 13,
     attackRange: 2,
     attackSpeed: 1.8,
     behavior: 'aggressive', // charges at player
