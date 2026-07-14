@@ -182,7 +182,7 @@ export class InventoryUI {
       return `
         <div class="inv-equip-slot ${hasItem ? 'has-item' : ''}" data-slot="${s.key}" title="${item ? item.name : 'Empty ' + s.label}">
           ${hasItem
-            ? `<span class="eq-icon">${item.icon?.symbol || '?'}</span><span class="eq-name">${item.name?.substring(0, 8) || ''}</span>`
+            ? `<img class="bag-icon-img" src="/assets/icons/${item.id}.png" alt="${item.name}" style="width:24px;height:24px" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><span class="eq-icon" style="display:none">${item.icon?.symbol || '?'}</span><span class="eq-name">${item.name?.substring(0, 8) || ''}</span>`
             : `<span class="eq-icon" style="opacity:0.2">${s.icon}</span><span class="eq-label">${s.label}</span>`
           }
         </div>
@@ -193,10 +193,10 @@ export class InventoryUI {
   renderBagGrid(items) {
     let html = '';
     items.forEach((item, idx) => {
-      const hasImg = item.icon?.image;
-      const iconHtml = hasImg
-        ? `<img class="bag-icon-img" src="${item.icon.image}" alt="${item.name}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><span class="bag-icon-fallback" style="display:none">${item.icon?.symbol || '?'}</span>`
-        : `<span class="bag-icon">${item.icon?.symbol || '?'}</span>`;
+      // Client-side: construct icon path from item ID — no server hydration needed
+      const imgPath = `/assets/icons/${item.id}.png`;
+      const hasImg = item.icon?.image || true; // always try image first
+      const iconHtml = `<img class="bag-icon-img" src="${imgPath}" alt="${item.name}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><span class="bag-icon-fallback" style="display:none">${item.icon?.symbol || '?'}</span>`;
       const qty = item.quantity || 1;
       html += `
         <div class="inv-bag-slot has-item" data-index="${idx}" title="${item.name}${qty > 1 ? ' x' + qty : ''}" draggable="true">
