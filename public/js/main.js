@@ -1994,8 +1994,8 @@ canvas.addEventListener('click', (e) => {
   }
 
   // Click ground = stop auto-attack + disarm skill, keep target locked
-  state.autoAttacking = false;
-  disarmSkill();
+  disarmSkill();               // disarm first (may re-enable auto-attack internally)
+  state.autoAttacking = false; // override: ground click always stops auto-attack
   state.targetPos = null;
   state.pathWaypoints = null;
 
