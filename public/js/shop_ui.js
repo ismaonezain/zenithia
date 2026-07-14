@@ -88,7 +88,23 @@ export class ShopUI {
     this.container.querySelectorAll('.sell-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         const itemId = btn.dataset.item;
-        this.ws.send(JSON.stringify({ type: 'sell_item', shopId: this.shopId, itemId, quantity: 1 }));
+        const row = btn.closest('.sell-row');
+        const input = row?.querySelector('.sell-qty-input');
+        const qty = Math.max(1, parseInt(input?.value) || 1);
+        this.ws.send(JSON.stringify({ type: 'sell_item', shopId: this.shopId, itemId, quantity: qty }));
+      });
+    });
+    // Sell qty +/- buttons
+    this.container.querySelectorAll('.sell-qty-plus').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const input = btn.closest('.sell-row')?.querySelector('.sell-qty-input');
+        if (input) { input.value = Math.min(parseInt(input.max), parseInt(input.value) + 1); }
+      });
+    });
+    this.container.querySelectorAll('.sell-qty-minus').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const input = btn.closest('.sell-row')?.querySelector('.sell-qty-input');
+        if (input) { input.value = Math.max(1, parseInt(input.value) - 1); }
       });
     });
 
@@ -141,23 +157,29 @@ export class ShopUI {
       const iconBg = item.icon ? `#${item.icon.bg.toString(16).padStart(6, '0')}` : '#555';
       const iconFg = item.icon ? `#${item.icon.fg.toString(16).padStart(6, '0')}` : '#fff';
       const symbol = item.icon?.symbol || '?';
-      const itemPrice = this.catalog.find(c => c.itemId === item.id)?.price || 10;
+      const itemDef = typeof ITEMS !== 'undefined' ? ITEMS[item.id] : null;
+      const itemPrice = itemDef?.price || this.catalog.find(c => c.itemId === item.id)?.price || 10;
       const shop = this.getShopDef();
       const sellPrice = Math.ceil(itemPrice * (shop?.sellMultiplier || 0.4));
       const qty = item.quantity || 1;
 
       return `
-        <div style="display:flex; align-items:center; padding:10px 12px; margin:4px 0; border-radius:8px; background:rgba(255,255,255,0.04); gap:12px;">
+        <div class="sell-row" style="display:flex; align-items:center; padding:10px 12px; margin:4px 0; border-radius:8px; background:rgba(255,255,255,0.04); gap:8px;">
           <div style="width:36px; height:36px; border-radius:6px; background:${iconBg}; display:flex; align-items:center; justify-content:center; color:${iconFg}; font-size:14px; font-weight:bold; flex-shrink:0;">
             ${symbol}
           </div>
           <div style="flex:1; min-width:0;">
-            <div style="font-size:12px; font-weight:bold; color:#eee;">${item.name} ${qty > 1 ? `<span style="color:#999;">x${qty}</span>` : ''}</div>
+            <div style="font-size:12px; font-weight:bold; color:#eee;">${item.name} <span style="color:#666; font-size:10px;">x${qty}</span></div>
             <div style="font-size:10px; color:#999;">${item.description || ''}</div>
+          </div>
+          <div style="display:flex; align-items:center; gap:3px; flex-shrink:0;">
+            <button class="sell-qty-minus" style="width:20px; height:20px; border-radius:4px; border:1px solid #555; background:rgba(255,255,255,0.06); color:#aaa; font-size:12px; cursor:pointer; display:flex; align-items:center; justify-content:center;">−</button>
+            <input class="sell-qty-input" type="number" min="1" max="${qty}" value="1" style="width:36px; height:20px; text-align:center; border-radius:4px; border:1px solid #555; background:rgba(0,0,0,0.3); color:#eee; font-size:11px; padding:0;">
+            <button class="sell-qty-plus" style="width:20px; height:20px; border-radius:4px; border:1px solid #555; background:rgba(255,255,255,0.06); color:#aaa; font-size:12px; cursor:pointer; display:flex; align-items:center; justify-content:center;">+</button>
           </div>
           <button class="sell-btn" data-item="${item.id}"
             style="background:rgba(255,152,0,0.2); border:1px solid #FF9800;
-            color:#FF9800; padding:5px 12px; border-radius:6px; font-size:11px; cursor:pointer; white-space:nowrap;">
+            color:#FF9800; padding:5px 10px; border-radius:6px; font-size:11px; cursor:pointer; white-space:nowrap;">
             💰 ${sellPrice}
           </button>
         </div>
