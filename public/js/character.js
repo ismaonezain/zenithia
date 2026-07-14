@@ -864,6 +864,48 @@ export function stopWalk(model, skipArms) {
 }
 
 // --- Equipment Visuals ---
+// Theme colors matching item-icons.js THEMES
+const EQ_THEMES = {
+  guard:      { primary: 0x8D6E63, secondary: 0x5D4037, accent: 0xA1887F },
+  moss:       { primary: 0x66BB6A, secondary: 0x388E3C, accent: 0xA5D6A7 },
+  bramble:    { primary: 0x4CAF50, secondary: 0x2E7D32, accent: 0x81C784 },
+  dancer:     { primary: 0xE91E63, secondary: 0xAD1457, accent: 0xF48FB1 },
+  plains:     { primary: 0x8D6E63, secondary: 0x5D4037, accent: 0xBCAAA4 },
+  storm:      { primary: 0x42A5F5, secondary: 0x1565C0, accent: 0x90CAF9 },
+  sage:       { primary: 0x7E57C2, secondary: 0x4527A0, accent: 0xB39DDB },
+  deepwood:   { primary: 0x2E7D32, secondary: 0x1B5E20, accent: 0x66BB6A },
+  arcane:     { primary: 0x9C27B0, secondary: 0x6A1B9A, accent: 0xCE93D8 },
+  healer:     { primary: 0xE0E0E0, secondary: 0x9E9E9E, accent: 0xF5F5F5 },
+  shrine:     { primary: 0xFFD54F, secondary: 0xFFC107, accent: 0xFFF9C4 },
+  lightweave: { primary: 0xFFF8E1, secondary: 0xFFD54F, accent: 0xFFFFFF },
+  shadow:     { primary: 0x424242, secondary: 0x212121, accent: 0x757575 },
+  nightstalker:{ primary: 0x212121, secondary: 0x000000, accent: 0x616161 },
+  void:       { primary: 0x1A1A2E, secondary: 0x16213E, accent: 0x7B1FA2 },
+  iron:       { primary: 0x78909C, secondary: 0x546E7A, accent: 0xB0BEC5 },
+  guardian:   { primary: 0xFFD54F, secondary: 0xFFC107, accent: 0xFF8F00 },
+  holy:       { primary: 0xFFF9C4, secondary: 0xFFD54F, accent: 0xFFFFFF },
+  lightward:  { primary: 0xFFF8E1, secondary: 0xFFECB3, accent: 0xFFFFFF },
+  copper:     { primary: 0xE67E22, secondary: 0xD35400, accent: 0xF0B27A },
+  moonstone:  { primary: 0xB3E5FC, secondary: 0x81D4FA, accent: 0xE1F5FE },
+  aether:     { primary: 0xCE93D8, secondary: 0xAB47BC, accent: 0xE1BEE7 },
+  wind:       { primary: 0x81D4FA, secondary: 0x4FC3F7, accent: 0xB3E5FC },
+  wooden:     { primary: 0x8D6E63, secondary: 0x5D4037, accent: 0xBCAAA4 },
+  village:    { primary: 0xBDBDBD, secondary: 0x9E9E9E, accent: 0xE0E0E0 },
+  ironclad:   { primary: 0x607D8B, secondary: 0x455A64, accent: 0x90A4AE },
+  nightfang:  { primary: 0x37474F, secondary: 0x263238, accent: 0x546E7A },
+  _default:   { primary: 0x607D8B, secondary: 0x455A64, accent: 0x90A4AE },
+};
+
+function getEQTheme(itemId) {
+  if (!itemId) return EQ_THEMES._default;
+  const parts = itemId.split('_');
+  for (let len = parts.length; len >= 1; len--) {
+    const prefix = parts.slice(0, len).join('_');
+    if (EQ_THEMES[prefix]) return EQ_THEMES[prefix];
+  }
+  return EQ_THEMES._default;
+}
+
 export function applyEquipment(model, equipment) {
   if (!model || !equipment) return;
 
@@ -873,58 +915,244 @@ export function applyEquipment(model, equipment) {
   const eqGroup = new THREE.Group();
   eqGroup.name = 'equipment';
 
-  // WEAPON — attached to right hand
-  if (equipment.weapon) {
-    const weaponGeo = new THREE.BoxGeometry(0.08, 0.5, 0.08);
-    const weaponMat = new THREE.MeshLambertMaterial({ color: 0xBDBDBD });
-    const weapon = new THREE.Mesh(weaponGeo, weaponMat);
-    weapon.position.set(0.4, 0.6, 0.1);
-    weapon.rotation.z = -0.3;
-    eqGroup.add(weapon);
+  // Find character parts by name
+  const body = model.getObjectByName('body');
+  const leftLeg = model.getObjectByName('leftLeg');
+  const rightLeg = model.getObjectByName('rightLeg');
 
-    // Handle
-    const handleGeo = new THREE.BoxGeometry(0.05, 0.15, 0.05);
-    const handleMat = new THREE.MeshLambertMaterial({ color: 0x5D4037 });
-    const handle = new THREE.Mesh(handleGeo, handleMat);
-    handle.position.set(0.4, 0.35, 0.1);
-    handle.rotation.z = -0.3;
-    eqGroup.add(handle);
-  }
-
-  // SHIELD — attached to left hand
-  if (equipment.shield) {
-    const shieldGeo = new THREE.BoxGeometry(0.05, 0.35, 0.3);
-    const shieldMat = new THREE.MeshLambertMaterial({ color: 0x795548 });
-    const shield = new THREE.Mesh(shieldGeo, shieldMat);
-    shield.position.set(-0.45, 0.7, 0.15);
-    eqGroup.add(shield);
-  }
-
-  // HELMET — on top of head
-  if (equipment.helmet) {
-    const helmGeo = new THREE.BoxGeometry(0.55, 0.2, 0.55);
-    const helmMat = new THREE.MeshLambertMaterial({ color: 0x78909C });
-    const helm = new THREE.Mesh(helmGeo, helmMat);
-    helm.position.set(0, 1.75, 0);
-    eqGroup.add(helm);
-  }
-
-  // ARMOR — change body color tint
+  // === ARMOR — recolor body + shoulder pads ===
   if (equipment.armor) {
-    const body = model.children.find(c => c.position.y === 0.8 && c.geometry?.parameters?.width === 0.6);
-    if (body) {
-      body.material = new THREE.MeshLambertMaterial({ color: 0x607D8B });
+    const t = getEQTheme(equipment.armor.id);
+    if (body) body.material = new THREE.MeshLambertMaterial({ color: t.primary });
+    // Shoulder pads
+    const spGeo = new THREE.BoxGeometry(0.22, 0.12, 0.26);
+    const spMat = new THREE.MeshLambertMaterial({ color: t.secondary });
+    const lSP = new THREE.Mesh(spGeo, spMat);
+    lSP.position.set(-0.34, 1.15, 0);
+    lSP.name = 'eq_shoulder';
+    eqGroup.add(lSP);
+    const rSP = new THREE.Mesh(spGeo, spMat);
+    rSP.position.set(0.34, 1.15, 0);
+    rSP.name = 'eq_shoulder';
+    eqGroup.add(rSP);
+    // Chest plate overlay
+    const cpGeo = new THREE.BoxGeometry(0.5, 0.5, 0.06);
+    const cpMat = new THREE.MeshLambertMaterial({ color: t.accent, transparent: true, opacity: 0.35 });
+    const chestPlate = new THREE.Mesh(cpGeo, cpMat);
+    chestPlate.position.set(0, 0.85, 0.22);
+    chestPlate.name = 'eq_chestplate';
+    eqGroup.add(chestPlate);
+    // Belt accent
+    const beltGeo = new THREE.BoxGeometry(0.62, 0.08, 0.44);
+    const beltMat = new THREE.MeshLambertMaterial({ color: t.secondary });
+    const beltOverlay = new THREE.Mesh(beltGeo, beltMat);
+    beltOverlay.position.set(0, 0.52, 0);
+    beltOverlay.name = 'eq_belt';
+    eqGroup.add(beltOverlay);
+  }
+
+  // === PANTS — recolor legs + knee guards ===
+  if (equipment.pants) {
+    const t = getEQTheme(equipment.pants.id);
+    const pantsMat = new THREE.MeshLambertMaterial({ color: t.primary });
+    if (leftLeg) leftLeg.material = pantsMat;
+    if (rightLeg) rightLeg.material = pantsMat;
+    // Knee guards
+    const kgGeo = new THREE.BoxGeometry(0.22, 0.12, 0.08);
+    const kgMat = new THREE.MeshLambertMaterial({ color: t.accent });
+    const lKG = new THREE.Mesh(kgGeo, kgMat);
+    lKG.position.set(0, 0, 0.16);
+    lKG.name = 'eq_kneeguard';
+    if (leftLeg) leftLeg.add(lKG);
+    const rKG = new THREE.Mesh(kgGeo, kgMat);
+    rKG.position.set(0, 0, 0.16);
+    rKG.name = 'eq_kneeguard';
+    if (rightLeg) rightLeg.add(rKG);
+  }
+
+  // === BOOTS — recolor boot parts ===
+  if (equipment.boots) {
+    const t = getEQTheme(equipment.boots.id);
+    const bootMat = new THREE.MeshLambertMaterial({ color: t.primary });
+    const bootTopMat = new THREE.MeshLambertMaterial({ color: t.secondary });
+    // Recolor boot meshes in left/right leg children
+    for (const leg of [leftLeg, rightLeg]) {
+      if (!leg) continue;
+      leg.children.forEach(c => {
+        if (c.position.y <= -0.2) {
+          // This is a boot part
+          if (c.position.y > -0.25) c.material = bootTopMat;
+          else c.material = bootMat;
+        }
+      });
     }
   }
 
-  // ACCESSORY — small glow
+  // === WEAPON — blade + handle in right hand ===
+  if (equipment.weapon) {
+    const t = getEQTheme(equipment.weapon.id);
+    const wGroup = new THREE.Group();
+    wGroup.name = 'eq_weapon';
+
+    // Determine weapon style from name
+    const wid = equipment.weapon.id || '';
+    const isStaff = wid.includes('staff') || wid.includes('rod') || wid.includes('focus') || wid.includes('scepter');
+    const isDagger = wid.includes('dagger') || wid.includes('fang') || wid.includes('edge');
+    const isCleaver = wid.includes('cleaver');
+    const isCurved = wid.includes('cutter') || wid.includes('slicer');
+
+    if (isStaff || wid.includes('lightbringer')) {
+      // Staff — long vertical rod with orb on top
+      const rodGeo = new THREE.BoxGeometry(0.04, 0.9, 0.04);
+      const rodMat = new THREE.MeshLambertMaterial({ color: t.secondary || 0x5D4037 });
+      const rod = new THREE.Mesh(rodGeo, rodMat);
+      rod.position.set(0, 0.35, 0);
+      wGroup.add(rod);
+      // Orb
+      const orbGeo = new THREE.SphereGeometry(0.06, 8, 8);
+      const orbMat = new THREE.MeshBasicMaterial({ color: t.accent || t.primary });
+      const orb = new THREE.Mesh(orbGeo, orbMat);
+      orb.position.set(0, 0.85, 0);
+      wGroup.add(orb);
+      // Glow
+      const glowGeo = new THREE.SphereGeometry(0.1, 8, 8);
+      const glowMat = new THREE.MeshBasicMaterial({ color: t.accent || t.primary, transparent: true, opacity: 0.2 });
+      const glow = new THREE.Mesh(glowGeo, glowMat);
+      glow.position.set(0, 0.85, 0);
+      wGroup.add(glow);
+    } else if (isCleaver) {
+      // Wide blade
+      const bladeGeo = new THREE.BoxGeometry(0.15, 0.35, 0.04);
+      const bladeMat = new THREE.MeshLambertMaterial({ color: t.primary });
+      const blade = new THREE.Mesh(bladeGeo, bladeMat);
+      blade.position.set(0, 0.35, 0);
+      wGroup.add(blade);
+    } else {
+      // Standard blade (short sword / dagger)
+      const len = isDagger ? 0.25 : 0.4;
+      const bladeGeo = new THREE.BoxGeometry(isDagger ? 0.04 : 0.06, len, 0.03);
+      const bladeMat = new THREE.MeshLambertMaterial({ color: t.primary });
+      const blade = new THREE.Mesh(bladeGeo, bladeMat);
+      blade.position.set(0, isDagger ? 0.2 : 0.3, 0);
+      wGroup.add(blade);
+      // Edge highlight
+      const edgeGeo = new THREE.BoxGeometry(0.01, len * 0.9, 0.02);
+      const edgeMat = new THREE.MeshBasicMaterial({ color: t.accent || 0xD5D5D5 });
+      const edge = new THREE.Mesh(edgeGeo, edgeMat);
+      edge.position.set(isDagger ? -0.025 : -0.035, isDagger ? 0.2 : 0.3, 0.02);
+      wGroup.add(edge);
+    }
+
+    // Handle (shared)
+    const handleGeo = new THREE.BoxGeometry(0.04, 0.12, 0.04);
+    const handleMat = new THREE.MeshLambertMaterial({ color: 0x5D4037 });
+    const handle = new THREE.Mesh(handleGeo, handleMat);
+    handle.position.set(0, -0.02, 0);
+    wGroup.add(handle);
+    // Guard
+    const guardGeo = new THREE.BoxGeometry(0.1, 0.025, 0.06);
+    const guardMat = new THREE.MeshLambertMaterial({ color: 0x8D6E63 });
+    const guard = new THREE.Mesh(guardGeo, guardMat);
+    guard.position.set(0, 0.05, 0);
+    wGroup.add(guard);
+
+    // Position at right hand
+    wGroup.position.set(0.42, 0.55, 0.05);
+    wGroup.rotation.z = -0.3;
+    eqGroup.add(wGroup);
+  }
+
+  // === SHIELD — on left hand ===
+  if (equipment.shield) {
+    const t = getEQTheme(equipment.shield.id);
+    const sGroup = new THREE.Group();
+    sGroup.name = 'eq_shield';
+
+    const wid = equipment.shield.id || '';
+    const isHex = wid.includes('turtle') || wid.includes('iron') || wid.includes('lightward');
+
+    if (isHex) {
+      // Hexagonal shield
+      const shape = new THREE.Shape();
+      const r = 0.18;
+      for (let i = 0; i < 6; i++) {
+        const a = (Math.PI / 3) * i - Math.PI / 6;
+        if (i === 0) shape.moveTo(Math.cos(a) * r, Math.sin(a) * r);
+        else shape.lineTo(Math.cos(a) * r, Math.sin(a) * r);
+      }
+      shape.closePath();
+      const shieldGeo = new THREE.ExtrudeGeometry(shape, { depth: 0.04, bevelEnabled: false });
+      const shieldMat = new THREE.MeshLambertMaterial({ color: t.primary });
+      const shield = new THREE.Mesh(shieldGeo, shieldMat);
+      sGroup.add(shield);
+    } else {
+      // Round/kite shield
+      const shieldGeo = new THREE.BoxGeometry(0.05, 0.32, 0.28);
+      const shieldMat = new THREE.MeshLambertMaterial({ color: t.primary });
+      const shield = new THREE.Mesh(shieldGeo, shieldMat);
+      sGroup.add(shield);
+    }
+
+    // Emblem
+    const emGeo = new THREE.BoxGeometry(0.08, 0.08, 0.06);
+    const emMat = new THREE.MeshBasicMaterial({ color: t.accent });
+    const emblem = new THREE.Mesh(emGeo, emMat);
+    emblem.position.set(0.03, 0, 0);
+    sGroup.add(emblem);
+
+    // Position at left hand
+    sGroup.position.set(-0.42, 0.65, 0.12);
+    eqGroup.add(sGroup);
+  }
+
+  // === RING — subtle glow on left hand ===
+  if (equipment.ring) {
+    const t = getEQTheme(equipment.ring.id);
+    const ringGeo = new THREE.TorusGeometry(0.04, 0.012, 8, 16);
+    const ringMat = new THREE.MeshBasicMaterial({ color: t.primary });
+    const ring = new THREE.Mesh(ringGeo, ringMat);
+    ring.position.set(-0.42, 0.42, 0.08);
+    ring.rotation.x = Math.PI / 2;
+    ring.name = 'eq_ring';
+    eqGroup.add(ring);
+    // Gem
+    const gemGeo = new THREE.SphereGeometry(0.018, 6, 6);
+    const gemMat = new THREE.MeshBasicMaterial({ color: t.accent });
+    const gem = new THREE.Mesh(gemGeo, gemMat);
+    gem.position.set(-0.42, 0.42, 0.12);
+    gem.name = 'eq_ring_gem';
+    eqGroup.add(gem);
+  }
+
+  // === ACCESSORY — pendant glow / cape ===
   if (equipment.accessory) {
-    const glowGeo = new THREE.BoxGeometry(0.1, 0.1, 0.1);
-    const glowMat = new THREE.MeshBasicMaterial({ color: 0x7B1FA2, transparent: true, opacity: 0.6 });
-    const glow = new THREE.Mesh(glowGeo, glowMat);
-    glow.position.set(0, 1.2, 0.3);
-    glow.name = 'accessory_glow';
-    eqGroup.add(glow);
+    const t = getEQTheme(equipment.accessory.id);
+    const wid = equipment.accessory.id || '';
+
+    if (wid.includes('cloak') || wid.includes('cape')) {
+      // Cape — flowing cloth on back
+      const capeGeo = new THREE.BoxGeometry(0.35, 0.5, 0.04);
+      const capeMat = new THREE.MeshLambertMaterial({ color: t.primary, transparent: true, opacity: 0.85 });
+      const cape = new THREE.Mesh(capeGeo, capeMat);
+      cape.position.set(0, 0.65, -0.22);
+      cape.name = 'eq_cape';
+      eqGroup.add(cape);
+    } else {
+      // Pendant on chest
+      const pendantGeo = new THREE.SphereGeometry(0.03, 6, 6);
+      const pendantMat = new THREE.MeshBasicMaterial({ color: t.accent });
+      const pendant = new THREE.Mesh(pendantGeo, pendantMat);
+      pendant.position.set(0, 1.1, 0.25);
+      pendant.name = 'eq_pendant';
+      eqGroup.add(pendant);
+      // Glow
+      const glowGeo = new THREE.SphereGeometry(0.06, 6, 6);
+      const glowMat = new THREE.MeshBasicMaterial({ color: t.accent, transparent: true, opacity: 0.15 });
+      const glow = new THREE.Mesh(glowGeo, glowMat);
+      glow.position.set(0, 1.1, 0.25);
+      glow.name = 'eq_pendant_glow';
+      eqGroup.add(glow);
+    }
   }
 
   model.add(eqGroup);
@@ -934,4 +1162,13 @@ export function removeEquipment(model) {
   if (!model) return;
   const eq = model.getObjectByName('equipment');
   if (eq) model.remove(eq);
+  // Also remove knee guards added to legs
+  ['leftLeg', 'rightLeg'].forEach(name => {
+    const part = model.getObjectByName(name);
+    if (part) {
+      part.children.forEach(c => {
+        if (c.name === 'eq_kneeguard') part.remove(c);
+      });
+    }
+  });
 }

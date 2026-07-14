@@ -786,6 +786,10 @@ function handleServerMessage(msg) {
       if (msg.monsters) msg.monsters.forEach(m => spawnMonsterClient(m));
       showHUD();
       createPlayerModelInWorld(state.player);
+      // Apply equipment visuals on spawn
+      if (state.playerModel && state.player.equipment) {
+        applyEquipment(state.playerModel, state.player.equipment);
+      }
 
       // Always update HUD from server data
       const hudName = document.getElementById('hud-name');
@@ -911,6 +915,8 @@ function handleServerMessage(msg) {
       if (msg.spd !== undefined) state.player.spd = msg.spd;
       if (msg.crit !== undefined) state.player.crit = msg.crit;
       state.inventoryUI.updatePlayer(state.player);
+      // Update character model visuals
+      if (state.playerModel) applyEquipment(state.playerModel, msg.equipment);
       break;
     }
 
