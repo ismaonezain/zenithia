@@ -198,9 +198,11 @@ function getOrCreatePlayer(playerId, name, wallet, customization, persistentId) 
       if (!existing.unlockedSkills) {
         existing.unlockedSkills = ['tier1'];
       }
-      if (existing.skillPoints === undefined) {
-        // Give retroactive skill points: 1 per level above 1
-        existing.skillPoints = Math.max(0, (existing.level || 1) - 1);
+      if (existing.skillPoints === undefined || existing.skillPoints === 0) {
+        // Retroactive: 1 SP per level above 1, minus what they already spent
+        const tier2Count = (existing.unlockedSkills || []).filter(s => s.startsWith('tier2')).length;
+        const totalEarned = Math.max(0, (existing.level || 1) - 1);
+        existing.skillPoints = Math.max(0, totalEarned - tier2Count);
       }
       world.players[playerId] = existing;
       // Remove old entry if different id
