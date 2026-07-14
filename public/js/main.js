@@ -1580,14 +1580,19 @@ function spawnAttackImpact(position, color = 0xFF5252) {
 // ============================
 // HIT REACTION (flinch when taking damage)
 // ============================
+let _hitBodyTimer = null;
+let _hitBodyTimer2 = null;
 function hitReaction(model) {
   if (!model) return;
   const body = model.getObjectByName('body');
   if (body) {
+    // Cancel previous hit timers so body doesn't stack rotations
+    clearTimeout(_hitBodyTimer);
+    clearTimeout(_hitBodyTimer2);
     const orig = body.rotation.x;
     body.rotation.x = 0.2; // lean back
-    setTimeout(() => { body.rotation.x = -0.05; }, 80);
-    setTimeout(() => { body.rotation.x = orig; }, 150);
+    _hitBodyTimer = setTimeout(() => { body.rotation.x = -0.05; }, 80);
+    _hitBodyTimer2 = setTimeout(() => { body.rotation.x = 0; }, 150);
   }
   // Flash effect — brief red tint on body mesh
   // Save original color in userData so rapid hits don't capture red as "original"
@@ -2239,12 +2244,16 @@ function classAttackAnim(model, classType) {
   const rightArm = model.getObjectByName('rightArm');
   const leftArm = model.getObjectByName('leftArm');
 
-  // Helper: animate property
+  // Helper: animate property — supports 'rotation.x' style dot paths
   const anim = (obj, prop, val, dur) => {
     if (!obj) return;
-    const orig = obj[prop];
-    obj[prop] = val;
-    setTimeout(() => { obj[prop] = orig; }, dur);
+    const parts = prop.split('.');
+    const target = parts.length > 1 ? obj[parts[0]] : obj;
+    const key = parts.length > 1 ? parts[1] : prop;
+    if (!target) return;
+    const orig = target[key];
+    target[key] = val;
+    setTimeout(() => { target[key] = orig; }, dur);
   };
 
   switch (classType) {
