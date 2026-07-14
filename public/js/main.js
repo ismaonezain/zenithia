@@ -1867,7 +1867,7 @@ function updatePlayerHP(hp, maxHp) {
   }
 }
 
-// === HIT FLASH — blink HP bar + open panels + screen vignette when damaged ===
+// === HIT FLASH — blink HP bar + screen vignette when damaged ===
 let _hitFlashTimer = null;
 function hitFlash() {
   // HP bar blink red
@@ -1877,21 +1877,6 @@ function hitFlash() {
     clearTimeout(_hitFlashTimer);
     _hitFlashTimer = setTimeout(() => hpFill.classList.remove('hp-hit-flash'), 300);
   }
-  // Blink any open UI panels
-  const panels = [
-    document.getElementById('inventory-ui'),
-    document.getElementById('dialogue-ui'),
-    document.getElementById('skill-tree-modal.show'),
-    document.getElementById('skill-detail-panel'),
-    document.getElementById('hotbar-picker'),
-  ];
-  // Also query visible panels by common selectors
-  document.querySelectorAll('#inventory-ui, #dialogue-ui, #skill-tree-modal, #skill-detail-panel, #hotbar-picker').forEach(el => {
-    if (el && el.style.display !== 'none' && getComputedStyle(el).display !== 'none') {
-      el.classList.add('panel-hit-flash');
-      setTimeout(() => el.classList.remove('panel-hit-flash'), 400);
-    }
-  });
   // Screen vignette
   let vig = document.getElementById('hit-vignette');
   if (!vig) {
@@ -1900,7 +1885,7 @@ function hitFlash() {
     document.body.appendChild(vig);
   }
   vig.classList.remove('vignette-flash');
-  void vig.offsetWidth; // reflow to restart animation
+  void vig.offsetWidth;
   vig.classList.add('vignette-flash');
 }
 
