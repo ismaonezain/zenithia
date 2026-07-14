@@ -1590,11 +1590,17 @@ function hitReaction(model) {
     setTimeout(() => { body.rotation.x = orig; }, 150);
   }
   // Flash effect — brief red tint on body mesh
+  // Save original color in userData so rapid hits don't capture red as "original"
   const bodyMesh = model.getObjectByName('body');
   if (bodyMesh && bodyMesh.material) {
-    const origColor = bodyMesh.material.color.getHex();
+    if (bodyMesh.userData.origColor === undefined) {
+      bodyMesh.userData.origColor = bodyMesh.material.color.getHex();
+    }
     bodyMesh.material.color.setHex(0xFF0000);
-    setTimeout(() => { bodyMesh.material.color.setHex(origColor); }, 100);
+    clearTimeout(bodyMesh.userData._flashTimer);
+    bodyMesh.userData._flashTimer = setTimeout(() => {
+      bodyMesh.material.color.setHex(bodyMesh.userData.origColor);
+    }, 100);
   }
 }
 
