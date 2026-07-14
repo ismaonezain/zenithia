@@ -823,7 +823,7 @@ function handleMessage(ws, playerId, msg) {
             player.hp = player.maxHp;
             player.maxMp += 5;
             player.mp = player.maxMp;
-            ws.send(JSON.stringify({ type: 'level_up', level: player.level, maxHp: player.maxHp, maxMp: player.maxMp }));
+            ws.send(JSON.stringify({ type: 'level_up', level: player.level, xp: player.xp, maxHp: player.maxHp, maxMp: player.maxMp }));
           }
         }
         if (quest.rewards.items) {
@@ -1138,7 +1138,7 @@ function handleMessage(ws, playerId, msg) {
           if (player.level >= 5 && !player.unlockedSkills.includes('tier2a')) {
             player.unlockedSkills.push('tier2a');
           }
-          ws.send(JSON.stringify({ type: 'level_up', level: player.level, maxHp: player.maxHp, maxMp: player.maxMp, unlockedSkills: player.unlockedSkills }));
+          ws.send(JSON.stringify({ type: 'level_up', level: player.level, xp: player.xp, maxHp: player.maxHp, maxMp: player.maxMp, unlockedSkills: player.unlockedSkills }));
         }
         const loot = rollLoot(monster.type);
         addLootToPlayer(player, loot);

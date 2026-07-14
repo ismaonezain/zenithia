@@ -1074,6 +1074,7 @@ function handleServerMessage(msg) {
     case 'level_up': {
       window.ZenSFX?.levelUp();
       state.player.level = msg.level;
+      state.player.xp = msg.xp ?? 0;
       state.player.maxHp = msg.maxHp;
       state.player.maxMp = msg.maxMp;
       if (msg.unlockedSkills) state.unlockedSkills = msg.unlockedSkills;
@@ -1082,6 +1083,8 @@ function handleServerMessage(msg) {
       updatePlayerLevel(msg.level);
       updatePlayerHP(state.player.maxHp, state.player.maxHp);
       updatePlayerMP(state.player.maxMp, state.player.maxMp);
+      const xpNeeded = 100 + ((state.player.level || 1) - 1) * 200;
+      updatePlayerXP(state.player.xp, xpNeeded);
       break;
     }
 
