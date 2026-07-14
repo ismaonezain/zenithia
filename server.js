@@ -194,6 +194,12 @@ function getOrCreatePlayer(playerId, name, wallet, customization, persistentId) 
         existing.mp = existing.maxMp || CLASS_STATS[existing.class || 'laborer']?.mp || 30;
         console.log(`[RECOVER] ${existing.name} had hp=0, restored to ${existing.hp}`);
       }
+      // Backfill unlockedSkills for existing players
+      if (!existing.unlockedSkills) {
+        existing.unlockedSkills = ['tier1'];
+        if (existing.level >= 3) existing.unlockedSkills.push('tier2b');
+        if (existing.level >= 5) existing.unlockedSkills.push('tier2a');
+      }
       world.players[playerId] = existing;
       // Remove old entry if different id
       Object.keys(world.players).forEach(k => {
@@ -243,7 +249,7 @@ function getOrCreatePlayer(playerId, name, wallet, customization, persistentId) 
     x: 0, y: 0, z: 0, class: cls, className: null, level: 1, xp: 0,
     hp: s.hp, maxHp: s.hp, mp: s.mp, maxMp: s.mp, atk: s.atk, def: s.def, spd: s.spd, crit: s.crit,
     zen: 50, inventory: [], quests: {}, reputation: {}, region: 'willowmere',
-    customization: customization || {}, equipment: {},
+    customization: customization || {}, equipment: {}, unlockedSkills: ['tier1'],
     createdAt: Date.now(), lastLogin: Date.now(),
   };
   world.players[playerId] = player;
@@ -492,6 +498,14 @@ function handleAttack(ws, playerId, msg) {
       player.maxMp += 5; player.mp = player.maxMp;
       player.atk += 1; player.def += 1;
       leveledUp = true;
+      // Unlock skill tree tiers on level up
+      if (!player.unlockedSkills) player.unlockedSkills = ['tier1'];
+      if (player.level >= 3 && !player.unlockedSkills.includes('tier2b')) {
+        player.unlockedSkills.push('tier2b');
+      }
+      if (player.level >= 5 && !player.unlockedSkills.includes('tier2a')) {
+        player.unlockedSkills.push('tier2a');
+      }
     }
 
     // Loot
@@ -985,27 +999,62 @@ function handleMessage(ws, playerId, msg) {
     case 'use_skill': {
       const player = connectedPlayers[ws];
       if (!player) break;
-      // Skill definitions (must match client)
-      const SKILL_DATA = {
-        laborer: { mpCost: 15, damageMulti: 2.5, healMulti: 0 },
-        miner: { mpCost: 20, damageMulti: 3.0, healMulti: 0 },
-        gardener: { mpCost: 12, damageMulti: 2.0, healMulti: 0 },
-        herbalist: { mpCost: 25, damageMulti: 0, healMulti: 0.4 },
-        watchman: { mpCost: 18, damageMulti: 2.0, healMulti: 0 },
+      // Full skill definitions for all tiers (must match client)
+      const ALL_SKILLS = {
+        laborer: {
+          tier1:  { mpCost: 15, damageMulti: 2.5, healMulti: 0, range: 3.5, name: 'Power Smash' },
+          tier2a: { mpCost: 25, damageMulti: 3.5, healMulti: 0, range: 4, name: 'Earthquake' },
+          tier2b: { mpCost: 20, damageMulti: 0, healMulti: 0, range: 0, name: 'Iron Wall', buff: { stat: 'def', value: 0.5, duration: 10 } },
+        },
+        miner: {
+          tier1:  { mpCost: 20, damageMulti: 3.0, healMulti: 0, range: 4, name: 'Avalanche' },
+          tier2a: { mpCost: 30, damageMulti: 4.0, healMulti: 0, range: 4.5, name: 'Blade Storm' },
+          tier2b: { mpCost: 15, damageMulti: 0, healMulti: 0, range: 0, name: 'Shadow Step', buff: { stat: 'spd', value: 0.5, duration: 8 } },
+        },
+        gardener: {
+          tier1:  { mpCost: 12, damageMulti: 2.0, healMulti: 0, range: 5, name: 'Thorn Whip' },
+          tier2a: { mpCost: 20, damageMulti: 3.0, healMulti: 0, range: 5, name: "Nature's Wrath" },
+          tier2b: { mpCost: 18, damageMulti: 0, healMulti: 0.4, range: 0, name: 'Healing Bloom' },
+        },
+        herbalist: {
+          tier1:  { mpCost: 25, damageMulti: 0, healMulti: 0.4, range: 4, name: 'Mystic Heal' },
+          tier2a: { mpCost: 35, damageMulti: 0, healMulti: 0.7, range: 0, name: 'Rejuvenation' },
+          tier2b: { mpCost: 20, damageMulti: 0, healMulti: 0, range: 0, name: 'Mana Surge', buff: { stat: 'atk', value: 0.3, duration: 12 } },
+        },
+        watchman: {
+          tier1:  { mpCost: 15, damageMulti: 2.5, healMulti: 0, range: 4.5, name: 'Eagle Eye' },
+          tier2a: { mpCost: 25, damageMulti: 4.0, healMulti: 0, range: 5, name: 'Piercing Shot', ignoreDef: true },
+          tier2b: { mpCost: 18, damageMulti: 0, healMulti: 0, range: 0, name: "Sentinel's Mark", buff: { stat: 'dmgTaken', value: 0.5, duration: 10 } },
+        },
       };
-      const skill = SKILL_DATA[player.class];
+      const skillTier = msg.skillTier || 'tier1';
+      const classSkills = ALL_SKILLS[player.class];
+      if (!classSkills) break;
+      const skill = classSkills[skillTier];
       if (!skill) break;
+      // Check if unlocked
+      if (!player.unlockedSkills || !player.unlockedSkills.includes(skillTier)) {
+        ws.send(JSON.stringify({ type: 'combat_message', text: `Skill not unlocked! Reach the required level.` }));
+        break;
+      }
       if (player.mp < skill.mpCost) {
         ws.send(JSON.stringify({ type: 'combat_message', text: 'Not enough MP!' }));
         break;
       }
       player.mp -= skill.mpCost;
 
+      // Buff skill (no damage/heal, just applies buff)
+      if (skill.buff && skill.range === 0) {
+        // Apply buff to player (simplified: just notify client)
+        ws.send(JSON.stringify({ type: 'skill_used', skillId: skillTier, skillName: skill.name, mp: player.mp, buff: skill.buff }));
+        break;
+      }
+
       // Heal skill
       if (skill.healMulti > 0) {
         const healAmt = Math.floor(player.maxHp * skill.healMulti);
         player.hp = Math.min(player.maxHp, player.hp + healAmt);
-        ws.send(JSON.stringify({ type: 'skill_used', skillId: msg.skillId, hp: player.hp, mp: player.mp, heal: healAmt }));
+        ws.send(JSON.stringify({ type: 'skill_used', skillId: skillTier, skillName: skill.name, hp: player.hp, mp: player.mp, heal: healAmt }));
         break;
       }
 
@@ -1020,14 +1069,19 @@ function handleMessage(ws, playerId, msg) {
       const dx = player.x - monster.x;
       const dz = player.z - monster.z;
       const dist = Math.sqrt(dx * dx + dz * dz);
-      if (dist > 5) { // skill range generous
+      if (dist > skill.range + 1.5) { // generous range
         ws.send(JSON.stringify({ type: 'combat_message', text: 'Too far!' }));
         player.mp += skill.mpCost; // refund
         break;
       }
 
       const isCrit = Math.random() < player.crit;
-      let dmg = Math.max(1, Math.floor(player.atk * skill.damageMulti) - Math.floor(monster.def * 0.4));
+      let dmg;
+      if (skill.ignoreDef) {
+        dmg = Math.max(1, Math.floor(player.atk * skill.damageMulti));
+      } else {
+        dmg = Math.max(1, Math.floor(player.atk * skill.damageMulti) - Math.floor(monster.def * 0.4));
+      }
       if (isCrit) dmg = Math.floor(dmg * 1.5);
 
       monster.hp -= dmg;
@@ -1035,25 +1089,43 @@ function handleMessage(ws, playerId, msg) {
       if (monster.state === 'idle') { monster.state = 'chase'; monster.target = playerId; }
 
       broadcast({ type: 'monster_hit', monsterId: monster.id, damage: dmg, isCrit, hp: skillDisplayHp, maxHp: monster.maxHp });
-      ws.send(JSON.stringify({ type: 'skill_used', skillId: msg.skillId, mp: player.mp }));
+      ws.send(JSON.stringify({ type: 'skill_used', skillId: skillTier, skillName: skill.name, mp: player.mp }));
 
       if (monster.hp <= 0) {
         monster.alive = false;
         monster.hp = 0;
         const xpGain = data.xp;
+        const zenGain = data.zen ? data.zen[0] + Math.floor(Math.random() * (data.zen[1] - data.zen[0])) : 0;
         player.xp += xpGain;
+        player.zen = (player.zen || 0) + zenGain;
         const xpNeeded = 100 + (player.level - 1) * 200;
+        let leveledUp = false;
         if (player.xp >= xpNeeded) {
           player.level++;
           player.xp -= xpNeeded;
           player.maxHp += 10; player.hp = player.maxHp;
           player.maxMp += 5; player.mp = player.maxMp;
-          ws.send(JSON.stringify({ type: 'level_up', level: player.level, maxHp: player.maxHp, maxMp: player.maxMp }));
+          player.atk += 1; player.def += 1;
+          leveledUp = true;
+          // Unlock skill tree tiers on level up
+          if (!player.unlockedSkills) player.unlockedSkills = ['tier1'];
+          if (player.level >= 3 && !player.unlockedSkills.includes('tier2b')) {
+            player.unlockedSkills.push('tier2b');
+          }
+          if (player.level >= 5 && !player.unlockedSkills.includes('tier2a')) {
+            player.unlockedSkills.push('tier2a');
+          }
+          ws.send(JSON.stringify({ type: 'level_up', level: player.level, maxHp: player.maxHp, maxMp: player.maxMp, unlockedSkills: player.unlockedSkills }));
         }
         const loot = rollLoot(monster.type);
         addLootToPlayer(player, loot);
         trackQuestKills(player, monster.type);
-        ws.send(JSON.stringify({ type: 'monster_killed', monsterId: monster.id, monsterName: monster.name, xp: xpGain, loot, hp: player.hp, maxHp: player.maxHp, mp: player.mp, maxMp: player.maxMp }));
+        broadcast({
+          type: 'monster_killed', monsterId: monster.id, killerId: playerId,
+          xp: xpGain, zen: zenGain, loot, level: player.level,
+          expToNext: xpNeeded, leveledUp,
+          hp: player.hp, maxHp: player.maxHp, mp: player.mp, maxMp: player.maxMp,
+        });
         broadcast({ type: 'monster_died', monsterId: monster.id });
         saveWorld();
         }
