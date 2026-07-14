@@ -2103,7 +2103,7 @@ function updateMovement() {
   }
 
   // Check next step collision — stop if blocked
-  const step = dir.clone().normalize().multiplyScalar(0.15);
+  const step = dir.clone().normalize().multiplyScalar(0.08);
   const nextX = model.position.x + step.x;
   const nextZ = model.position.z + step.z;
   if (!isWalkable(nextX, nextZ)) {
