@@ -949,7 +949,7 @@ body {
 .skill-key {
   position: absolute;
   bottom: 2px;
-  right: 4px;
+  left: 4px;
   font-size: 0.6rem;
   color: rgba(255,255,255,0.5);
   font-weight: 600;
@@ -1111,4 +1111,429 @@ body {
   font-weight: 600;
   text-shadow: 1px 1px 3px rgba(0,0,0,0.8);
   white-space: nowrap;
+}
+
+/* ============================
+   SKILL TREE BUTTON
+   ============================ */
+#skill-tree-btn {
+  position: fixed;
+  bottom: 84px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 80;
+  background: rgba(15,12,8,0.85);
+  border: 2px solid rgba(255,215,0,0.4);
+  border-radius: 8px;
+  padding: 4px 12px;
+  color: #FFD700;
+  font-size: 0.7rem;
+  font-family: 'Courier New', monospace;
+  cursor: pointer;
+  transition: all 0.2s;
+  pointer-events: auto;
+}
+#skill-tree-btn:hover {
+  background: rgba(255,215,0,0.15);
+  border-color: rgba(255,215,0,0.7);
+}
+
+/* ============================
+   SKILL TREE MODAL
+   ============================ */
+#skill-tree-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.7);
+  backdrop-filter: blur(4px);
+}
+#skill-tree-modal.show {
+  display: flex;
+}
+#skill-tree-panel {
+  background: rgba(10, 8, 5, 0.96);
+  border: 2px solid rgba(255,215,0,0.4);
+  border-radius: 14px;
+  padding: 20px 24px;
+  min-width: 340px;
+  max-width: 420px;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.7);
+  font-family: 'Courier New', monospace;
+}
+#skill-tree-panel::-webkit-scrollbar { width: 4px; }
+#skill-tree-panel::-webkit-scrollbar-thumb { background: rgba(255,215,0,0.3); border-radius: 2px; }
+
+.st-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+.st-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #FFD700;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+.st-close {
+  background: none;
+  border: 1px solid rgba(244,67,54,0.5);
+  color: #F44336;
+  border-radius: 6px;
+  padding: 4px 10px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-family: inherit;
+}
+.st-close:hover { background: rgba(244,67,54,0.15); }
+
+.st-class-label {
+  font-size: 0.75rem;
+  color: rgba(255,215,0,0.6);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 12px;
+  text-align: center;
+}
+
+/* Skill node */
+.st-node {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  margin: 6px 0;
+  border-radius: 8px;
+  border: 2px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.03);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.st-node:hover {
+  border-color: rgba(255,215,0,0.4);
+  background: rgba(255,215,0,0.05);
+}
+.st-node.unlocked {
+  border-color: rgba(76,175,80,0.6);
+}
+.st-node.unlocked:hover {
+  border-color: rgba(76,175,80,0.9);
+  background: rgba(76,175,80,0.08);
+}
+.st-node.locked {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.st-node.locked:hover {
+  border-color: rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.03);
+}
+.st-node-icon {
+  font-size: 1.6rem;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.05);
+  flex-shrink: 0;
+}
+.st-node-info {
+  flex: 1;
+  min-width: 0;
+}
+.st-node-name {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #e0d6c8;
+}
+.st-node.unlocked .st-node-name { color: #4CAF50; }
+.st-node-desc {
+  font-size: 0.65rem;
+  color: rgba(255,255,255,0.45);
+  margin-top: 2px;
+}
+.st-node-req {
+  font-size: 0.6rem;
+  color: rgba(255,152,0,0.7);
+  margin-top: 2px;
+}
+.st-node-badge {
+  font-size: 0.55rem;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(255,215,0,0.15);
+  color: #FFD700;
+  flex-shrink: 0;
+}
+.st-node.unlocked .st-node-badge {
+  background: rgba(76,175,80,0.2);
+  color: #4CAF50;
+}
+
+/* Tree connector lines */
+.st-connector {
+  display: flex;
+  justify-content: center;
+  padding: 2px 0;
+}
+.st-connector-line {
+  width: 2px;
+  height: 12px;
+  background: rgba(255,215,0,0.2);
+}
+.st-node.unlocked + .st-connector .st-connector-line {
+  background: rgba(76,175,80,0.4);
+}
+
+/* Branch connectors */
+.st-branch {
+  display: flex;
+  justify-content: center;
+  gap: 0;
+  padding: 0;
+  margin: 0;
+  position: relative;
+}
+.st-branch::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 25%;
+  right: 25%;
+  height: 2px;
+  background: rgba(255,215,0,0.15);
+}
+
+/* ============================
+   MERGED INVENTORY PANEL
+   ============================ */
+#inventory-ui {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(10, 10, 20, 0.95);
+  color: white;
+  border-radius: 16px;
+  border: 2px solid #4CAF50;
+  z-index: 25;
+  display: none;
+  font-family: 'Courier New', monospace;
+  width: 480px;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+#inventory-ui::-webkit-scrollbar { width: 4px; }
+#inventory-ui::-webkit-scrollbar-thumb { background: rgba(76,175,80,0.3); border-radius: 2px; }
+
+.inv-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 16px 10px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+.inv-header h3 {
+  margin: 0;
+  color: #4CAF50;
+  font-size: 0.95rem;
+  letter-spacing: 1px;
+}
+.inv-close-btn {
+  padding: 4px 10px;
+  border: 1px solid #F44336;
+  background: transparent;
+  color: #F44336;
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.75rem;
+}
+.inv-close-btn:hover { background: rgba(244,67,54,0.15); }
+
+.inv-section-label {
+  font-size: 0.65rem;
+  color: rgba(255,215,0,0.6);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  padding: 10px 16px 4px;
+  font-weight: 700;
+}
+
+/* Equipment slots row */
+.inv-equip-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 6px 16px 10px;
+}
+.inv-equip-slot {
+  width: 52px;
+  height: 52px;
+  border: 2px solid #333;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.03);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  position: relative;
+  transition: border-color 0.2s;
+}
+.inv-equip-slot:hover { border-color: rgba(255,215,0,0.4); }
+.inv-equip-slot.has-item { border-color: rgba(76,175,80,0.5); }
+.inv-equip-slot .eq-icon { font-size: 1.1rem; }
+.inv-equip-slot .eq-label {
+  font-size: 0.45rem;
+  color: rgba(255,255,255,0.4);
+  position: absolute;
+  bottom: 1px;
+  text-transform: uppercase;
+}
+.inv-equip-slot .eq-name {
+  font-size: 0.45rem;
+  color: #4CAF50;
+  max-width: 48px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: center;
+}
+
+/* Inventory grid */
+.inv-bag-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 5px;
+  padding: 6px 16px 10px;
+}
+.inv-bag-slot {
+  width: 100%;
+  aspect-ratio: 1;
+  border: 2px solid #333;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.02);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  position: relative;
+  transition: border-color 0.2s;
+}
+.inv-bag-slot:hover { border-color: rgba(255,215,0,0.3); }
+.inv-bag-slot.has-item { border-color: rgba(255,255,255,0.15); }
+.inv-bag-slot .bag-icon { font-size: 1rem; }
+.inv-bag-slot .bag-qty {
+  position: absolute;
+  bottom: 1px;
+  right: 3px;
+  font-size: 0.55rem;
+  color: rgba(255,255,255,0.6);
+}
+
+/* Context menu for items */
+.inv-context-menu {
+  position: fixed;
+  z-index: 260;
+  background: rgba(15, 12, 8, 0.96);
+  border: 1px solid rgba(255,215,0,0.3);
+  border-radius: 8px;
+  padding: 4px 0;
+  min-width: 120px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.6);
+}
+.inv-context-menu .ctx-item {
+  display: block;
+  width: 100%;
+  padding: 6px 14px;
+  background: none;
+  border: none;
+  color: #e0d6c8;
+  font-family: 'Courier New', monospace;
+  font-size: 0.75rem;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.inv-context-menu .ctx-item:hover {
+  background: rgba(255,215,0,0.15);
+}
+
+/* Stats bar at bottom */
+.inv-stats-bar {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 16px;
+  border-top: 1px solid rgba(255,255,255,0.08);
+  background: rgba(0,0,0,0.2);
+  border-radius: 0 0 14px 14px;
+}
+.inv-stat {
+  text-align: center;
+}
+.inv-stat-label {
+  font-size: 0.55rem;
+  color: rgba(255,255,255,0.4);
+  text-transform: uppercase;
+}
+.inv-stat-val {
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+.inv-zen {
+  color: #FFD54F;
+}
+.inv-atk { color: #F44336; }
+.inv-def { color: #2196F3; }
+.inv-spd { color: #4CAF50; }
+.inv-crit { color: #FF9800; }
+
+/* Tooltip */
+.inv-tooltip {
+  position: fixed;
+  z-index: 270;
+  background: rgba(10, 8, 5, 0.96);
+  border: 1px solid rgba(255,215,0,0.3);
+  border-radius: 8px;
+  padding: 8px 12px;
+  max-width: 200px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.6);
+  font-size: 0.7rem;
+  color: #e0d6c8;
+  pointer-events: none;
+}
+.inv-tooltip .tt-name {
+  font-weight: 700;
+  color: #FFD700;
+  margin-bottom: 2px;
+}
+.inv-tooltip .tt-type {
+  font-size: 0.6rem;
+  color: rgba(255,255,255,0.4);
+}
+.inv-tooltip .tt-desc {
+  margin-top: 4px;
+  color: rgba(255,255,255,0.6);
+  line-height: 1.3;
+}
+.inv-tooltip .tt-stats {
+  margin-top: 4px;
+  color: #4CAF50;
+  font-size: 0.65rem;
+}
+
+/* Skill detail panel opacity transition */
+#skill-detail-panel {
+  transition: opacity 0.3s ease;
 }

@@ -71,6 +71,7 @@ const state = {
   hotbarPickerSlot: null,  // which slot is being reassigned
   flashlightOn: false,
   flashlight: null,
+  unlockedSkills: ['tier1'], // skill tree unlocks from server
   // Day/night cycle
   dayTime: 0.25,         // 0-1, 0 = midnight, 0.25 = sunrise, 0.5 = noon, 0.75 = sunset
   daySpeed: 1 / 1200,    // full cycle = 1200 seconds (20 min, matches server)
@@ -671,6 +672,7 @@ function enterSinglePlayer(playerName, wallet) {
     equipment: {},
     zen: 0,
     customization: state.customization,
+    unlockedSkills: ['tier1'],
   };
   state.playerId = state.player.id;
 
@@ -792,6 +794,10 @@ function handleServerMessage(msg) {
       if (hudLevel) hudLevel.textContent = 'Lv.' + state.player.level;
       updatePlayerHP(state.player.hp, state.player.maxHp);
       updatePlayerMP(state.player.mp, state.player.maxMp);
+      // Sync unlocked skills from server
+      if (msg.player.unlockedSkills) {
+        state.unlockedSkills = msg.player.unlockedSkills;
+      }
       initSkillUI();
       // Sync inventory/equipment UI from server data
       state.inventoryUI.updatePlayer(state.player);
@@ -1026,11 +1032,12 @@ function handleServerMessage(msg) {
       state.player.level = msg.level;
       state.player.maxHp = msg.maxHp;
       state.player.maxMp = msg.maxMp;
+      if (msg.unlockedSkills) state.unlockedSkills = msg.unlockedSkills;
       showLevelUpEffect();
       addChatMessage('System', `🎉 Level Up! You are now Level ${msg.level}!`);
       updatePlayerLevel(msg.level);
-      updatePlayerHP(msg.maxHp, msg.maxHp);
-      updatePlayerMP(msg.maxMp, msg.maxMp);
+      updatePlayerHP(state.player.maxHp, state.player.maxHp);
+      updatePlayerMP(state.player.maxMp, state.player.maxMp);
       break;
     }
 
@@ -1087,7 +1094,11 @@ function handleServerMessage(msg) {
       if (msg.heal) {
         state.player.hp = msg.hp;
         updatePlayerHP(msg.hp, state.player.maxHp);
-        addChatMessage('Skill', `💚 Healed ${msg.heal} HP!`);
+        addChatMessage('Skill', `💚 ${msg.skillName || 'Heal'} — Healed ${msg.heal} HP!`);
+      } else if (msg.buff) {
+        addChatMessage('Skill', `⚡ ${msg.skillName || 'Buff'} — ${msg.buff.stat.toUpperCase()} buff active!`);
+      } else {
+        addChatMessage('Skill', `⚔️ ${msg.skillName || 'Skill'} used!`);
       }
       break;
     }
@@ -1351,7 +1362,7 @@ function spawnMonsterClient(m) {
 }
 
 // ============================
-// SKILL DEFINITIONS (1 per class)
+// SKILL DEFINITIONS (1 per class + skill tree)
 // ============================
 const SKILLS = {
   laborer: {
@@ -1400,6 +1411,45 @@ const SKILLS = {
     defBreak: 0.5,
     range: 3,
     desc: 'Bash dealing 2x ATK, reduces monster DEF',
+  },
+};
+
+// Full skill tree (3 skills per class)
+const SKILL_TREES = {
+  laborer: {
+    className: 'Guardian',
+    color: '#8D6E63',
+    tier1:  { id: 'tier1', name: 'Power Smash', icon: '🔨', mpCost: 15, cooldown: 8000, damageMulti: 2.5, range: 3.5, desc: 'Devastating blow dealing 2.5x ATK damage', reqLevel: 1 },
+    tier2a: { id: 'tier2a', name: 'Earthquake', icon: '🌋', mpCost: 25, cooldown: 12000, damageMulti: 3.5, range: 4, desc: 'AoE shockwave dealing 3.5x ATK damage', reqLevel: 5 },
+    tier2b: { id: 'tier2b', name: 'Iron Wall', icon: '🧱', mpCost: 20, cooldown: 15000, damageMulti: 0, healMulti: 0, range: 0, desc: 'DEF buff +50% for 10 seconds', reqLevel: 3, buff: { stat: 'def', value: 0.5, duration: 10 } },
+  },
+  miner: {
+    className: 'Blade Dancer',
+    color: '#78909C',
+    tier1:  { id: 'tier1', name: 'Avalanche', icon: '⛏️', mpCost: 20, cooldown: 10000, damageMulti: 3.0, range: 4, desc: 'Rock slam dealing 3x ATK damage', reqLevel: 1 },
+    tier2a: { id: 'tier2a', name: 'Blade Storm', icon: '🌀', mpCost: 30, cooldown: 14000, damageMulti: 4.0, range: 4.5, desc: 'Multi-hit storm dealing 4x ATK damage', reqLevel: 5 },
+    tier2b: { id: 'tier2b', name: 'Shadow Step', icon: '👤', mpCost: 15, cooldown: 12000, damageMulti: 0, healMulti: 0, range: 0, desc: 'Dodge + speed buff for 8 seconds', reqLevel: 3, buff: { stat: 'spd', value: 0.5, duration: 8 } },
+  },
+  gardener: {
+    className: 'Ranger',
+    color: '#66BB6A',
+    tier1:  { id: 'tier1', name: 'Thorn Whip', icon: '🌿', mpCost: 12, cooldown: 6000, damageMulti: 2.0, range: 5, desc: 'Ranged vine attack dealing 2x ATK', reqLevel: 1 },
+    tier2a: { id: 'tier2a', name: "Nature's Wrath", icon: '🌸', mpCost: 20, cooldown: 10000, damageMulti: 3.0, range: 5, desc: 'Powerful vine strike dealing 3x ATK + slow', reqLevel: 5 },
+    tier2b: { id: 'tier2b', name: 'Healing Bloom', icon: '🌺', mpCost: 18, cooldown: 10000, damageMulti: 0, healMulti: 0.4, range: 0, desc: 'Heal 40% max HP', reqLevel: 3 },
+  },
+  herbalist: {
+    className: 'Sage',
+    color: '#AB47BC',
+    tier1:  { id: 'tier1', name: 'Mystic Heal', icon: '✨', mpCost: 25, cooldown: 12000, damageMulti: 0, healMulti: 0.4, range: 4, desc: 'Restore 40% max HP', reqLevel: 1 },
+    tier2a: { id: 'tier2a', name: 'Rejuvenation', icon: '🌟', mpCost: 35, cooldown: 18000, damageMulti: 0, healMulti: 0.7, range: 0, desc: 'Restore 70% max HP', reqLevel: 5 },
+    tier2b: { id: 'tier2b', name: 'Mana Surge', icon: '🔮', mpCost: 20, cooldown: 15000, damageMulti: 0, healMulti: 0, range: 0, desc: 'Restore 50% MP + ATK buff', reqLevel: 3, buff: { stat: 'atk', value: 0.3, duration: 12 } },
+  },
+  watchman: {
+    className: 'Sentinel',
+    color: '#455A64',
+    tier1:  { id: 'tier1', name: 'Eagle Eye', icon: '👁️', mpCost: 15, cooldown: 7000, damageMulti: 2.5, range: 4.5, desc: 'Precise shot dealing 2.5x ATK', reqLevel: 1 },
+    tier2a: { id: 'tier2a', name: 'Piercing Shot', icon: '🎯', mpCost: 25, cooldown: 12000, damageMulti: 4.0, range: 5, desc: 'Piercing arrow dealing 4x ATK, ignores DEF', reqLevel: 5, ignoreDef: true },
+    tier2b: { id: 'tier2b', name: "Sentinel's Mark", icon: '🔮', mpCost: 18, cooldown: 10000, damageMulti: 0, healMulti: 0, range: 0, desc: 'Mark enemy +50% damage taken for 10s', reqLevel: 3, buff: { stat: 'dmgTaken', value: 0.5, duration: 10 } },
   },
 };
 
@@ -2538,6 +2588,9 @@ function getSlotLabel(slot) {
   if (!slot || !slot.type) return '';
   if (slot.type === 'skill') {
     const classType = state.player?.class || 'laborer';
+    const tier = slot.skillTier || 'tier1';
+    const tree = SKILL_TREES[classType];
+    if (tree && tree[tier]) return tree[tier].icon;
     const skill = SKILLS[classType];
     return skill ? skill.icon : '';
   }
@@ -2553,6 +2606,12 @@ function getSlotTitle(slot) {
   if (!slot || !slot.type) return 'Empty slot';
   if (slot.type === 'skill') {
     const classType = state.player?.class || 'laborer';
+    const tier = slot.skillTier || 'tier1';
+    const tree = SKILL_TREES[classType];
+    if (tree && tree[tier]) {
+      const sk = tree[tier];
+      return `${sk.name} (${sk.mpCost} MP) — ${sk.desc}`;
+    }
     const skill = SKILLS[classType];
     return skill ? `${skill.name} (${skill.mpCost} MP) — ${skill.desc}` : 'Skill';
   }
@@ -2580,6 +2639,7 @@ function renderHotbar() {
     div.dataset.index = i;
     div.dataset.key = keys[i];
     if (slot && slot.type) div.dataset.type = slot.type;
+    if (slot && slot.type === 'skill' && slot.skillTier) div.dataset.skillTier = slot.skillTier;
     div.title = getSlotTitle(slot);
 
     const icon = document.createElement('div');
@@ -2620,13 +2680,20 @@ function activateHotbarSlot(idx) {
   if (!slot || !slot.type) return;
 
   if (slot.type === 'skill') {
-    useSkill();
+    const skillTier = slot.skillTier || 'tier1';
+    useSkill(skillTier);
     // Show skill detail panel briefly
     const classType = state.player?.class || 'laborer';
-    const skill = SKILLS[classType];
+    const tree = SKILL_TREES[classType];
+    const skill = tree ? tree[skillTier] : null;
     if (skill) {
       const slotEl = document.querySelector(`#skill-hotbar .skill-slot[data-index="${idx}"]`);
       if (slotEl) showSkillDetail(skill, classType, slotEl);
+      // Show skill info in chat
+      const multiText = skill.healMulti
+        ? `Heal ${(skill.healMulti * 100).toFixed(0)}% HP`
+        : `${skill.damageMulti}x ATK`;
+      addChatMessage('Skill', `[${skill.name}] — ${multiText}, ${skill.mpCost} MP`);
     }
   } else if (slot.type === 'potion') {
     usePotion(slot.id);
@@ -2646,14 +2713,19 @@ function showHotbarPicker(slotIdx, x, y) {
 
   let html = '<div class="picker-header">Assign to Slot ' + (slotIdx + 1 === 10 ? '0' : slotIdx + 1) + '</div>';
 
-  // Skill option (class-specific)
+  // Show all unlocked skills from skill tree
   const classType = state.player?.class || 'laborer';
-  const skill = SKILLS[classType];
-  if (skill) {
-    html += `<div class="picker-item" data-type="skill" data-id="${classType}">
-      <span class="picker-icon">${skill.icon}</span>
-      <span class="picker-label">${skill.name}</span>
-    </div>`;
+  const tree = SKILL_TREES[classType];
+  if (tree) {
+    ['tier1', 'tier2a', 'tier2b'].forEach(tier => {
+      if (state.unlockedSkills.includes(tier) && tree[tier]) {
+        const sk = tree[tier];
+        html += `<div class="picker-item" data-type="skill" data-id="${classType}" data-skill-tier="${tier}">
+          <span class="picker-icon">${sk.icon}</span>
+          <span class="picker-label">${sk.name}</span>
+        </div>`;
+      }
+    });
   }
 
   // Consumables from inventory
@@ -2666,7 +2738,7 @@ function showHotbarPicker(slotIdx, x, y) {
     html += '<div class="picker-header">Consumables</div>';
     for (const item of consumables) {
       const def = typeof ITEMS !== 'undefined' ? ITEMS[item.id] : null;
-      const count = item.count || 1;
+      const count = item.quantity || item.count || 1;
       const icon = item.id.includes('mp') ? '💙' : item.id.includes('antidote') ? '💚' : '🧪';
       html += `<div class="picker-item" data-type="potion" data-id="${item.id}">
         <span class="picker-icon">${icon}</span>
@@ -2698,8 +2770,11 @@ function showHotbarPicker(slotIdx, x, y) {
     item.addEventListener('click', () => {
       const type = item.dataset.type;
       const id = item.dataset.id;
+      const skillTier = item.dataset.skillTier || null;
       if (type === 'clear') {
         state.hotbar[state.hotbarPickerSlot] = { type: null, id: null };
+      } else if (type === 'skill') {
+        state.hotbar[state.hotbarPickerSlot] = { type, id, skillTier };
       } else {
         state.hotbar[state.hotbarPickerSlot] = { type, id };
       }
@@ -2785,7 +2860,7 @@ function initSkillUI() {
   // Initialize default hotbar if no saved loadout
   if (!state.hotbar) {
     state.hotbar = Array(10).fill(null).map(() => ({ type: null, id: null }));
-    state.hotbar[0] = { type: 'skill', id: classType };
+    state.hotbar[0] = { type: 'skill', id: classType, skillTier: 'tier1' };
     state.hotbar[1] = { type: 'potion', id: 'potion_small' };
     saveHotbar();
   }
@@ -2793,18 +2868,119 @@ function initSkillUI() {
   const hotbar = document.getElementById('skill-hotbar');
   hotbar.style.display = 'flex';
   renderHotbar();
+
+  // Show skill tree button
+  const treeBtn = document.getElementById('skill-tree-btn');
+  if (treeBtn) {
+    treeBtn.style.display = 'block';
+    treeBtn.onclick = () => renderSkillTree();
+  }
+
+  // Close skill tree on Escape
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      const modal = document.getElementById('skill-tree-modal');
+      if (modal) modal.classList.remove('show');
+    }
+  });
 }
 
-function useSkill() {
+// ============================
+// SKILL TREE UI
+// ============================
+function renderSkillTree() {
+  const modal = document.getElementById('skill-tree-modal');
+  const content = document.getElementById('skill-tree-content');
+  if (!modal || !content) return;
+
+  const classType = state.player?.class || 'laborer';
+  const tree = SKILL_TREES[classType];
+  if (!tree) return;
+
+  const level = state.player?.level || 1;
+  const unlocked = state.unlockedSkills || ['tier1'];
+
+  let html = `<div class="st-class-label">${tree.className} — Level ${level}</div>`;
+
+  // Tier 1 (always unlocked)
+  const t1 = tree.tier1;
+  html += `
+    <div class="st-node unlocked" data-tier="tier1">
+      <div class="st-node-icon">${t1.icon}</div>
+      <div class="st-node-info">
+        <div class="st-node-name">${t1.name}</div>
+        <div class="st-node-desc">${t1.desc}</div>
+      </div>
+      <div class="st-node-badge">Active</div>
+    </div>
+  `;
+
+  // Connector
+  html += `<div class="st-connector"><div class="st-connector-line"></div></div>`;
+
+  // Tier 2a (level 5)
+  const t2a = tree.tier2a;
+  const t2aUnlocked = unlocked.includes('tier2a');
+  html += `
+    <div class="st-node ${t2aUnlocked ? 'unlocked' : 'locked'}" data-tier="tier2a">
+      <div class="st-node-icon">${t2a.icon}</div>
+      <div class="st-node-info">
+        <div class="st-node-name">${t2a.name}</div>
+        <div class="st-node-desc">${t2a.desc}</div>
+        ${!t2aUnlocked ? `<div class="st-node-req">🔒 Requires Level ${t2a.reqLevel}</div>` : ''}
+      </div>
+      <div class="st-node-badge">${t2aUnlocked ? 'Active' : `Lv.${t2a.reqLevel}`}</div>
+    </div>
+  `;
+
+  // Branch connector
+  html += `<div class="st-connector"><div class="st-connector-line"></div></div>`;
+
+  // Tier 2b (level 3)
+  const t2b = tree.tier2b;
+  const t2bUnlocked = unlocked.includes('tier2b');
+  html += `
+    <div class="st-node ${t2bUnlocked ? 'unlocked' : 'locked'}" data-tier="tier2b">
+      <div class="st-node-icon">${t2b.icon}</div>
+      <div class="st-node-info">
+        <div class="st-node-name">${t2b.name}</div>
+        <div class="st-node-desc">${t2b.desc}</div>
+        ${!t2bUnlocked ? `<div class="st-node-req">🔒 Requires Level ${t2b.reqLevel}</div>` : ''}
+      </div>
+      <div class="st-node-badge">${t2bUnlocked ? 'Active' : `Lv.${t2b.reqLevel}`}</div>
+    </div>
+  `;
+
+  content.innerHTML = html;
+
+  // Bind clicks on unlocked nodes → assign to next empty hotbar slot
+  content.querySelectorAll('.st-node.unlocked').forEach(node => {
+    node.addEventListener('click', () => {
+      const tier = node.dataset.tier;
+      // Find first empty hotbar slot, or replace slot 0
+      let targetIdx = state.hotbar.findIndex(s => !s || !s.type);
+      if (targetIdx === -1) targetIdx = 0;
+      state.hotbar[targetIdx] = { type: 'skill', id: classType, skillTier: tier };
+      saveHotbar();
+      renderHotbar();
+      addChatMessage('Skill', `Assigned ${tree[tier].name} to Slot ${targetIdx + 1 === 10 ? '0' : targetIdx + 1}`);
+    });
+  });
+
+  modal.classList.add('show');
+}
+
+function useSkill(skillTier = 'tier1') {
   if (state.isDead) return;
   const classType = state.player?.class || 'laborer';
-  const skill = SKILLS[classType];
+  const tree = SKILL_TREES[classType];
+  const skill = tree ? tree[skillTier] : null;
   if (!skill) return;
 
   const now = Date.now();
 
   // If same skill already armed → disarm (toggle off)
-  if (state.skillArmed && state.skillArmed.classType === classType) {
+  if (state.skillArmed && state.skillArmed.skillTier === skillTier) {
     disarmSkill();
     return;
   }
@@ -2822,21 +2998,34 @@ function useSkill() {
     return;
   }
 
+  // Buff skill — cast immediately (no target needed)
+  if (skill.buff && skill.range === 0) {
+    const myModel = state.players[state.playerId];
+    if (myModel) {
+      spawnSkillEffect(myModel.position.clone(), classType);
+      classAttackAnim(myModel, classType);
+    }
+    wsSend(JSON.stringify({ type: 'use_skill', skillTier, skillId: classType }));
+    skillCooldownEnd = now + skill.cooldown;
+    startSkillCooldownUI(skill.cooldown, skillTier);
+    return;
+  }
+
   // Heal skill — cast immediately (no target needed)
-  if (skill.healMulti) {
+  if (skill.healMulti && skill.healMulti > 0 && skill.range === 0) {
     const myModel = state.players[state.playerId];
     if (myModel) {
       spawnSkillEffect(myModel.position.clone(), 'herbalist');
       classAttackAnim(myModel, 'herbalist');
     }
-    wsSend(JSON.stringify({ type: 'use_skill', skillId: classType }));
+    wsSend(JSON.stringify({ type: 'use_skill', skillTier, skillId: classType }));
     skillCooldownEnd = now + skill.cooldown;
-    startSkillCooldownUI(skill.cooldown);
+    startSkillCooldownUI(skill.cooldown, skillTier);
     return;
   }
 
   // Arm the skill
-  state.skillArmed = { classType, skill };
+  state.skillArmed = { classType, skill, skillTier };
 
   // If already targeting a monster (auto-attack active) → use that target
   if (state.targetedMonster) {
@@ -2846,7 +3035,7 @@ function useSkill() {
       const dist = model.position.distanceTo(mob.position);
       if (dist <= skill.range) {
         // In range — cast now
-        executeSkill(classType, skill, mob);
+        executeSkill(classType, skill, mob, skillTier);
         return;
       } else {
         // Out of range — walk to monster
@@ -2861,7 +3050,7 @@ function useSkill() {
           state.targetPos = new THREE.Vector3(state.pathWaypoints[0].x, 0, state.pathWaypoints[0].z);
         }
         // Visual feedback
-        const skillSlotEl = document.querySelector('#skill-hotbar .skill-slot[data-type="skill"]');
+        const skillSlotEl = document.querySelector(`#skill-hotbar .skill-slot[data-skill-tier="${skillTier}"]`);
         if (skillSlotEl) skillSlotEl.classList.add('skill-armed');
         addChatMessage('Skill', `${skill.name} — walking to range...`);
         return;
@@ -2873,23 +3062,26 @@ function useSkill() {
   state.autoAttacking = false;
 
   // Visual feedback — glow the skill icon
-  const skillSlotEl = document.querySelector('#skill-hotbar .skill-slot[data-type="skill"]');
+  const skillSlotEl = document.querySelector(`#skill-hotbar .skill-slot[data-skill-tier="${skillTier}"]`);
   if (skillSlotEl) skillSlotEl.classList.add('skill-armed');
   addChatMessage('Skill', `${skill.name} ready — click a monster to cast`);
 }
 
 function disarmSkill() {
   if (!state.skillArmed) return;
+  const tier = state.skillArmed.skillTier;
   state.skillArmed = null;
-  const skillSlotEl = document.querySelector('#skill-hotbar .skill-slot[data-type="skill"]');
+  const skillSlotEl = document.querySelector(`#skill-hotbar .skill-slot[data-skill-tier="${tier}"]`);
   if (skillSlotEl) skillSlotEl.classList.remove('skill-armed');
+  // Also remove from any other skill slots
+  document.querySelectorAll('#skill-hotbar .skill-slot.skill-armed').forEach(el => el.classList.remove('skill-armed'));
   // Resume auto-attack if we have a target
   if (state.targetedMonster) {
     state.autoAttacking = true;
   }
 }
 
-function executeSkill(classType, skill, mob) {
+function executeSkill(classType, skill, mob, skillTier = 'tier1') {
   const model = state.players[state.playerId];
   if (!model) return;
 
@@ -2913,15 +3105,15 @@ function executeSkill(classType, skill, mob) {
   spawnAttackImpact(mob.position.clone(), {laborer:0xFF8C00,miner:0x8D6E63,gardener:0x4CAF50,watchman:0x42A5F5}[classType] || 0xFFFFFF);
 
   // Send to server
-  wsSend(JSON.stringify({ type: 'use_skill', skillId: classType, monsterId: mob.userData.id }));
+  wsSend(JSON.stringify({ type: 'use_skill', skillTier, skillId: classType, monsterId: mob.userData.id }));
   skillCooldownEnd = now + skill.cooldown;
-  startSkillCooldownUI(skill.cooldown);
+  startSkillCooldownUI(skill.cooldown, skillTier);
   disarmSkill();
   pendingSkill = null;
 }
 
-function startSkillCooldownUI(durationMs) {
-  const skillSlotEl = document.querySelector('#skill-hotbar .skill-slot[data-type="skill"]');
+function startSkillCooldownUI(durationMs, skillTier = 'tier1') {
+  const skillSlotEl = document.querySelector(`#skill-hotbar .skill-slot[data-skill-tier="${skillTier}"]`);
   if (!skillSlotEl) return;
   const cdEl = skillSlotEl.querySelector('.skill-cd-overlay');
   if (!cdEl) return;

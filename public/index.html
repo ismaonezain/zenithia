@@ -92,6 +92,20 @@
   <!-- Skill Hotbar (10 slots, populated by JS) -->
   <div id="skill-hotbar" style="display:none;"></div>
 
+  <!-- Skill Tree Button -->
+  <button id="skill-tree-btn" style="display:none;">🌟 Skills</button>
+
+  <!-- Skill Tree Modal -->
+  <div id="skill-tree-modal">
+    <div id="skill-tree-panel">
+      <div class="st-header">
+        <span class="st-title">Skill Tree</span>
+        <button class="st-close" onclick="document.getElementById('skill-tree-modal').classList.remove('show')">✕</button>
+      </div>
+      <div id="skill-tree-content"></div>
+    </div>
+  </div>
+
   <!-- Hotbar Right-Click Picker -->
   <div id="hotbar-picker" style="display:none;"></div>
 
