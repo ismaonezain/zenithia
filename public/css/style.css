@@ -1470,6 +1470,8 @@ body {
 .inv-bag-slot .bag-icon { font-size: 1rem; }
 .bag-icon-img { width: 32px; height: 32px; object-fit: contain; image-rendering: pixelated; }
 .bag-icon-fallback { display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; font-size: 1rem; }
+.bag-icon-canvas { width: 40px; height: 40px; image-rendering: pixelated; image-rendering: crisp-edges; }
+.eq-icon-canvas { width: 24px; height: 24px; image-rendering: pixelated; image-rendering: crisp-edges; margin-right: 4px; }
 .inv-bag-slot .bag-qty {
   position: absolute;
   bottom: 1px;

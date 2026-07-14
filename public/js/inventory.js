@@ -1,4 +1,5 @@
 // Zenithia — Merged Inventory & Equipment UI
+import { drawItemIcon } from './item-icons.js';
 
 export class InventoryUI {
   constructor(ws, playerState) {
@@ -98,6 +99,18 @@ export class InventoryUI {
       </div>
     `;
 
+    // Draw canvas icons after DOM insert
+    requestAnimationFrame(() => {
+      this.container.querySelectorAll('.bag-icon-canvas, .eq-icon-canvas').forEach(canvas => {
+        const itemId = canvas.dataset.itemId;
+        if (itemId) {
+          const ctx = canvas.getContext('2d');
+          const size = canvas.width;
+          drawItemIcon(ctx, itemId, size);
+        }
+      });
+    });
+
     // Bind equipment slot clicks
     this.container.querySelectorAll('.inv-equip-slot').forEach(slot => {
       slot.addEventListener('click', (e) => {
@@ -179,10 +192,11 @@ export class InventoryUI {
     return slots.map(s => {
       const item = equip[s.key];
       const hasItem = !!item;
+      const eqCanvasId = `eq-icon-${s.key}`;
       return `
         <div class="inv-equip-slot ${hasItem ? 'has-item' : ''}" data-slot="${s.key}" title="${item ? item.name : 'Empty ' + s.label}">
           ${hasItem
-            ? `<img class="bag-icon-img" src="/assets/icons/${item.id}.png" alt="${item.name}" style="width:24px;height:24px" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><span class="eq-icon" style="display:none">${item.icon?.symbol || '?'}</span><span class="eq-name">${item.name?.substring(0, 8) || ''}</span>`
+            ? `<canvas class="eq-icon-canvas" id="${eqCanvasId}" width="32" height="32" data-item-id="${item.id || ''}"></canvas><span class="eq-name">${item.name?.substring(0, 8) || ''}</span>`
             : `<span class="eq-icon" style="opacity:0.2">${s.icon}</span><span class="eq-label">${s.label}</span>`
           }
         </div>
@@ -193,14 +207,12 @@ export class InventoryUI {
   renderBagGrid(items) {
     let html = '';
     items.forEach((item, idx) => {
-      // Client-side: construct icon path from item ID — no server hydration needed
-      const imgPath = `/assets/icons/${item.id}.png`;
-      const hasImg = item.icon?.image || true; // always try image first
-      const iconHtml = `<img class="bag-icon-img" src="${imgPath}" alt="${item.name}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><span class="bag-icon-fallback" style="display:none">${item.icon?.symbol || '?'}</span>`;
+      const hasVisual = !!item.id;
+      const iconId = `bag-icon-${idx}`;
       const qty = item.quantity || 1;
       html += `
         <div class="inv-bag-slot has-item" data-index="${idx}" title="${item.name}${qty > 1 ? ' x' + qty : ''}" draggable="true">
-          ${iconHtml}
+          <canvas class="bag-icon-canvas" id="${iconId}" width="48" height="48" data-item-id="${item.id || ''}"></canvas>
           ${qty > 1 ? `<span class="bag-qty">x${qty}</span>` : ''}
         </div>
       `;
