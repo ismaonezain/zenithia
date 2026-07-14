@@ -60,7 +60,15 @@ const state = {
   isAttacking: false,     // attack animation playing — skip walk/idle arm overrides
   attackEndTime: 0,       // when attack anim finishes
   isDead: false,          // death screen active
-  // Flashlight
+  // Hotbar system
+  hotbar: (() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem('zenithia_hotbar'));
+      if (Array.isArray(saved) && saved.length === 10) return saved;
+    } catch(e) {}
+    return null; // Will be initialized with defaults in initSkillUI
+  })(),
+  hotbarPickerSlot: null,  // which slot is being reassigned
   flashlightOn: false,
   flashlight: null,
   // Day/night cycle
@@ -2347,16 +2355,17 @@ function classAttackAnim(model, classType) {
 // ============================
 // POTION SHORTCUT
 // ============================
-function usePotion() {
+function usePotion(specificId) {
   if (!state.connected || !state.player || state.isDead) return;
   const inv = state.player.inventory || [];
-  // Find first consumable (potion_small, potion_medium, mp_potion_small, antidote)
-  const potion = inv.find(i => {
-    const id = i.id;
-    return id === 'potion_small' || id === 'potion_medium' || id === 'mp_potion_small' || id === 'antidote';
-  });
+  const potion = specificId
+    ? inv.find(i => i.id === specificId && (i.count || 1) > 0)
+    : inv.find(i => {
+        const id = i.id;
+        return id === 'potion_small' || id === 'potion_medium' || id === 'mp_potion_small' || id === 'antidote';
+      });
   if (!potion) {
-    addChatMessage('System', 'No potion in inventory!');
+    addChatMessage('System', specificId ? `No ${specificId.replace(/_/g, ' ')} in inventory!` : 'No potion in inventory!');
     return;
   }
   wsSend(JSON.stringify({ type: 'use_item', itemId: potion.id }));
@@ -2368,7 +2377,8 @@ function usePotion() {
 // ============================
 function toggleFlashlight() {
   state.flashlightOn = !state.flashlightOn;
-  const slotF = document.getElementById('skill-slot-f');
+  // Find which hotbar slot has the flashlight
+  const slotF = document.querySelector('#skill-hotbar .skill-slot[data-type="flashlight"]');
   if (state.flashlightOn) {
     if (!state.flashlight) {
       state.flashlight = new THREE.PointLight(0xFFF3D4, 1.5, 15);
@@ -2392,26 +2402,17 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
     cancelTarget();
     disarmSkill();
+    hideHotbarPicker();
+    hideSkillDetail();
     return;
   }
 
-  if (e.key === '1') {
+  // Hotbar keys 1-9, 0 → slots 0-9
+  const hotbarKeys = { '1':0,'2':1,'3':2,'4':3,'5':4,'6':5,'7':6,'8':7,'9':8,'0':9 };
+  if (hotbarKeys[e.key] !== undefined) {
     e.preventDefault();
-    useSkill();
-    return;
-  }
-
-  // Key 2 — use first potion in inventory
-  if (e.key === '2') {
-    e.preventDefault();
-    usePotion();
-    return;
-  }
-
-  // Key F — toggle flashlight
-  if (e.key === 'f' || e.key === 'F') {
-    e.preventDefault();
-    toggleFlashlight();
+    const idx = hotbarKeys[e.key];
+    activateHotbarSlot(idx);
     return;
   }
 
@@ -2531,33 +2532,267 @@ document.getElementById('loot-pickup-all').addEventListener('click', () => {
 // ============================
 let skillCooldownEnd = 0;
 let pendingSkill = null; // { classType, skill } — waiting to walk to monster
+let skillDetailTimer = null;
+
+function getSlotLabel(slot) {
+  if (!slot || !slot.type) return '';
+  if (slot.type === 'skill') {
+    const classType = state.player?.class || 'laborer';
+    const skill = SKILLS[classType];
+    return skill ? skill.icon : '';
+  }
+  if (slot.type === 'potion') {
+    const item = typeof ITEMS !== 'undefined' ? ITEMS[slot.id] : null;
+    return item ? (slot.id.includes('mp') ? '💙' : slot.id.includes('antidote') ? '💚' : '🧪') : '🧪';
+  }
+  if (slot.type === 'flashlight') return '🔦';
+  return '';
+}
+
+function getSlotTitle(slot) {
+  if (!slot || !slot.type) return 'Empty slot';
+  if (slot.type === 'skill') {
+    const classType = state.player?.class || 'laborer';
+    const skill = SKILLS[classType];
+    return skill ? `${skill.name} (${skill.mpCost} MP) — ${skill.desc}` : 'Skill';
+  }
+  if (slot.type === 'potion') {
+    const item = typeof ITEMS !== 'undefined' ? ITEMS[slot.id] : null;
+    return item ? `${item.name} — ${item.description}` : slot.id;
+  }
+  if (slot.type === 'flashlight') return 'Toggle Flashlight';
+  return '';
+}
+
+function saveHotbar() {
+  try { localStorage.setItem('zenithia_hotbar', JSON.stringify(state.hotbar)); } catch(e) {}
+}
+
+function renderHotbar() {
+  const container = document.getElementById('skill-hotbar');
+  if (!container) return;
+  container.innerHTML = '';
+  const keys = ['1','2','3','4','5','6','7','8','9','0'];
+  for (let i = 0; i < 10; i++) {
+    const slot = state.hotbar[i];
+    const div = document.createElement('div');
+    div.className = 'skill-slot';
+    div.dataset.index = i;
+    div.dataset.key = keys[i];
+    if (slot && slot.type) div.dataset.type = slot.type;
+    div.title = getSlotTitle(slot);
+
+    const icon = document.createElement('div');
+    icon.className = 'skill-icon';
+    icon.textContent = getSlotLabel(slot);
+    div.appendChild(icon);
+
+    // Cooldown overlay (for skill slots)
+    if (slot && slot.type === 'skill') {
+      const cd = document.createElement('div');
+      cd.className = 'skill-cd-overlay';
+      div.appendChild(cd);
+    }
+
+    const keyLabel = document.createElement('span');
+    keyLabel.className = 'skill-key';
+    keyLabel.textContent = keys[i];
+    div.appendChild(keyLabel);
+
+    // Left click → activate
+    div.addEventListener('click', (e) => {
+      e.preventDefault();
+      activateHotbarSlot(i);
+    });
+
+    // Right click → show picker
+    div.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      showHotbarPicker(i, e.clientX, e.clientY);
+    });
+
+    container.appendChild(div);
+  }
+}
+
+function activateHotbarSlot(idx) {
+  const slot = state.hotbar[idx];
+  if (!slot || !slot.type) return;
+
+  if (slot.type === 'skill') {
+    useSkill();
+    // Show skill detail panel briefly
+    const classType = state.player?.class || 'laborer';
+    const skill = SKILLS[classType];
+    if (skill) {
+      const slotEl = document.querySelector(`#skill-hotbar .skill-slot[data-index="${idx}"]`);
+      if (slotEl) showSkillDetail(skill, classType, slotEl);
+    }
+  } else if (slot.type === 'potion') {
+    usePotion(slot.id);
+  } else if (slot.type === 'flashlight') {
+    toggleFlashlight();
+  }
+}
+
+// ============================
+// HOTBAR PICKER (right-click)
+// ============================
+function showHotbarPicker(slotIdx, x, y) {
+  hideSkillDetail();
+  const picker = document.getElementById('hotbar-picker');
+  if (!picker) return;
+  state.hotbarPickerSlot = slotIdx;
+
+  let html = '<div class="picker-header">Assign to Slot ' + (slotIdx + 1 === 10 ? '0' : slotIdx + 1) + '</div>';
+
+  // Skill option (class-specific)
+  const classType = state.player?.class || 'laborer';
+  const skill = SKILLS[classType];
+  if (skill) {
+    html += `<div class="picker-item" data-type="skill" data-id="${classType}">
+      <span class="picker-icon">${skill.icon}</span>
+      <span class="picker-label">${skill.name}</span>
+    </div>`;
+  }
+
+  // Consumables from inventory
+  const inv = state.player?.inventory || [];
+  const consumables = inv.filter(i => {
+    const item = typeof ITEMS !== 'undefined' ? ITEMS[i.id] : null;
+    return item && item.type === 'consumable';
+  });
+  if (consumables.length > 0) {
+    html += '<div class="picker-header">Consumables</div>';
+    for (const item of consumables) {
+      const def = typeof ITEMS !== 'undefined' ? ITEMS[item.id] : null;
+      const count = item.count || 1;
+      const icon = item.id.includes('mp') ? '💙' : item.id.includes('antidote') ? '💚' : '🧪';
+      html += `<div class="picker-item" data-type="potion" data-id="${item.id}">
+        <span class="picker-icon">${icon}</span>
+        <span class="picker-label">${def ? def.name : item.id}</span>
+        <span class="picker-count">x${count}</span>
+      </div>`;
+    }
+  }
+
+  // Flashlight
+  html += `<div class="picker-item" data-type="flashlight" data-id="flashlight">
+    <span class="picker-icon">🔦</span>
+    <span class="picker-label">Flashlight</span>
+  </div>`;
+
+  // Clear option
+  html += `<div class="picker-item" data-type="clear" data-id="">
+    <span class="picker-icon">❌</span>
+    <span class="picker-label">Clear Slot</span>
+  </div>`;
+
+  picker.innerHTML = html;
+  picker.style.display = 'block';
+  picker.style.left = Math.min(x, window.innerWidth - 200) + 'px';
+  picker.style.top = Math.min(y, window.innerHeight - 320) + 'px';
+
+  // Attach click handlers
+  picker.querySelectorAll('.picker-item').forEach(item => {
+    item.addEventListener('click', () => {
+      const type = item.dataset.type;
+      const id = item.dataset.id;
+      if (type === 'clear') {
+        state.hotbar[state.hotbarPickerSlot] = { type: null, id: null };
+      } else {
+        state.hotbar[state.hotbarPickerSlot] = { type, id };
+      }
+      saveHotbar();
+      renderHotbar();
+      hideHotbarPicker();
+    });
+  });
+}
+
+function hideHotbarPicker() {
+  const picker = document.getElementById('hotbar-picker');
+  if (picker) picker.style.display = 'none';
+  state.hotbarPickerSlot = null;
+}
+
+// Close picker on click outside
+document.addEventListener('click', (e) => {
+  const picker = document.getElementById('hotbar-picker');
+  if (picker && picker.style.display === 'block' && !picker.contains(e.target)) {
+    hideHotbarPicker();
+  }
+  // Also hide skill detail on outside click
+  const detail = document.getElementById('skill-detail-panel');
+  if (detail && detail.style.display === 'block' && !detail.contains(e.target)) {
+    hideSkillDetail();
+  }
+});
+
+// ============================
+// SKILL DETAIL PANEL
+// ============================
+function showSkillDetail(skill, classType, anchorEl) {
+  const panel = document.getElementById('skill-detail-panel');
+  if (!panel || !skill) return;
+
+  document.getElementById('skill-detail-icon').textContent = skill.icon;
+  document.getElementById('skill-detail-name').textContent = skill.name;
+  document.getElementById('skill-detail-class').textContent = classType.charAt(0).toUpperCase() + classType.slice(1);
+
+  const costEl = document.getElementById('skill-detail-cost');
+  costEl.innerHTML = `<span class="stat-label">MP Cost:</span> ${skill.mpCost}`;
+
+  const cdEl = document.getElementById('skill-detail-cd');
+  cdEl.innerHTML = `<span class="stat-label">Cooldown:</span> ${skill.cooldown / 1000}s`;
+
+  const multiEl = document.getElementById('skill-detail-multi');
+  if (skill.healMulti) {
+    multiEl.innerHTML = `<span class="stat-label">Heal:</span> ${(skill.healMulti * 100).toFixed(0)}% max HP`;
+  } else {
+    multiEl.innerHTML = `<span class="stat-label">Damage:</span> ${skill.damageMulti}x ATK`;
+  }
+
+  const rangeEl = document.getElementById('skill-detail-range');
+  rangeEl.innerHTML = skill.range > 0
+    ? `<span class="stat-label">Range:</span> ${skill.range}`
+    : `<span class="stat-label">Range:</span> Self`;
+
+  document.getElementById('skill-detail-desc').textContent = skill.desc;
+
+  // Position above the anchor slot
+  const rect = anchorEl.getBoundingClientRect();
+  panel.style.left = Math.max(10, rect.left + rect.width / 2 - 110) + 'px';
+  panel.style.top = Math.max(10, rect.top - panel.offsetHeight - 10) + 'px';
+  panel.style.display = 'block';
+
+  // Auto-hide after 3 seconds
+  clearTimeout(skillDetailTimer);
+  skillDetailTimer = setTimeout(hideSkillDetail, 3000);
+}
+
+function hideSkillDetail() {
+  clearTimeout(skillDetailTimer);
+  const panel = document.getElementById('skill-detail-panel');
+  if (panel) panel.style.display = 'none';
+}
 
 function initSkillUI() {
   const classType = state.player?.class || 'laborer';
   const skill = SKILLS[classType];
   if (!skill) return;
 
+  // Initialize default hotbar if no saved loadout
+  if (!state.hotbar) {
+    state.hotbar = Array(10).fill(null).map(() => ({ type: null, id: null }));
+    state.hotbar[0] = { type: 'skill', id: classType };
+    state.hotbar[1] = { type: 'potion', id: 'potion_small' };
+    saveHotbar();
+  }
+
   const hotbar = document.getElementById('skill-hotbar');
   hotbar.style.display = 'flex';
-
-  const icon = document.getElementById('skill-icon-1');
-  icon.textContent = skill.icon;
-  icon.title = `${skill.name}: ${skill.desc}`;
-
-  const slot = document.getElementById('skill-slot-1');
-  slot.title = `${skill.name} (${skill.mpCost} MP) — ${skill.desc}`;
-
-  // Click handlers for hotbar slots
-  document.getElementById('skill-slot-2')?.addEventListener('click', () => usePotion());
-  document.getElementById('skill-slot-w')?.addEventListener('click', () => {
-    if (!state.targetedMonster) {
-      const nearest = findNearestMonster();
-      if (nearest) setTarget(nearest.userData.id);
-    } else {
-      state.autoAttacking = true;
-    }
-  });
-  document.getElementById('skill-slot-f')?.addEventListener('click', () => toggleFlashlight());
+  renderHotbar();
 }
 
 function useSkill() {
@@ -2626,8 +2861,8 @@ function useSkill() {
           state.targetPos = new THREE.Vector3(state.pathWaypoints[0].x, 0, state.pathWaypoints[0].z);
         }
         // Visual feedback
-        const slot = document.getElementById('skill-slot-1');
-        slot.classList.add('skill-armed');
+        const skillSlotEl = document.querySelector('#skill-hotbar .skill-slot[data-type="skill"]');
+        if (skillSlotEl) skillSlotEl.classList.add('skill-armed');
         addChatMessage('Skill', `${skill.name} — walking to range...`);
         return;
       }
@@ -2638,16 +2873,16 @@ function useSkill() {
   state.autoAttacking = false;
 
   // Visual feedback — glow the skill icon
-  const slot = document.getElementById('skill-slot-1');
-  slot.classList.add('skill-armed');
+  const skillSlotEl = document.querySelector('#skill-hotbar .skill-slot[data-type="skill"]');
+  if (skillSlotEl) skillSlotEl.classList.add('skill-armed');
   addChatMessage('Skill', `${skill.name} ready — click a monster to cast`);
 }
 
 function disarmSkill() {
   if (!state.skillArmed) return;
   state.skillArmed = null;
-  const slot = document.getElementById('skill-slot-1');
-  if (slot) slot.classList.remove('skill-armed');
+  const skillSlotEl = document.querySelector('#skill-hotbar .skill-slot[data-type="skill"]');
+  if (skillSlotEl) skillSlotEl.classList.remove('skill-armed');
   // Resume auto-attack if we have a target
   if (state.targetedMonster) {
     state.autoAttacking = true;
@@ -2686,9 +2921,11 @@ function executeSkill(classType, skill, mob) {
 }
 
 function startSkillCooldownUI(durationMs) {
-  const cdEl = document.getElementById('skill-cd-1');
-  const slot = document.getElementById('skill-slot-1');
-  slot.classList.add('on-cd');
+  const skillSlotEl = document.querySelector('#skill-hotbar .skill-slot[data-type="skill"]');
+  if (!skillSlotEl) return;
+  const cdEl = skillSlotEl.querySelector('.skill-cd-overlay');
+  if (!cdEl) return;
+  skillSlotEl.classList.add('on-cd');
   cdEl.style.height = '100%';
 
   const start = Date.now();
@@ -2697,7 +2934,7 @@ function startSkillCooldownUI(durationMs) {
     const pct = Math.max(0, 1 - elapsed / durationMs);
     cdEl.style.height = (pct * 100) + '%';
     if (pct > 0) requestAnimationFrame(tick);
-    else slot.classList.remove('on-cd');
+    else skillSlotEl.classList.remove('on-cd');
   };
   requestAnimationFrame(tick);
 }

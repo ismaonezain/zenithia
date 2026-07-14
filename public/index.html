@@ -89,25 +89,24 @@
     <button id="loot-pickup-all">Pick Up All</button>
   </div>
 
-  <!-- Skill Hotbar -->
-  <div id="skill-hotbar" style="display:none;">
-    <div id="skill-slot-1" class="skill-slot" data-key="1" title="Skill (1)">
-      <div id="skill-icon-1" class="skill-icon"></div>
-      <div id="skill-cd-1" class="skill-cd"></div>
-      <span class="skill-key">1</span>
-    </div>
-    <div id="skill-slot-2" class="skill-slot" data-key="2" title="Potion (2)">
-      <div class="skill-icon">🧪</div>
-      <span class="skill-key">2</span>
-    </div>
-    <div id="skill-slot-w" class="skill-slot" data-key="w" title="Attack (W)">
-      <div class="skill-icon">⚔️</div>
-      <span class="skill-key">W</span>
-    </div>
-    <div id="skill-slot-f" class="skill-slot" data-key="f" title="Flashlight (F)">
-      <div class="skill-icon">🔦</div>
-      <span class="skill-key">F</span>
-    </div>
+  <!-- Skill Hotbar (10 slots, populated by JS) -->
+  <div id="skill-hotbar" style="display:none;"></div>
+
+  <!-- Hotbar Right-Click Picker -->
+  <div id="hotbar-picker" style="display:none;"></div>
+
+  <!-- Skill Detail Panel -->
+  <div id="skill-detail-panel" style="display:none;">
+    <div id="skill-detail-icon" class="skill-detail-icon"></div>
+    <div id="skill-detail-name" class="skill-detail-name"></div>
+    <div id="skill-detail-class" class="skill-detail-class"></div>
+    <div class="skill-detail-divider"></div>
+    <div id="skill-detail-cost" class="skill-detail-stat"></div>
+    <div id="skill-detail-cd" class="skill-detail-stat"></div>
+    <div id="skill-detail-multi" class="skill-detail-stat"></div>
+    <div id="skill-detail-range" class="skill-detail-stat"></div>
+    <div class="skill-detail-divider"></div>
+    <div id="skill-detail-desc" class="skill-detail-desc"></div>
   </div>
 
   <!-- Login Screen -->
