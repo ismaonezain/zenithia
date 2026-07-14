@@ -2272,17 +2272,15 @@ function classAttackAnim(model, classType) {
       break;
     }
     case 'miner': {
-      // Quick dual slash — right then left
+      // Quick dual slash — forward right then left
       if (rightArm) {
-        anim(rightArm, 'rotation.z', -1.0, 100);
-        anim(rightArm, 'rotation.x', -0.8, 100);
-        setTimeout(() => { anim(rightArm, 'rotation.z', 0, 100); anim(rightArm, 'rotation.x', 0, 100); }, 150);
+        anim(rightArm, 'rotation.x', -1.6, 100);
+        setTimeout(() => anim(rightArm, 'rotation.x', 0, 100), 150);
       }
       if (leftArm) {
         setTimeout(() => {
-          anim(leftArm, 'rotation.z', 1.0, 100);
-          anim(leftArm, 'rotation.x', -0.8, 100);
-          setTimeout(() => { anim(leftArm, 'rotation.z', 0, 100); anim(leftArm, 'rotation.x', 0, 100); }, 150);
+          anim(leftArm, 'rotation.x', -1.4, 100);
+          setTimeout(() => anim(leftArm, 'rotation.x', 0, 100), 150);
         }, 100);
       }
       break;
@@ -2313,9 +2311,8 @@ function classAttackAnim(model, classType) {
       // Quick thrust — fast forward jab
       if (rightArm) {
         anim(rightArm, 'rotation.x', -1.8, 80);
-        anim(rightArm, 'rotation.z', -0.3, 80);
         setTimeout(() => anim(rightArm, 'rotation.x', -0.3, 60), 80);
-        setTimeout(() => { anim(rightArm, 'rotation.x', 0, 100); anim(rightArm, 'rotation.z', 0, 100); }, 140);
+        setTimeout(() => anim(rightArm, 'rotation.x', 0, 100), 140);
       }
       if (leftArm) {
         anim(leftArm, 'rotation.x', 0.4, 80);
