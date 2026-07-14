@@ -2828,19 +2828,6 @@ function activateHotbarSlot(idx) {
   if (slot.type === 'skill') {
     const skillTier = slot.skillTier || 'tier1';
     useSkill(skillTier);
-    // Show skill detail panel briefly
-    const classType = state.player?.class || 'laborer';
-    const tree = SKILL_TREES[classType];
-    const skill = tree ? tree[skillTier] : null;
-    if (skill) {
-      const slotEl = document.querySelector(`#skill-hotbar .skill-slot[data-index="${idx}"]`);
-      if (slotEl) showSkillDetail(skill, classType, slotEl);
-      // Show skill info in chat
-      const multiText = skill.healMulti
-        ? `Heal ${(skill.healMulti * 100).toFixed(0)}% HP`
-        : `${skill.damageMulti}x ATK`;
-      addChatMessage('Skill', `[${skill.name}] — ${multiText}, ${skill.mpCost} MP`);
-    }
   } else if (slot.type === 'potion') {
     usePotion(slot.id);
   } else if (slot.type === 'flashlight') {
@@ -3049,6 +3036,17 @@ function renderSkillTree() {
 
   let html = `<div class="st-class-label">${tree.className} — Level ${level}</div>`;
 
+  // Helper: build skill stats HTML
+  function skillStats(sk) {
+    const stats = [];
+    stats.push(`<span class="st-stat">💙 ${sk.mpCost} MP</span>`);
+    stats.push(`<span class="st-stat">⏱ ${(sk.cooldown / 1000).toFixed(1)}s</span>`);
+    if (sk.healMulti) stats.push(`<span class="st-stat">💚 ${(sk.healMulti * 100).toFixed(0)}% HP</span>`);
+    else if (sk.damageMulti) stats.push(`<span class="st-stat">⚔️ ${sk.damageMulti}x ATK</span>`);
+    stats.push(`<span class="st-stat">🎯 ${sk.range > 0 ? sk.range + ' range' : 'Self'}</span>`);
+    return `<div class="st-node-stats">${stats.join('')}</div>`;
+  }
+
   // Tier 1 (always unlocked)
   const t1 = tree.tier1;
   html += `
@@ -3057,6 +3055,7 @@ function renderSkillTree() {
       <div class="st-node-info">
         <div class="st-node-name">${t1.name}</div>
         <div class="st-node-desc">${t1.desc}</div>
+        ${skillStats(t1)}
       </div>
       <div class="st-node-badge">Active</div>
     </div>
@@ -3076,6 +3075,7 @@ function renderSkillTree() {
       <div class="st-node-info">
         <div class="st-node-name">${t2a.name}</div>
         <div class="st-node-desc">${t2a.desc}</div>
+        ${skillStats(t2a)}
         ${t2aUnlocked || t2aCanUnlock ? '' : `<div class="st-node-req">🔒 Requires Level ${t2a.reqLevel}</div>`}
       </div>
       <div class="st-node-badge">${t2aUnlocked || t2aCanUnlock ? 'Active' : `Lv.${t2a.reqLevel}`}</div>
@@ -3095,6 +3095,7 @@ function renderSkillTree() {
       <div class="st-node-info">
         <div class="st-node-name">${t2b.name}</div>
         <div class="st-node-desc">${t2b.desc}</div>
+        ${skillStats(t2b)}
         ${t2bUnlocked || t2bCanUnlock ? '' : `<div class="st-node-req">🔒 Requires Level ${t2b.reqLevel}</div>`}
       </div>
       <div class="st-node-badge">${t2bUnlocked || t2bCanUnlock ? 'Active' : `Lv.${t2b.reqLevel}`}</div>
