@@ -57,6 +57,8 @@ const state = {
   lastAttackTime: 0,      // client-side cooldown tracking
   autoAttacking: false,   // auto-attack loop active
   skillArmed: null,       // { classType, skill } — skill ready to cast, waiting for target click
+  isAttacking: false,     // attack animation playing — skip walk/idle arm overrides
+  attackEndTime: 0,       // when attack anim finishes
   isDead: false,          // death screen active
   // Day/night cycle
   dayTime: 0.25,         // 0-1, 0 = midnight, 0.25 = sunrise, 0.5 = noon, 0.75 = sunset
@@ -2256,6 +2258,10 @@ function classAttackAnim(model, classType) {
     setTimeout(() => { target[key] = orig; }, dur);
   };
 
+  // Mark attacking so game loop doesn't overwrite arm rotations
+  state.isAttacking = true;
+  state.attackEndTime = Date.now() + 400;
+
   switch (classType) {
     case 'laborer': {
       // Heavy overhead smash — both arms raise then slam down
@@ -3140,11 +3146,16 @@ function gameLoop() {
   const time = Date.now() * 0.001;
 
   if (state.targetPos) {
-    animateWalk(playerModel, 1);
+    animateWalk(playerModel, 1, state.isAttacking);
   } else {
-    stopWalk(playerModel);
-    // Idle animation when not walking
-    if (playerModel) animateIdle(playerModel, time);
+    stopWalk(playerModel, state.isAttacking);
+    // Idle animation when not walking (skip arms if attacking)
+    if (playerModel) {
+      if (Date.now() >= state.attackEndTime) {
+        state.isAttacking = false;
+        animateIdle(playerModel, time);
+      }
+    }
   }
 
   // Auto blink (every 3-6 seconds)
