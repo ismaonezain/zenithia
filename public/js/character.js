@@ -619,33 +619,33 @@ export function createPlayerModel(options = {}) {
   rightLeg.castShadow = true;
   group.add(rightLeg);
 
-  // Knee pads
+  // Knee pads — parented to legs
   const kneeGeo = new THREE.BoxGeometry(0.22 * scale, 0.1 * scale, 0.06 * scale);
   const kneeMat = new THREE.MeshLambertMaterial({ color: trimColor });
   const leftKnee = new THREE.Mesh(kneeGeo, kneeMat);
-  leftKnee.position.set(-0.15 * scale, 0.28 * scale, 0.16 * scale);
-  group.add(leftKnee);
+  leftKnee.position.set(0, 0, 0.16 * scale);
+  leftLeg.add(leftKnee);
   const rightKnee = new THREE.Mesh(kneeGeo, kneeMat);
-  rightKnee.position.set(0.15 * scale, 0.28 * scale, 0.16 * scale);
-  group.add(rightKnee);
+  rightKnee.position.set(0, 0, 0.16 * scale);
+  rightLeg.add(rightKnee);
 
-  // === FEET / BOOTS ===
+  // === FEET / BOOTS — parented to legs ===
   const bootMat = new THREE.MeshLambertMaterial({ color: 0x3E2723 });
-  // Boot tops (slightly lighter)
   const bootTopMat = new THREE.MeshLambertMaterial({ color: 0x5D4037 });
+  // Boot tops
   const leftBootTop = new THREE.Mesh(new THREE.BoxGeometry(0.22 * scale, 0.08 * scale, 0.32 * scale), bootTopMat);
-  leftBootTop.position.set(-0.15 * scale, 0.1 * scale, 0);
-  group.add(leftBootTop);
+  leftBootTop.position.set(0, -0.2 * scale, 0);
+  leftLeg.add(leftBootTop);
   const rightBootTop = new THREE.Mesh(new THREE.BoxGeometry(0.22 * scale, 0.08 * scale, 0.32 * scale), bootTopMat);
-  rightBootTop.position.set(0.15 * scale, 0.1 * scale, 0);
-  group.add(rightBootTop);
+  rightBootTop.position.set(0, -0.2 * scale, 0);
+  rightLeg.add(rightBootTop);
   // Boot soles
   const leftFoot = new THREE.Mesh(new THREE.BoxGeometry(0.24 * scale, 0.08 * scale, 0.36 * scale), bootMat);
-  leftFoot.position.set(-0.15 * scale, 0.04 * scale, 0.02 * scale);
-  group.add(leftFoot);
+  leftFoot.position.set(0, -0.3 * scale, 0.02 * scale);
+  leftLeg.add(leftFoot);
   const rightFoot = new THREE.Mesh(new THREE.BoxGeometry(0.24 * scale, 0.08 * scale, 0.36 * scale), bootMat);
-  rightFoot.position.set(0.15 * scale, 0.04 * scale, 0.02 * scale);
-  group.add(rightFoot);
+  rightFoot.position.set(0, -0.3 * scale, 0.02 * scale);
+  rightLeg.add(rightFoot);
 
   // === ARMS ===
   const armMat = new THREE.MeshLambertMaterial({ color: bodyColor });
@@ -774,7 +774,7 @@ export function createNPCModel(npc) {
 }
 
 // --- Walk Animation ---
-export function animateWalk(model, dt) {
+export function animateWalk(model, dt, skipArms) {
   if (!model) return;
   const leftLeg = model.getObjectByName('leftLeg');
   const rightLeg = model.getObjectByName('rightLeg');
@@ -783,13 +783,15 @@ export function animateWalk(model, dt) {
   const body = model.getObjectByName('body');
 
   const time = Date.now() * 0.005;
-  // Legs swing (bigger amplitude for visibility)
+  // Legs swing
   if (leftLeg) leftLeg.rotation.x = Math.sin(time) * 0.6;
   if (rightLeg) rightLeg.rotation.x = -Math.sin(time) * 0.6;
-  // Arms swing opposite to legs (natural walk, bigger swing)
-  if (leftArm) leftArm.rotation.x = -Math.sin(time) * 0.5;
-  if (rightArm) rightArm.rotation.x = Math.sin(time) * 0.5;
-  // Body bob (more pronounced)
+  // Arms swing opposite to legs (skip if attacking)
+  if (!skipArms) {
+    if (leftArm) leftArm.rotation.x = -Math.sin(time) * 0.5;
+    if (rightArm) rightArm.rotation.x = Math.sin(time) * 0.5;
+  }
+  // Body bob
   if (body) body.position.y = 0.8 + Math.abs(Math.sin(time * 2)) * 0.06;
 }
 
@@ -842,16 +844,20 @@ export function idleArms(model, time) {
   if (rightArm) rightArm.rotation.x = -Math.sin(time * 1.5) * 0.1;
 }
 
-export function stopWalk(model) {
+export function stopWalk(model, skipArms) {
   if (!model) return;
-  model.children.forEach(c => {
-    if (c.position.y < 0.4) c.rotation.x = 0;
-  });
-  // Reset arms
-  const leftArm = model.getObjectByName('leftArm');
-  const rightArm = model.getObjectByName('rightArm');
-  if (leftArm) leftArm.rotation.x = 0;
-  if (rightArm) rightArm.rotation.x = 0;
+  // Reset leg rotations only
+  const leftLeg = model.getObjectByName('leftLeg');
+  const rightLeg = model.getObjectByName('rightLeg');
+  if (leftLeg) leftLeg.rotation.x = 0;
+  if (rightLeg) rightLeg.rotation.x = 0;
+  // Reset arms (skip if attacking)
+  if (!skipArms) {
+    const leftArm = model.getObjectByName('leftArm');
+    const rightArm = model.getObjectByName('rightArm');
+    if (leftArm) leftArm.rotation.x = 0;
+    if (rightArm) rightArm.rotation.x = 0;
+  }
   // Reset body bob
   const body = model.getObjectByName('body');
   if (body) body.position.y = 0.8;
