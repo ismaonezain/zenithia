@@ -375,39 +375,7 @@ body {
   text-shadow: 1px 1px 3px rgba(0,0,0,0.8);
 }
 
-/* XP Bar */
-#xp-bar {
-  position: absolute;
-  bottom: 16px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 360px;
-  height: 14px;
-  background: rgba(0, 0, 0, 0.55);
-  backdrop-filter: blur(4px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
-}
-
-#xp-fill {
-  height: 100%;
-  width: 0%;
-  background: linear-gradient(90deg, #F9A825, #FDD835);
-  border-radius: 8px;
-  transition: width 0.3s;
-}
-
-#xp-text {
-  position: absolute;
-  top: 50%;
-  left: 10px;
-  transform: translateY(-50%);
-  font-size: 0.6rem;
-  font-weight: 600;
-  text-shadow: 1px 1px 3px rgba(0,0,0,0.8);
-}
+/* XP Bar (active definition below at line ~1085) */
 
 /* Mini Map */
 #mini-map {
