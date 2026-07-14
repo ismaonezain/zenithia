@@ -1002,51 +1002,54 @@ export function applyEquipment(model, equipment) {
       const isCleaver = wid.includes('cleaver');
       const isCurved = wid.includes('cutter') || wid.includes('slicer');
 
+      // Blade extends FORWARD (+Z) from top of handle
+      const hTop = 0.1; // top of handle
+
       if (isStaff) {
-        const rodGeo = new THREE.BoxGeometry(0.04, 0.9, 0.04);
+        const rodGeo = new THREE.BoxGeometry(0.04, 0.04, 0.9);
         const rodMat = new THREE.MeshLambertMaterial({ color: t.secondary || 0x5D4037 });
         const rod = new THREE.Mesh(rodGeo, rodMat);
-        rod.position.set(0, 0.35, 0);
+        rod.position.set(0, 0, 0.35);
         wGroup.add(rod);
         const orbGeo = new THREE.SphereGeometry(0.06, 8, 8);
         const orbMat = new THREE.MeshBasicMaterial({ color: t.accent || t.primary });
         const orb = new THREE.Mesh(orbGeo, orbMat);
-        orb.position.set(0, 0.85, 0);
+        orb.position.set(0, 0, 0.85);
         wGroup.add(orb);
         const glowGeo = new THREE.SphereGeometry(0.1, 8, 8);
         const glowMat = new THREE.MeshBasicMaterial({ color: t.accent || t.primary, transparent: true, opacity: 0.2 });
         const glow = new THREE.Mesh(glowGeo, glowMat);
-        glow.position.set(0, 0.85, 0);
+        glow.position.set(0, 0, 0.85);
         wGroup.add(glow);
       } else if (isCleaver) {
-        const bladeGeo = new THREE.BoxGeometry(0.15, 0.35, 0.04);
+        const bladeGeo = new THREE.BoxGeometry(0.15, 0.04, 0.35);
         const bladeMat = new THREE.MeshLambertMaterial({ color: t.primary });
         const blade = new THREE.Mesh(bladeGeo, bladeMat);
-        blade.position.set(0, 0.3, 0);
+        blade.position.set(0, 0, hTop + 0.17);
         wGroup.add(blade);
       } else if (isCurved) {
         const len = 0.38;
-        const bladeGeo = new THREE.BoxGeometry(0.05, len, 0.03);
+        const bladeGeo = new THREE.BoxGeometry(0.05, 0.03, len);
         const bladeMat = new THREE.MeshLambertMaterial({ color: t.primary });
         const blade = new THREE.Mesh(bladeGeo, bladeMat);
-        blade.position.set(0.02, len / 2 + 0.02, 0);
-        blade.rotation.z = 0.15;
+        blade.position.set(0.02, 0, hTop + len / 2);
+        blade.rotation.x = 0.15;
         wGroup.add(blade);
       } else {
         const len = isDagger ? 0.22 : 0.38;
-        const bladeGeo = new THREE.BoxGeometry(isDagger ? 0.04 : 0.055, len, 0.025);
+        const bladeGeo = new THREE.BoxGeometry(isDagger ? 0.04 : 0.055, 0.025, len);
         const bladeMat = new THREE.MeshLambertMaterial({ color: t.primary });
         const blade = new THREE.Mesh(bladeGeo, bladeMat);
-        blade.position.set(0, len / 2 + 0.02, 0);
+        blade.position.set(0, 0, hTop + len / 2);
         wGroup.add(blade);
-        const edgeGeo = new THREE.BoxGeometry(0.008, len * 0.9, 0.015);
+        const edgeGeo = new THREE.BoxGeometry(0.008, 0.015, len * 0.9);
         const edgeMat = new THREE.MeshBasicMaterial({ color: t.accent || 0xD5D5D5 });
         const edge = new THREE.Mesh(edgeGeo, edgeMat);
-        edge.position.set(isDagger ? -0.024 : -0.032, len / 2 + 0.02, 0.016);
+        edge.position.set(isDagger ? -0.024 : -0.032, 0.016, hTop + len / 2);
         wGroup.add(edge);
       }
 
-      // Handle sits in palm
+      // Handle in palm — vertical grip
       const handleGeo = new THREE.BoxGeometry(0.035, 0.1, 0.035);
       const handleMat = new THREE.MeshLambertMaterial({ color: 0x5D4037 });
       const handle = new THREE.Mesh(handleGeo, handleMat);
