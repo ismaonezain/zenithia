@@ -2368,15 +2368,18 @@ function usePotion() {
 // ============================
 function toggleFlashlight() {
   state.flashlightOn = !state.flashlightOn;
+  const slotF = document.getElementById('skill-slot-f');
   if (state.flashlightOn) {
     if (!state.flashlight) {
       state.flashlight = new THREE.PointLight(0xFFF3D4, 1.5, 15);
       state.scene.add(state.flashlight);
     }
     state.flashlight.visible = true;
+    if (slotF) slotF.classList.add('skill-armed');
     addChatMessage('System', '🔦 Flashlight ON');
   } else {
     if (state.flashlight) state.flashlight.visible = false;
+    if (slotF) slotF.classList.remove('skill-armed');
     addChatMessage('System', 'Flashlight OFF');
   }
 }
@@ -2543,6 +2546,18 @@ function initSkillUI() {
 
   const slot = document.getElementById('skill-slot-1');
   slot.title = `${skill.name} (${skill.mpCost} MP) — ${skill.desc}`;
+
+  // Click handlers for hotbar slots
+  document.getElementById('skill-slot-2')?.addEventListener('click', () => usePotion());
+  document.getElementById('skill-slot-w')?.addEventListener('click', () => {
+    if (!state.targetedMonster) {
+      const nearest = findNearestMonster();
+      if (nearest) setTarget(nearest.userData.id);
+    } else {
+      state.autoAttacking = true;
+    }
+  });
+  document.getElementById('skill-slot-f')?.addEventListener('click', () => toggleFlashlight());
 }
 
 function useSkill() {
