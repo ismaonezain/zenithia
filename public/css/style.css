@@ -1082,9 +1082,50 @@ body {
 }
 
 /* Target HP bar in HUD */
-#target-hp-bar {
+#xp-bar {
   position: absolute;
   top: 80px;
+  left: 20px;
+  width: 220px;
+  height: 16px;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+#xp-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #FFD600, #FFC107);
+  border-radius: 10px;
+  transition: width 0.3s;
+}
+#xp-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 0.55rem;
+  font-weight: 600;
+  text-shadow: 1px 1px 3px rgba(0,0,0,0.8);
+  white-space: nowrap;
+}
+#hud-sp {
+  position: absolute;
+  top: 100px;
+  left: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #FFD600;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.8);
+  pointer-events: none;
+}
+/* Target HP bar in HUD */
+#target-hp-bar {
+  position: absolute;
+  top: 100px;
   left: 20px;
   width: 220px;
   height: 18px;

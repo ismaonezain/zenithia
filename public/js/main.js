@@ -794,6 +794,12 @@ function handleServerMessage(msg) {
       if (hudLevel) hudLevel.textContent = 'Lv.' + state.player.level;
       updatePlayerHP(state.player.hp, state.player.maxHp);
       updatePlayerMP(state.player.mp, state.player.maxMp);
+      // Sync XP bar
+      const xpNeeded = 100 + (state.player.level - 1) * 200;
+      updatePlayerXP(state.player.xp || 0, xpNeeded);
+      // Sync skill points
+      state.player.skillPoints = msg.player.skillPoints || 0;
+      updateSkillPointsUI();
       // Sync unlocked skills from server
       if (msg.player.unlockedSkills) {
         state.unlockedSkills = msg.player.unlockedSkills;
@@ -863,17 +869,24 @@ function handleServerMessage(msg) {
       if (msg.hp !== undefined) updatePlayerHP(msg.hp, msg.maxHp);
       if (msg.mp !== undefined) updatePlayerMP(msg.mp, msg.maxMp);
       if (msg.xp !== undefined) state.player.xp = (state.player.xp || 0) + msg.xp;
+      // Update XP bar
+      const xpNeeded = 100 + ((state.player.level || 1) - 1) * 200;
+      updatePlayerXP(state.player.xp || 0, xpNeeded);
       if (msg.leveledUp) {
         state.player.level = msg.level;
         state.player.maxHp = msg.maxHp;
         state.player.maxMp = msg.maxMp;
         state.player.hp = msg.hp;
         state.player.mp = msg.mp;
+        state.player.skillPoints = (state.player.skillPoints || 0) + 1;
         updatePlayerLevel(msg.level);
         updatePlayerHP(msg.hp, msg.maxHp);
         updatePlayerMP(msg.mp, msg.maxMp);
+        const newXpNeeded = 100 + (msg.level - 1) * 200;
+        updatePlayerXP(state.player.xp || 0, newXpNeeded);
+        updateSkillPointsUI();
         showLevelUpEffect();
-        addChatMessage('System', `🎉 Level Up! Now Lv.${msg.level}`);
+        addChatMessage('System', `🎉 Level Up! Now Lv.${msg.level} (+1 SP)`);
       }
       if (msg.loot?.length > 0) showLootPopup(msg.loot);
       break;
@@ -1006,6 +1019,21 @@ function handleServerMessage(msg) {
     case 'xp_penalty': {
       state.player.xp = msg.xp;
       addChatMessage('System', `💀 XP penalty: -${msg.xpLoss} XP`);
+      const xpNeeded = 100 + ((state.player.level || 1) - 1) * 200;
+      updatePlayerXP(state.player.xp, xpNeeded);
+      break;
+    }
+
+    case 'skill_unlocked': {
+      state.player.skillPoints = msg.skillPoints;
+      state.unlockedSkills = msg.unlockedSkills;
+      updateSkillPointsUI();
+      addChatMessage('System', `✨ Skill unlocked: ${msg.tier}!`);
+      break;
+    }
+
+    case 'skill_error': {
+      addChatMessage('System', `❌ ${msg.error}`);
       break;
     }
 
@@ -1792,7 +1820,16 @@ function updatePlayerXP(xp, maxXp) {
   const fill = document.getElementById('xp-fill');
   const text = document.getElementById('xp-text');
   if (fill) fill.style.width = `${(xp / maxXp) * 100}%`;
-  if (text) text.textContent = `${xp}/${maxXp}`;
+  if (text) text.textContent = `XP ${xp}/${maxXp}`;
+}
+
+function updateSkillPointsUI() {
+  const sp = document.getElementById('hud-sp');
+  const pts = state.player?.skillPoints || 0;
+  if (sp) {
+    sp.textContent = `✦ SP: ${pts}`;
+    sp.style.display = pts > 0 ? 'block' : 'none';
+  }
 }
 
 function updatePlayerLevel(level) {

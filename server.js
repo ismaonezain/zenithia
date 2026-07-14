@@ -194,11 +194,13 @@ function getOrCreatePlayer(playerId, name, wallet, customization, persistentId) 
         existing.mp = existing.maxMp || CLASS_STATS[existing.class || 'laborer']?.mp || 30;
         console.log(`[RECOVER] ${existing.name} had hp=0, restored to ${existing.hp}`);
       }
-      // Backfill unlockedSkills for existing players
+      // Backfill unlockedSkills + skillPoints for existing players
       if (!existing.unlockedSkills) {
         existing.unlockedSkills = ['tier1'];
-        if (existing.level >= 3) existing.unlockedSkills.push('tier2b');
-        if (existing.level >= 5) existing.unlockedSkills.push('tier2a');
+      }
+      if (existing.skillPoints === undefined) {
+        // Give retroactive skill points: 1 per level above 1
+        existing.skillPoints = Math.max(0, (existing.level || 1) - 1);
       }
       world.players[playerId] = existing;
       // Remove old entry if different id
@@ -249,7 +251,7 @@ function getOrCreatePlayer(playerId, name, wallet, customization, persistentId) 
     x: 0, y: 0, z: 0, class: cls, className: null, level: 1, xp: 0,
     hp: s.hp, maxHp: s.hp, mp: s.mp, maxMp: s.mp, atk: s.atk, def: s.def, spd: s.spd, crit: s.crit,
     zen: 50, inventory: [], quests: {}, reputation: {}, region: 'willowmere',
-    customization: customization || {}, equipment: {}, unlockedSkills: ['tier1'],
+    customization: customization || {}, equipment: {}, unlockedSkills: ['tier1'], skillPoints: 0,
     createdAt: Date.now(), lastLogin: Date.now(),
   };
   world.players[playerId] = player;
@@ -498,14 +500,8 @@ function handleAttack(ws, playerId, msg) {
       player.maxMp += 5; player.mp = player.maxMp;
       player.atk += 1; player.def += 1;
       leveledUp = true;
-      // Unlock skill tree tiers on level up
-      if (!player.unlockedSkills) player.unlockedSkills = ['tier1'];
-      if (player.level >= 3 && !player.unlockedSkills.includes('tier2b')) {
-        player.unlockedSkills.push('tier2b');
-      }
-      if (player.level >= 5 && !player.unlockedSkills.includes('tier2a')) {
-        player.unlockedSkills.push('tier2a');
-      }
+      // Give 1 skill point per level
+      player.skillPoints = (player.skillPoints || 0) + 1;
     }
 
     // Loot
@@ -994,6 +990,27 @@ function handleMessage(ws, playerId, msg) {
         broadcast({ type: 'player_moved', playerId, x: player.x, y: 0, z: player.z });
         broadcast({ type: 'player_respawn', targetId: playerId, hp: player.hp, maxHp: player.maxHp, mp: player.mp, maxMp: player.maxMp, x: player.x, z: player.z });
       }
+      break;
+    }
+    case 'unlock_skill': {
+      const player = connectedPlayers[ws];
+      if (!player) break;
+      const { tier } = msg; // 'tier2a' or 'tier2b'
+      if (!tier || !['tier2a', 'tier2b'].includes(tier)) break;
+      if (!player.skillPoints || player.skillPoints <= 0) {
+        ws.send(JSON.stringify({ type: 'skill_error', error: 'No skill points available' }));
+        break;
+      }
+      if (!player.unlockedSkills) player.unlockedSkills = ['tier1'];
+      if (player.unlockedSkills.includes(tier)) {
+        ws.send(JSON.stringify({ type: 'skill_error', error: 'Skill already unlocked' }));
+        break;
+      }
+      // Spend 1 point, unlock
+      player.skillPoints--;
+      player.unlockedSkills.push(tier);
+      saveWorld();
+      ws.send(JSON.stringify({ type: 'skill_unlocked', tier, skillPoints: player.skillPoints, unlockedSkills: player.unlockedSkills }));
       break;
     }
     case 'use_skill': {
