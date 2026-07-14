@@ -57,8 +57,6 @@ const state = {
   lastAttackTime: 0,      // client-side cooldown tracking
   autoAttacking: false,   // auto-attack loop active
   skillArmed: null,       // { classType, skill } — skill ready to cast, waiting for target click
-  isAttacking: false,     // attack animation playing — protect arm rotations
-  attackEndTime: 0,       // when attack anim finishes
   isDead: false,          // death screen active
   // Day/night cycle
   dayTime: 0.25,         // 0-1, 0 = midnight, 0.25 = sunrise, 0.5 = noon, 0.75 = sunset
@@ -2230,29 +2228,50 @@ function attackSwing(model) {
   }
 }
 
-// Class-specific attack animation — arms only, body stays still
+// Class-specific attack animation — full body: arms + legs + body lunge
 function classAttackAnim(model, classType) {
   if (!model) return;
   const rightArm = model.getObjectByName('rightArm');
   const leftArm = model.getObjectByName('leftArm');
+  const body = model.getObjectByName('body');
+  const rightLeg = model.getObjectByName('rightLeg');
+  const leftLeg = model.getObjectByName('leftLeg');
 
-  // Protect arm rotations from walk/idle overwrite
-  state.isAttacking = true;
-  state.attackEndTime = Date.now() + 400;
-
-  // Helper: animate property
-  const anim = (obj, prop, val, dur) => {
+  // Helper: animate property with easing
+  const anim = (obj, prop, val, dur, restore) => {
     if (!obj) return;
     const orig = obj[prop];
     obj[prop] = val;
-    setTimeout(() => { obj[prop] = orig; }, dur);
+    setTimeout(() => { obj[prop] = restore !== undefined ? restore : orig; }, dur);
+  };
+
+  // Common: body lunge forward + leg step
+  const lungeForward = () => {
+    if (body) {
+      const origZ = body.position.z;
+      body.position.z = 0.12;
+      setTimeout(() => { body.position.z = origZ; }, 300);
+    }
+    // Right leg steps forward
+    if (rightLeg) {
+      anim(rightLeg, 'rotation.x', 0.5, 150);
+      setTimeout(() => anim(rightLeg, 'rotation.x', -0.3, 100), 150);
+      setTimeout(() => anim(rightLeg, 'rotation.x', 0, 150), 250);
+    }
+    // Left leg braces back
+    if (leftLeg) {
+      anim(leftLeg, 'rotation.x', -0.4, 200);
+      setTimeout(() => anim(leftLeg, 'rotation.x', 0, 200), 200);
+    }
   };
 
   switch (classType) {
     case 'laborer': {
+      // Heavy overhead smash — both arms raise then slam down
+      lungeForward();
       if (rightArm) {
-        anim(rightArm, 'rotation.x', -2.2, 150);
-        setTimeout(() => anim(rightArm, 'rotation.x', 1.0, 100), 150);
+        anim(rightArm, 'rotation.x', -2.2, 150); // raise high
+        setTimeout(() => anim(rightArm, 'rotation.x', 1.0, 100), 150); // slam down hard
         setTimeout(() => anim(rightArm, 'rotation.x', 0, 200), 250);
       }
       if (leftArm) {
@@ -2263,14 +2282,16 @@ function classAttackAnim(model, classType) {
       break;
     }
     case 'miner': {
+      // Quick dual slash — right then left, with body twist
+      lungeForward();
       if (rightArm) {
-        anim(rightArm, 'rotation.z', -1.0, 100);
+        anim(rightArm, 'rotation.z', -1.0, 100); // swing right
         anim(rightArm, 'rotation.x', -0.8, 100);
         setTimeout(() => { anim(rightArm, 'rotation.z', 0, 100); anim(rightArm, 'rotation.x', 0, 100); }, 150);
       }
       if (leftArm) {
         setTimeout(() => {
-          anim(leftArm, 'rotation.z', 1.0, 100);
+          anim(leftArm, 'rotation.z', 1.0, 100); // swing left
           anim(leftArm, 'rotation.x', -0.8, 100);
           setTimeout(() => { anim(leftArm, 'rotation.z', 0, 100); anim(leftArm, 'rotation.x', 0, 100); }, 150);
         }, 100);
@@ -2278,8 +2299,10 @@ function classAttackAnim(model, classType) {
       break;
     }
     case 'gardener': {
+      // Ranged cast — step forward + extend arm
+      lungeForward();
       if (rightArm) {
-        anim(rightArm, 'rotation.x', -1.4, 200);
+        anim(rightArm, 'rotation.x', -1.4, 200); // extend forward
         setTimeout(() => anim(rightArm, 'rotation.x', 0, 300), 400);
       }
       if (leftArm) {
@@ -2289,8 +2312,13 @@ function classAttackAnim(model, classType) {
       break;
     }
     case 'herbalist': {
+      // Heal — arms open wide + lift
       if (rightArm) anim(rightArm, 'rotation.z', -0.8, 200);
       if (leftArm) anim(leftArm, 'rotation.z', 0.8, 200);
+      // Lift body slightly
+      const origY = model.position.y;
+      model.position.y += 0.15;
+      setTimeout(() => { model.position.y = origY; }, 500);
       setTimeout(() => {
         if (rightArm) anim(rightArm, 'rotation.z', 0, 300);
         if (leftArm) anim(leftArm, 'rotation.z', 0, 300);
@@ -2298,21 +2326,23 @@ function classAttackAnim(model, classType) {
       break;
     }
     case 'watchman': {
+      // Quick thrust — fast forward jab with step
+      lungeForward();
       if (rightArm) {
-        anim(rightArm, 'rotation.x', -1.8, 80);
+        anim(rightArm, 'rotation.x', -1.8, 80); // fast thrust
         anim(rightArm, 'rotation.z', -0.3, 80);
-        setTimeout(() => anim(rightArm, 'rotation.x', -0.3, 60), 80);
+        setTimeout(() => anim(rightArm, 'rotation.x', -0.3, 60), 80); // recoil
         setTimeout(() => { anim(rightArm, 'rotation.x', 0, 100); anim(rightArm, 'rotation.z', 0, 100); }, 140);
       }
+      // Left arm counterbalance
       if (leftArm) {
         anim(leftArm, 'rotation.x', 0.4, 80);
         setTimeout(() => anim(leftArm, 'rotation.x', 0, 120), 80);
       }
       break;
     }
-    default: {
-      if (rightArm) anim(rightArm, 'rotation.x', -1.2, 200);
-    }
+    default:
+      attackSwing(model);
   }
 }
 
@@ -3126,36 +3156,12 @@ function gameLoop() {
   const playerModel = state.players[state.playerId];
   const time = Date.now() * 0.001;
 
-  // Clear attacking flag when anim done
-  if (state.isAttacking && Date.now() >= state.attackEndTime) {
-    state.isAttacking = false;
-  }
-
   if (state.targetPos) {
-    if (state.isAttacking) {
-      // Save arm rotations, let walk animate legs only, then restore arms
-      const la = playerModel?.getObjectByName('leftArm');
-      const ra = playerModel?.getObjectByName('rightArm');
-      const saveLAR = la?.rotation.x, saveRAR = ra?.rotation.x, saveLAZ = la?.rotation.z, saveRAZ = ra?.rotation.z;
-      animateWalk(playerModel, 1);
-      if (la) { la.rotation.x = saveLAR; la.rotation.z = saveLAZ; }
-      if (ra) { ra.rotation.x = saveRAR; ra.rotation.z = saveRAZ; }
-    } else {
-      animateWalk(playerModel, 1);
-    }
+    animateWalk(playerModel, 1);
   } else {
-    if (state.isAttacking) {
-      // Reset legs only, keep arms from attack anim
-      const ll = playerModel?.getObjectByName('leftLeg');
-      const rl = playerModel?.getObjectByName('rightLeg');
-      const body = playerModel?.getObjectByName('body');
-      if (ll) ll.rotation.x = 0;
-      if (rl) rl.rotation.x = 0;
-      if (body) body.position.y = 0.8;
-    } else {
-      stopWalk(playerModel);
-      if (playerModel) animateIdle(playerModel, time);
-    }
+    stopWalk(playerModel);
+    // Idle animation when not walking
+    if (playerModel) animateIdle(playerModel, time);
   }
 
   // Auto blink (every 3-6 seconds)
