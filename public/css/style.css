@@ -301,8 +301,8 @@ body {
 }
 #hud-level {
   position: absolute;
-  top: 24px;
-  left: 190px;
+  top: 8px;
+  left: 160px;
   font-size: 12px;
   font-weight: 600;
   color: #ffd54f;
@@ -1092,7 +1092,7 @@ body {
   backdrop-filter: blur(4px);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 10px;
-  overflow: visible;
+  overflow: hidden;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
 }
 #xp-fill {
