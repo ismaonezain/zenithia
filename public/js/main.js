@@ -987,6 +987,7 @@ function handleServerMessage(msg) {
       if (attackerMob) monsterAttackAnim(attackerMob);
       if (msg.targetId === state.playerId) {
         window.ZenSFX?.damageTaken();
+        hitFlash();
         state.player.hp = Math.max(0, (state.player.hp || 0) - msg.damage);
         updatePlayerHP(state.player.hp, state.player.maxHp);
         showDamageNumber(null, msg.damage, false, state.playerId);
@@ -1864,6 +1865,28 @@ function updatePlayerHP(hp, maxHp) {
     state.player.hp = hp; state.player.maxHp = maxHp;
     updateNameHPBar(state.playerModel, hp, maxHp, state.player.mp ?? 0, state.player.maxMp ?? maxHp);
   }
+}
+
+// === HIT FLASH — blink HP bar + screen vignette when damaged ===
+let _hitFlashTimer = null;
+function hitFlash() {
+  // HP bar blink red
+  const hpFill = document.getElementById('hp-fill');
+  if (hpFill) {
+    hpFill.classList.add('hp-hit-flash');
+    clearTimeout(_hitFlashTimer);
+    _hitFlashTimer = setTimeout(() => hpFill.classList.remove('hp-hit-flash'), 300);
+  }
+  // Screen vignette
+  let vig = document.getElementById('hit-vignette');
+  if (!vig) {
+    vig = document.createElement('div');
+    vig.id = 'hit-vignette';
+    document.body.appendChild(vig);
+  }
+  vig.classList.remove('vignette-flash');
+  void vig.offsetWidth; // reflow to restart animation
+  vig.classList.add('vignette-flash');
 }
 
 function updatePlayerXP(xp, maxXp) {
