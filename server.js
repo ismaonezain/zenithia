@@ -194,15 +194,19 @@ function getOrCreatePlayer(playerId, name, wallet, customization, persistentId) 
         existing.mp = existing.maxMp || CLASS_STATS[existing.class || 'laborer']?.mp || 30;
         console.log(`[RECOVER] ${existing.name} had hp=0, restored to ${existing.hp}`);
       }
-      // Backfill unlockedSkills + skillPoints for existing players
+      // Backfill unlockedSkills for existing players — auto-unlock by level
       if (!existing.unlockedSkills) {
         existing.unlockedSkills = ['tier1'];
       }
-      // ALWAYS recalculate SP on login: earned (level-1) minus spent (tier2 count)
-      const tier2Count = (existing.unlockedSkills || []).filter(s => s.startsWith('tier2')).length;
-      const totalEarned = Math.max(0, (existing.level || 1) - 1);
-      existing.skillPoints = Math.max(0, totalEarned - tier2Count);
-      console.log(`[SKILL] ${existing.name} Lv.${existing.level} → SP: ${existing.skillPoints} (earned: ${totalEarned}, spent: ${tier2Count})`);
+      // Auto-unlock tiers based on current level
+      if (existing.level >= 3 && !existing.unlockedSkills.includes('tier2b')) {
+        existing.unlockedSkills.push('tier2b');
+      }
+      if (existing.level >= 5 && !existing.unlockedSkills.includes('tier2a')) {
+        existing.unlockedSkills.push('tier2a');
+      }
+      existing.skillPoints = 0; // SP removed — skills auto-unlock by level
+      console.log(`[SKILL] ${existing.name} Lv.${existing.level} → unlocked: [${existing.unlockedSkills}]`);
       world.players[playerId] = existing;
       // Remove old entry if different id
       Object.keys(world.players).forEach(k => {
@@ -517,8 +521,6 @@ function handleAttack(ws, playerId, msg) {
       player.maxMp += 5; player.mp = player.maxMp;
       player.atk += 1; player.def += 1;
       leveledUp = true;
-      // Give 1 skill point per level
-      player.skillPoints = (player.skillPoints || 0) + 1;
     }
 
     // Loot
@@ -1011,24 +1013,10 @@ function handleMessage(ws, playerId, msg) {
       break;
     }
     case 'unlock_skill': {
+      // Skills auto-unlock by level — this is now a no-op
       const player = connectedPlayers[ws];
       if (!player) break;
-      const { tier } = msg; // 'tier2a' or 'tier2b'
-      if (!tier || !['tier2a', 'tier2b'].includes(tier)) break;
-      if (!player.skillPoints || player.skillPoints <= 0) {
-        ws.send(JSON.stringify({ type: 'skill_error', error: 'No skill points available' }));
-        break;
-      }
-      if (!player.unlockedSkills) player.unlockedSkills = ['tier1'];
-      if (player.unlockedSkills.includes(tier)) {
-        ws.send(JSON.stringify({ type: 'skill_error', error: 'Skill already unlocked' }));
-        break;
-      }
-      // Spend 1 point, unlock
-      player.skillPoints--;
-      player.unlockedSkills.push(tier);
-      saveWorld();
-      ws.send(JSON.stringify({ type: 'skill_unlocked', tier, skillPoints: player.skillPoints, unlockedSkills: player.unlockedSkills }));
+      ws.send(JSON.stringify({ type: 'skill_unlocked', tier: msg.tier, skillPoints: 0, unlockedSkills: player.unlockedSkills }));
       break;
     }
     case 'use_skill': {

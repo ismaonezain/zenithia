@@ -3010,7 +3010,7 @@ function renderSkillTree() {
   const unlocked = state.unlockedSkills || ['tier1'];
   const sp = state.player?.skillPoints || 0;
 
-  let html = `<div class="st-class-label">${tree.className} — Level ${level} · <span style="color:#FFD600">✦ SP: ${sp}</span></div>`;
+  let html = `<div class="st-class-label">${tree.className} — Level ${level}</div>`;
 
   // Tier 1 (always unlocked)
   const t1 = tree.tier1;
@@ -3031,17 +3031,17 @@ function renderSkillTree() {
   // Tier 2a (level 5)
   const t2a = tree.tier2a;
   const t2aUnlocked = unlocked.includes('tier2a');
-  const t2aCanUnlock = !t2aUnlocked && level >= t2a.reqLevel && sp > 0;
+  const t2aCanUnlock = !t2aUnlocked && level >= t2a.reqLevel;
   const t2aLocked = !t2aUnlocked && !t2aCanUnlock;
   html += `
-    <div class="st-node ${t2aUnlocked ? 'unlocked' : t2aCanUnlock ? 'unlockable' : 'locked'}" data-tier="tier2a">
+    <div class="st-node ${t2aUnlocked ? 'unlocked' : t2aCanUnlock ? 'unlocked' : 'locked'}" data-tier="tier2a">
       <div class="st-node-icon">${t2a.icon}</div>
       <div class="st-node-info">
         <div class="st-node-name">${t2a.name}</div>
         <div class="st-node-desc">${t2a.desc}</div>
-        ${t2aUnlocked ? '' : t2aCanUnlock ? `<div class="st-node-req" style="color:#4CAF50">✦ Click to unlock (1 SP)</div>` : `<div class="st-node-req">🔒 Requires Level ${t2a.reqLevel}</div>`}
+        ${t2aUnlocked || t2aCanUnlock ? '' : `<div class="st-node-req">🔒 Requires Level ${t2a.reqLevel}</div>`}
       </div>
-      <div class="st-node-badge">${t2aUnlocked ? 'Active' : t2aCanUnlock ? '✦ SP' : `Lv.${t2a.reqLevel}`}</div>
+      <div class="st-node-badge">${t2aUnlocked || t2aCanUnlock ? 'Active' : `Lv.${t2a.reqLevel}`}</div>
     </div>
   `;
 
@@ -3051,30 +3051,25 @@ function renderSkillTree() {
   // Tier 2b (level 3)
   const t2b = tree.tier2b;
   const t2bUnlocked = unlocked.includes('tier2b');
-  const t2bCanUnlock = !t2bUnlocked && level >= t2b.reqLevel && sp > 0;
+  const t2bCanUnlock = !t2bUnlocked && level >= t2b.reqLevel;
   html += `
-    <div class="st-node ${t2bUnlocked ? 'unlocked' : t2bCanUnlock ? 'unlockable' : 'locked'}" data-tier="tier2b">
+    <div class="st-node ${t2bUnlocked || t2bCanUnlock ? 'unlocked' : 'locked'}" data-tier="tier2b">
       <div class="st-node-icon">${t2b.icon}</div>
       <div class="st-node-info">
         <div class="st-node-name">${t2b.name}</div>
         <div class="st-node-desc">${t2b.desc}</div>
-        ${t2bUnlocked ? '' : t2bCanUnlock ? `<div class="st-node-req" style="color:#4CAF50">✦ Click to unlock (1 SP)</div>` : `<div class="st-node-req">🔒 Requires Level ${t2b.reqLevel}</div>`}
+        ${t2bUnlocked || t2bCanUnlock ? '' : `<div class="st-node-req">🔒 Requires Level ${t2b.reqLevel}</div>`}
       </div>
-      <div class="st-node-badge">${t2bUnlocked ? 'Active' : t2bCanUnlock ? '✦ SP' : `Lv.${t2b.reqLevel}`}</div>
+      <div class="st-node-badge">${t2bUnlocked || t2bCanUnlock ? 'Active' : `Lv.${t2b.reqLevel}`}</div>
     </div>
   `;
 
   content.innerHTML = html;
 
-  // Bind clicks on unlocked OR unlockable nodes
-  content.querySelectorAll('.st-node.unlocked, .st-node.unlockable').forEach(node => {
+  // Bind clicks on unlocked nodes — assign to hotbar
+  content.querySelectorAll('.st-node.unlocked').forEach(node => {
     node.addEventListener('click', () => {
       const tier = node.dataset.tier;
-      if (node.classList.contains('unlockable')) {
-        // Spend skill point to unlock
-        wsSend(JSON.stringify({ type: 'unlock_skill', tier }));
-        return;
-      }
       // Already unlocked → assign to hotbar
       let targetIdx = state.hotbar.findIndex(s => !s || !s.type);
       if (targetIdx === -1) targetIdx = 0;
