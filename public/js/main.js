@@ -1494,40 +1494,73 @@ function showDamageNumber(monsterId, damage, isCrit, targetId) {
   let pos;
   if (monsterId && state.monsters[monsterId]) {
     pos = state.monsters[monsterId].position.clone();
-    pos.y += 1.5;
+    pos.y += 1.8;
   } else if (targetId && state.players[targetId]) {
     pos = state.players[targetId].position.clone();
-    pos.y += 1.5;
+    pos.y += 1.8;
   } else {
     return;
   }
 
-  // Create floating text sprite
+  // Random X offset so stacked numbers don't overlap
+  pos.x += (Math.random() - 0.5) * 0.4;
+
+  // Create floating text sprite — bigger canvas for clarity
   const canvas = document.createElement('canvas');
-  canvas.width = 128;
-  canvas.height = 64;
+  canvas.width = 256;
+  canvas.height = 128;
   const ctx = canvas.getContext('2d');
-  ctx.fillStyle = isCrit ? '#FFD700' : '#FF5252';
-  ctx.font = isCrit ? 'bold 36px Courier New' : '28px Courier New';
+
+  // Text with black outline for contrast on any background
+  const fontSize = isCrit ? 56 : 44;
+  ctx.font = `bold ${fontSize}px Courier New`;
   ctx.textAlign = 'center';
-  ctx.fillText(isCrit ? `${damage}!` : `-${damage}`, 64, 40);
+  ctx.textBaseline = 'middle';
+  // Outline
+  ctx.strokeStyle = '#000000';
+  ctx.lineWidth = 4;
+  ctx.strokeText(isCrit ? `${damage}!` : `-${damage}`, 128, 64);
+  // Fill
+  ctx.fillStyle = isCrit ? '#FFD700' : '#FF5252';
+  ctx.fillText(isCrit ? `${damage}!` : `-${damage}`, 128, 64);
+  // Crit extra glow
+  if (isCrit) {
+    ctx.shadowColor = '#FFD700';
+    ctx.shadowBlur = 12;
+    ctx.fillText(`${damage}!`, 128, 64);
+  }
 
   const texture = new THREE.CanvasTexture(canvas);
-  const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: texture, transparent: true }));
+  const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: texture, transparent: true, depthTest: false }));
   sprite.position.copy(pos);
-  sprite.scale.set(0.8, 0.4, 1);
+  sprite.scale.set(1.2, 0.6, 1);
+  sprite.renderOrder = 999;
   state.scene.add(sprite);
 
-  // Animate up and fade
+  // Animate: pop in, hold, float up, fade out over 1.8s
   const startTime = Date.now();
+  const duration = 1.8;
+  const holdTime = 0.4; // stay fully visible for 0.4s
+  const startY = pos.y;
   const animate = () => {
     const elapsed = (Date.now() - startTime) / 1000;
-    if (elapsed > 1) {
+    if (elapsed > duration) {
       state.scene.remove(sprite);
       return;
     }
-    sprite.position.y += 0.02;
-    sprite.material.opacity = 1 - elapsed;
+    // Float up
+    sprite.position.y = startY + elapsed * 0.5;
+    // Pop-in scale during first 0.15s
+    if (elapsed < 0.15) {
+      const s = elapsed / 0.15;
+      sprite.scale.set(1.2 * (0.5 + s * 0.5), 0.6 * (0.5 + s * 0.5), 1);
+    }
+    // Fade: full opacity during hold, then fade out
+    if (elapsed < holdTime) {
+      sprite.material.opacity = 1;
+    } else {
+      sprite.material.opacity = 1 - (elapsed - holdTime) / (duration - holdTime);
+    }
     requestAnimationFrame(animate);
   };
   animate();
