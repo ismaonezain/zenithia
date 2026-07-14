@@ -2035,35 +2035,44 @@ canvas.addEventListener('click', (e) => {
   const raycaster = new THREE.Raycaster();
   raycaster.setFromCamera(mouse, state.camera);
 
-  const ground = state.scene.getObjectByName('ground');
-  if (!ground) return;
-
-  const intersects = raycaster.intersectObject(ground);
-  if (intersects.length === 0) return;
-
-  const point = intersects[0].point;
-
-  // Check NPC proximity — walk to NPC then interact
+  // === 1. Raycast directly against NPC + Monster meshes ===
+  const clickTargets = [];
   for (const npc of Object.values(state.npcs)) {
-    const dist = npc.position.distanceTo(point);
-    if (dist < 1.5) {
+    if (npc.isGroup || npc.isMesh) clickTargets.push(npc);
+    // Also add children (groups have nested meshes)
+    npc.traverse?.(child => { if (child.isMesh) clickTargets.push(child); });
+  }
+  for (const mob of Object.values(state.monsters)) {
+    if (mob.isGroup || mob.isMesh) clickTargets.push(mob);
+    mob.traverse?.(child => { if (child.isMesh) clickTargets.push(child); });
+  }
+
+  const hits = raycaster.intersectObjects(clickTargets, false);
+  if (hits.length > 0) {
+    const hit = hits[0].object;
+    // Walk up to find userData with id
+    let target = hit;
+    while (target && !target.userData?.id) target = target.parent;
+    if (target?.userData?.id) {
+      const ud = target.userData;
       const model = state.players[state.playerId];
-      if (model) {
+      if (!model) return;
+
+      if (ud.type === 'npc' || (!ud.type && state.npcs[ud.id])) {
+        // NPC click — interact or walk to
+        const npc = state.npcs[ud.id];
+        if (!npc) return;
         const playerDist = model.position.distanceTo(npc.position);
-        if (playerDist < 2) {
-          // Close enough — interact directly
+        if (playerDist < 2.5) {
           const faceDir = npc.position.clone().sub(model.position).normalize();
           state.lastFacing = model.position.clone().add(faceDir);
           model.lookAt(state.lastFacing);
-          wsSend(JSON.stringify({ type: 'interact_npc', npcId: npc.userData.id }));
-          return;
+          wsSend(JSON.stringify({ type: 'interact_npc', npcId: ud.id }));
         } else {
-          // Walk toward NPC, then interact when close
-          state.interactTarget = { type: 'npc', id: npc.userData.id, position: npc.position.clone() };
+          state.interactTarget = { type: 'npc', id: ud.id, position: npc.position.clone() };
           const dx = npc.position.x - model.position.x;
           const dz = npc.position.z - model.position.z;
-          const len = Math.sqrt(dx * dx + dz * dz);
-          // Target: 1.5 units away from NPC (face it)
+          const len = Math.sqrt(dx * dx + dz * dz) || 1;
           const targetX = npc.position.x - (dx / len) * 1.5;
           const targetZ = npc.position.z - (dz / len) * 1.5;
           const snapX = Math.round(targetX);
@@ -2077,47 +2086,45 @@ canvas.addEventListener('click', (e) => {
           } else if (path && path.length === 1) {
             state.targetPos = new THREE.Vector3(path[0].x, 0, path[0].z);
           }
-          return;
         }
-      }
-    }
-  }
-
-  // Check Monster proximity — attack via combat system
-  for (const mob of Object.values(state.monsters)) {
-    if (mob.position.distanceTo(point) < 2) {
-      setTarget(mob.userData.id); // sets target + visual indicator
-
-      // If skill is armed — walk to skill range, then cast
-      if (state.skillArmed) {
-        const model = state.players[state.playerId];
-        if (model) {
+        return;
+      } else {
+        // Monster click — attack
+        setTarget(ud.id);
+        if (state.skillArmed) {
           const skill = state.skillArmed.skill;
-          const dist = model.position.distanceTo(mob.position);
+          const dist = model.position.distanceTo(state.monsters[ud.id]?.position || new THREE.Vector3());
           if (dist > skill.range) {
-            // Walk to monster — but stop at skill range distance
-            // Use pathfinding to monster, we'll stop when close enough
             const startX = Math.round(model.position.x);
             const startZ = Math.round(model.position.z);
-            const targetX = Math.round(mob.position.x);
-            const targetZ = Math.round(mob.position.z);
+            const mobPos = state.monsters[ud.id].position;
+            const targetX = Math.round(mobPos.x);
+            const targetZ = Math.round(mobPos.z);
             const path = findPath(startX, startZ, targetX, targetZ);
             if (path && path.length > 1) {
               state.pathWaypoints = path.slice(1);
               state.targetPos = new THREE.Vector3(state.pathWaypoints[0].x, 0, state.pathWaypoints[0].z);
+              addChatMessage('Skill', `Walking to ${skill.name} range...`);
+            } else {
+              executeSkill(state.skillArmed.classType, skill, state.monsters[ud.id]);
             }
-            addChatMessage('Skill', `Walking to ${skill.name} range...`);
-          } else {
-            // Already in range — cast now
-            executeSkill(state.skillArmed.classType, skill, mob);
           }
+        } else {
+          performAttack();
         }
-      } else {
-        performAttack(); // attack immediately if in range
+        return;
       }
-      return;
     }
   }
+
+  // === 2. Fallback: ground raycast for movement ===
+  const ground = state.scene.getObjectByName('ground');
+  if (!ground) return;
+
+  const intersects = raycaster.intersectObject(ground);
+  if (intersects.length === 0) return;
+
+  const point = intersects[0].point;
 
   // Find nearest walkable tile to click point (don't need exact center)
   let snapX = Math.round(point.x);
