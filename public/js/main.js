@@ -2169,7 +2169,6 @@ let _zonePortals = []; // 3D portal meshes
 let _zoneDecorations = []; // 3D decoration meshes
 
 function enterZone(zoneData) {
-  console.log('[ZONE] enterZone:', zoneData?.id, 'groundColor:', zoneData?.groundColor, 'portals:', zoneData?.portals?.length, 'playerX:', zoneData?.playerX, 'playerZ:', zoneData?.playerZ);
   _currentZone = zoneData;
   // Update player position from server
   if (zoneData.playerX !== undefined && state.player) {
@@ -2179,14 +2178,24 @@ function enterZone(zoneData) {
     if (state.playerModel) {
       state.playerModel.position.set(zoneData.playerX, 0, zoneData.playerZ);
     }
-    // Move camera to follow player
+    // Move camera to follow player (instant snap, game loop will lerp from here)
     if (state.camera) {
-      state.camera.position.x = zoneData.playerX;
-      state.camera.position.z = zoneData.playerZ + 10;
-      state.camera.lookAt(zoneData.playerX, 0, zoneData.playerZ);
+      const dist = state.cameraDistance || 20;
+      const ax = state.cameraAngleX || 0;
+      const ay = state.cameraAngleY || 0.5;
+      state.camera.position.set(
+        zoneData.playerX + Math.sin(ax) * dist * Math.cos(ay),
+        dist * Math.sin(ay) + 3,
+        zoneData.playerZ + Math.cos(ax) * dist * Math.cos(ay)
+      );
+      state.camera.lookAt(zoneData.playerX, 1, zoneData.playerZ);
     }
   }
-  // Change ground color
+  // Remove old terrain and rebuild fresh
+  const oldTerrain = state.scene?.getObjectByName('terrain');
+  if (oldTerrain) state.scene.remove(oldTerrain);
+  buildTerrain(state.scene);
+  // Apply zone ground color
   const ground = state.scene?.getObjectByName('ground');
   if (ground && ground.material) {
     ground.material.color.setHex(zoneData.groundColor || 0x7CBA3F);

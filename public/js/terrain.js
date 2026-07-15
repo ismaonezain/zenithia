@@ -62,6 +62,7 @@ export function isWalkable(x, z) {
 export function buildTerrain(scene) {
   const group = new THREE.Group();
   group.name = 'terrain';
+  houseLights = []; // reset for rebuild
 
   // === GROUND with river channel ===
   // Create ground with enough segments to deform for river channel
