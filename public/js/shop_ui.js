@@ -1,8 +1,6 @@
 // Zenithia — Shop UI System
 // Buy/Sell items with NPC merchants
 
-import { ITEM_PRICES } from './items_client.js';
-
 import { drawItemIcon } from './item-icons.js';
 import { ITEM_PRICES } from './items_client.js';
 
