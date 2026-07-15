@@ -5344,6 +5344,22 @@ function gameLoop() {
   // Ground loot: bob animation + glow
   animateGroundLoot(time);
 
+  // Portal pulse animation — ring scales + glow pulses
+  _zonePortals.forEach(pg => {
+    const ring = pg.children[0]; // torus ring
+    const glow = pg.children[1]; // inner glow circle
+    if (ring) {
+      const pulse = 1.0 + Math.sin(time * 2.5) * 0.1;
+      ring.scale.set(pulse, pulse, 1);
+      ring.material.opacity = 0.6 + Math.sin(time * 3) * 0.25;
+    }
+    if (glow) {
+      glow.material.opacity = 0.15 + Math.sin(time * 2) * 0.15;
+      const gPulse = 1.0 + Math.sin(time * 2) * 0.15;
+      glow.scale.set(gPulse, gPulse, 1);
+    }
+  });
+
   // Flashlight follows player
   if (state.flashlightOn && state.flashlight && playerModel) {
     state.flashlight.position.set(playerModel.position.x, playerModel.position.y + 2.5, playerModel.position.z);
