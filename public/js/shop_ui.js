@@ -1,6 +1,8 @@
 // Zenithia — Shop UI System
 // Buy/Sell items with NPC merchants
 
+import { ITEM_PRICES } from './items_client.js';
+
 export class ShopUI {
   constructor(ws, playerState) {
     this.ws = ws;
@@ -158,7 +160,7 @@ export class ShopUI {
       const iconBg = item.icon ? `#${item.icon.bg.toString(16).padStart(6, '0')}` : '#555';
       const iconFg = item.icon ? `#${item.icon.fg.toString(16).padStart(6, '0')}` : '#fff';
       const symbol = item.icon?.symbol || '?';
-      const itemPrice = this.itemPrices[item.id] || this.catalog.find(c => c.itemId === item.id)?.price || 10;
+      const itemPrice = ITEM_PRICES[item.id] || this.itemPrices?.[item.id] || this.catalog.find(c => c.itemId === item.id)?.price || 10;
       const shop = this.getShopDef();
       const sellPrice = Math.ceil(itemPrice * (shop?.sellMultiplier || 0.4));
       const qty = item.quantity || 1;
