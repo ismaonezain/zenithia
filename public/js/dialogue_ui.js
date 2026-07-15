@@ -68,6 +68,10 @@ export class DialogueSystem {
         { label: '💰 Sell Items', action: () => this.openShop(npcId, 'sell') }
       );
     }
+    // Add Crafting for Elder Maren
+    if (npcId === 'elder_maren') {
+      topics.push({ label: '🔨 Craft Items', action: () => this.openCrafting() });
+    }
 
     if (dialogueData && dialogueData.topics) {
       dialogueData.topics
@@ -95,6 +99,14 @@ export class DialogueSystem {
     // Send shop_open to server, shop_ui will handle the rest
     if (this.ws) {
       this.ws.send(JSON.stringify({ type: 'shop_open', npcId }));
+    }
+  }
+
+  // Open crafting from dialogue
+  openCrafting() {
+    this.close();
+    if (this.ws) {
+      this.ws.send(JSON.stringify({ type: 'crafting_open' }));
     }
   }
 

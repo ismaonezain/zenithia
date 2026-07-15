@@ -15,6 +15,7 @@ const MONSTERS = require('./shared/monsters');
 const { ITEMS, LOOT_TABLES } = require('./shared/items');
 const { QUESTS, NPC_QUESTS } = require('./shared/quests');
 const { SHOPS } = require('./shared/shop');
+const { CRAFTING_RECIPES } = require('./shared/crafting');
 
 // Module-level CLASS_STATS (used by getOrCreatePlayer + recalcClassStats)
 const CLASS_STATS = {
@@ -1044,6 +1045,59 @@ function handleMessage(ws, playerId, msg) {
         saveWorld();
         ws.send(JSON.stringify({ type: 'shop_result', action: 'sell', itemId: item.id, quantity: qty, earned: totalGold, zen: player.zen, inventory: player.inventory }));
       }
+      break;
+    }
+    case 'crafting_open': {
+      const player = connectedPlayers[playerId];
+      if (player) {
+        // Send available recipes with player's material counts
+        const recipes = CRAFTING_RECIPES.map(r => {
+          const canCraft = r.ingredients.every(ing => {
+            const invItem = player.inventory?.find(i => i.id === ing.itemId);
+            return invItem && (invItem.quantity || 1) >= ing.qty;
+          });
+          return {
+            id: r.id, name: r.name, description: r.description, category: r.category,
+            ingredients: r.ingredients.map(ing => {
+              const invItem = player.inventory?.find(i => i.id === ing.itemId);
+              const def = ITEMS[ing.itemId];
+              return { itemId: ing.itemId, name: def?.name || ing.itemId, qty: ing.qty, have: invItem ? (invItem.quantity || 1) : 0 };
+            }),
+            result: { ...r.result, name: ITEMS[r.result.itemId]?.name || r.result.itemId },
+            canCraft,
+          };
+        });
+        ws.send(JSON.stringify({ type: 'crafting_recipes', recipes }));
+      }
+      break;
+    }
+    case 'craft_item': {
+      const player = connectedPlayers[playerId];
+      if (!player) break;
+      const recipe = CRAFTING_RECIPES.find(r => r.id === msg.recipeId);
+      if (!recipe) { ws.send(JSON.stringify({ type: 'craft_error', error: 'Recipe not found' })); break; }
+      // Check ingredients
+      for (const ing of recipe.ingredients) {
+        const idx = player.inventory?.findIndex(i => i.id === ing.itemId);
+        if (idx < 0) { ws.send(JSON.stringify({ type: 'craft_error', error: `Missing ${ITEMS[ing.itemId]?.name || ing.itemId}` })); return; }
+        const item = player.inventory[idx];
+        if ((item.quantity || 1) < ing.qty) { ws.send(JSON.stringify({ type: 'craft_error', error: `Need ${ing.qty}x ${ITEMS[ing.itemId]?.name || ing.itemId}, have ${item.quantity || 1}` })); return; }
+      }
+      // Consume ingredients
+      for (const ing of recipe.ingredients) {
+        const idx = player.inventory.findIndex(i => i.id === ing.itemId);
+        const item = player.inventory[idx];
+        item.quantity = (item.quantity || 1) - ing.qty;
+        if (item.quantity <= 0) player.inventory.splice(idx, 1);
+      }
+      // Give result
+      const resultDef = ITEMS[recipe.result.itemId];
+      if (!resultDef) { ws.send(JSON.stringify({ type: 'craft_error', error: 'Result item not found' })); break; }
+      const existing = player.inventory.find(i => i.id === recipe.result.itemId);
+      if (existing) existing.quantity = (existing.quantity || 1) + recipe.result.qty;
+      else player.inventory.push({ id: recipe.result.itemId, name: resultDef.name, type: resultDef.type, quantity: recipe.result.qty, icon: resultDef.icon });
+      saveWorld();
+      ws.send(JSON.stringify({ type: 'craft_success', recipeId: recipe.id, name: recipe.name, inventory: player.inventory }));
       break;
     }
     case 'respawn': {

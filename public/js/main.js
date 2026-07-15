@@ -1213,6 +1213,105 @@ function handleServerMessage(msg) {
       }
       break;
     }
+    // Crafting handlers
+    case 'crafting_recipes': {
+      openCraftingUI(msg.recipes);
+      break;
+    }
+    case 'craft_success': {
+      state.player.inventory = msg.inventory;
+      if (state.inventoryUI) state.inventoryUI.updatePlayer(state.player);
+      addChatMessage('System', `🔨 Crafted ${msg.name}!`);
+      // Refresh crafting UI
+      wsSend(JSON.stringify({ type: 'crafting_open' }));
+      break;
+    }
+    case 'craft_error': {
+      addChatMessage('System', `❌ ${msg.error}`);
+      break;
+    }
+  }
+}
+
+// ============================
+// CRAFTING UI
+// ============================
+function openCraftingUI(recipes) {
+  // Remove existing crafting UI if any
+  const old = document.getElementById('crafting-modal');
+  if (old) old.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'crafting-modal';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.7);';
+
+  const panel = document.createElement('div');
+  panel.style.cssText = 'background:#1a1a2e;border:2px solid #FF9800;border-radius:16px;padding:24px;max-width:520px;width:90%;max-height:80vh;overflow-y:auto;color:#fff;font-family:"Courier New",monospace;';
+
+  panel.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <h2 style="margin:0;color:#FF9800;">🔨 Crafting Table</h2>
+      <button id="crafting-close" style="background:none;border:none;color:#fff;font-size:1.5rem;cursor:pointer;">✕</button>
+    </div>
+    <div id="crafting-recipes"></div>
+  `;
+
+  modal.appendChild(panel);
+  document.body.appendChild(modal);
+
+  // Close handlers
+  document.getElementById('crafting-close').onclick = () => modal.remove();
+  modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+
+  const list = document.getElementById('crafting-recipes');
+
+  // Group by category
+  const categories = {};
+  recipes.forEach(r => {
+    if (!categories[r.category]) categories[r.category] = [];
+    categories[r.category].push(r);
+  });
+
+  const categoryIcons = { consumable: '🧪', weapon: '⚔️', armor: '🛡️', boots: '👢', shield: '🔰' };
+  const categoryNames = { consumable: 'Consumables', weapon: 'Weapons', armor: 'Armor', boots: 'Boots', shield: 'Shields' };
+
+  for (const [cat, items] of Object.entries(categories)) {
+    const catDiv = document.createElement('div');
+    catDiv.style.marginBottom = '16px';
+    catDiv.innerHTML = `<h3 style="color:#aaa;margin:8px 0 4px;font-size:0.9rem;">${categoryIcons[cat] || '📦'} ${categoryNames[cat] || cat}</h3>`;
+
+    items.forEach(recipe => {
+      const canCraft = recipe.canCraft;
+      const card = document.createElement('div');
+      card.style.cssText = `background:${canCraft ? 'rgba(76,175,80,0.15)' : 'rgba(255,255,255,0.05)'};border:1px solid ${canCraft ? '#4CAF50' : '#333'};border-radius:10px;padding:12px;margin:6px 0;cursor:${canCraft ? 'pointer' : 'default'};opacity:${canCraft ? 1 : 0.6};transition:all 0.2s;`;
+
+      const ingredients = recipe.ingredients.map(ing =>
+        `<span style="color:${ing.have >= ing.qty ? '#4CAF50' : '#f44336'}">${ing.name} ${ing.have}/${ing.qty}</span>`
+      ).join(' · ');
+
+      card.innerHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <div>
+            <div style="font-weight:bold;color:#fff;">${recipe.name}</div>
+            <div style="font-size:0.75rem;color:#888;margin:2px 0;">${recipe.description}</div>
+            <div style="font-size:0.8rem;">${ingredients}</div>
+          </div>
+          <div style="font-size:0.8rem;color:#4CAF50;">→ ${recipe.result.name}</div>
+        </div>
+      `;
+
+      if (canCraft) {
+        card.onmouseenter = () => { card.style.background = 'rgba(76,175,80,0.3)'; card.style.transform = 'scale(1.02)'; };
+        card.onmouseleave = () => { card.style.background = 'rgba(76,175,80,0.15)'; card.style.transform = 'scale(1)'; };
+        card.onclick = () => {
+          wsSend(JSON.stringify({ type: 'craft_item', recipeId: recipe.id }));
+        };
+      }
+
+      catDiv.appendChild(card);
+    });
+
+    list.appendChild(catDiv);
   }
 }
 
