@@ -66,7 +66,7 @@ export function buildTerrain(scene) {
 
   // === GROUND with river channel ===
   // Create ground with enough segments to deform for river channel
-  const groundGeo = new THREE.PlaneGeometry(120, 100, 60, 50);
+  const groundGeo = new THREE.PlaneGeometry(240, 240, 120, 120);
   const posAttr = groundGeo.getAttribute('position');
 
   // Push vertices down where the river channel is (z ≈ 0 to 4)
@@ -159,7 +159,7 @@ function addWater(group) {
   }
 
   // Main creek — sits in channel
-  const creekGeo = new THREE.PlaneGeometry(120, 4);
+  const creekGeo = new THREE.PlaneGeometry(240, 4);
   const creekMat = new THREE.MeshLambertMaterial({ color: 0x42A5F5, transparent: true, opacity: 0.85 });
   const creek = new THREE.Mesh(creekGeo, creekMat);
   creek.rotation.x = -Math.PI / 2;
@@ -168,7 +168,7 @@ function addWater(group) {
   waterMeshes.push(creek);
 
   // Deep center stripe
-  const deepGeo = new THREE.PlaneGeometry(120, 1.8);
+  const deepGeo = new THREE.PlaneGeometry(240, 1.8);
   const deepMat = new THREE.MeshLambertMaterial({ color: 0x1E88E5, transparent: true, opacity: 0.5 });
   const deep = new THREE.Mesh(deepGeo, deepMat);
   deep.rotation.x = -Math.PI / 2;
@@ -178,7 +178,7 @@ function addWater(group) {
 
   // Ripple layers (animated)
   for (let i = 0; i < 4; i++) {
-    const rippleGeo = new THREE.PlaneGeometry(120, 0.4);
+    const rippleGeo = new THREE.PlaneGeometry(240, 0.4);
     const rippleMat = new THREE.MeshLambertMaterial({ color: 0x90CAF9, transparent: true, opacity: 0.3 });
     const ripple = new THREE.Mesh(rippleGeo, rippleMat);
     ripple.rotation.x = -Math.PI / 2;
@@ -190,7 +190,7 @@ function addWater(group) {
   // Water edge highlights
   const edgeMat = new THREE.MeshLambertMaterial({ color: 0xBBDEFB, transparent: true, opacity: 0.4 });
   [4.1, -0.1].forEach(z => {
-    const edge = new THREE.Mesh(new THREE.PlaneGeometry(120, 0.4), edgeMat);
+    const edge = new THREE.Mesh(new THREE.PlaneGeometry(240, 0.4), edgeMat);
     edge.rotation.x = -Math.PI / 2;
     edge.position.set(0, -0.16, z);
     group.add(edge);
@@ -198,7 +198,7 @@ function addWater(group) {
   });
 
   // Foam line (white, animated)
-  const foamGeo = new THREE.PlaneGeometry(120, 0.2);
+  const foamGeo = new THREE.PlaneGeometry(240, 0.2);
   const foamMat = new THREE.MeshBasicMaterial({ color: 0xFFFFFF, transparent: true, opacity: 0.25 });
   const foam = new THREE.Mesh(foamGeo, foamMat);
   foam.rotation.x = -Math.PI / 2;
@@ -366,7 +366,7 @@ function addPaths(group) {
   const pathMat = new THREE.MeshLambertMaterial({ color: 0xBCAAA4 });
 
   // [A] Main vertical path (Elder's Hall → Gate)
-  const mainPath = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 40), pathMat);
+  const mainPath = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 80), pathMat);
   mainPath.rotation.x = -Math.PI / 2;
   mainPath.position.set(0, 0.02, 4);
   mainPath.receiveShadow = true;

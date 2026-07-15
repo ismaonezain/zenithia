@@ -798,6 +798,14 @@ function handleServerMessage(msg) {
       if (state.playerModel && state.player.equipment) {
         applyEquipment(state.playerModel, state.player.equipment);
       }
+      // Initialize area based on player position
+      const initArea = getAreaAtPosition(state.player.x || -90, state.player.z || -90);
+      if (initArea) {
+        const ground = state.scene?.getObjectByName('ground');
+        if (ground && ground.material) ground.material.color.setHex(initArea.groundColor);
+        _currentArea = initArea;
+        showAreaOverlay(initArea.name, initArea.subtitle, initArea.level);
+      }
 
       // Always update HUD from server data
       const hudName = document.getElementById('hud-name');
@@ -819,23 +827,6 @@ function handleServerMessage(msg) {
       initSkillUI();
       // Sync inventory/equipment UI from server data
       state.inventoryUI.updatePlayer(state.player);
-      // Request zone data (portals, ground color) — client-driven fallback
-      wsSend(JSON.stringify({ type: 'zone_sync' }));
-      // FALLBACK: if server doesn't send zone_enter in 3s, hardcode willowmere
-      if (!state._zoneReceived) {
-        setTimeout(() => {
-          if (!state._zoneReceived) {
-            console.log('[ZONE] No zone_enter received — using client fallback');
-            enterZone({ id: 'willowmere', name: 'Willowmere', subtitle: 'Desa Tercinta', level: 1, groundColor: 0x7CBA3F,
-              portals: [
-                { id: 'thornwood', name: 'Thornwood Forest', x: -25, z: -20, level: 3 },
-                { id: 'stormcrest', name: 'Stormcrest Mountains', x: 25, z: -20, level: 8 },
-                { id: 'mistmarsh', name: 'Mistmarsh Swamp', x: 0, z: 25, level: 5 }
-              ], decorations: []
-            });
-          }
-        }, 3000);
-      }
       break;
 
     case 'player_joined':
@@ -1033,26 +1024,9 @@ function handleServerMessage(msg) {
       addChatMessage('System', '🏪 ' + msg.error);
       break;
     }
-    // Zone handlers
-    case 'zone_enter': {
-      state._zoneReceived = true;
-      // Ignore stale zone_enter (e.g. from join handler arriving after zone_change)
-      if (state._expectedZone && msg.zone?.id !== state._expectedZone) {
-        console.log('[ZONE] Ignoring stale zone_enter:', msg.zone?.id, '(expected:', state._expectedZone + ')');
-        break;
-      }
-      // Portal click: enter zone directly (no rebuild — world is persistent)
-      if (state._expectedZone) {
-        state._expectedZone = null;
-        enterZone(msg.zone);
-        break;
-      }
-      state._expectedZone = null;
-      enterZone(msg.zone);
-      break;
-    }
-    case 'zone_error': {
-      addChatMessage('System', '🌀 ' + msg.error);
+    // Area handlers
+    case 'area_enter': {
+      enterArea(msg.area);
       break;
     }
     case 'system_message': {
@@ -2175,136 +2149,63 @@ function closeKioskUI() {
 
 
 // ============================
-// ZONE SYSTEM
+// AREA SYSTEM (One Big Map)
 // ============================
-let _currentZone = null;
-let _zonePortals = []; // 3D portal meshes
-let _zoneDecorations = []; // 3D decoration meshes
+let _currentArea = null;
+let _areaDecorations = []; // 3D decoration meshes
+const AREAS = [
+  { id: 'willowmere', name: 'Willowmere Village', subtitle: 'Desa awal — zona aman', level: '1-2', groundColor: 0x7CBA3F, x1: -120, z1: -120, x2: -60, z2: -60 },
+  { id: 'thornwood', name: 'Thornwood Forest', subtitle: 'Hutan gelap — penuh duri', level: '3-5', groundColor: 0x33691E, x1: -60, z1: -120, x2: 0, z2: -60 },
+  { id: 'stormcrest', name: 'Stormcrest Mountains', subtitle: 'Gunung berbatu — angin kencang', level: '5-8', groundColor: 0x757575, x1: 0, z1: -120, x2: 60, z2: -60 },
+  { id: 'mistmarsh', name: 'Mistmarsh Swamp', subtitle: 'Rawa beracun — hati-hati', level: '8-10', groundColor: 0x4E342E, x1: 60, z1: -120, x2: 120, z2: -60 },
+  { id: 'volcanic', name: 'Volcanic Wastes', subtitle: 'Tanah magma — panas dan berbahaya', level: '10-20', groundColor: 0x4A0000, x1: -120, z1: -60, x2: -60, z2: 0 },
+  { id: 'crystal', name: 'Crystal Caverns', subtitle: 'Gua kristal — berkilauan dan berbahaya', level: '20-30', groundColor: 0x1A237E, x1: -60, z1: -60, x2: 0, z2: 0 },
+  { id: 'sky_ruins', name: 'Sky Ruins', subtitle: 'Puingan langit — melayang di awan', level: '30-40', groundColor: 0xB0BEC5, x1: 0, z1: -60, x2: 60, z2: 0 },
+  { id: 'abyss', name: 'The Abyss', subtitle: 'Jurang kegelapan — dunia bawah', level: '40-50', groundColor: 0x0D0D0D, x1: 60, z1: -60, x2: 120, z2: 0 },
+];
 
-function rebuildScene(playerX, playerZ) {
-  // 0. Snap camera to new position BEFORE removing objects (no sky flash)
-  if (state.camera && playerX !== undefined && playerZ !== undefined) {
-    const dist = state.cameraDistance || 20;
-    const ax = state.cameraAngleX || 0;
-    const ay = state.cameraAngleY || 0.5;
-    state.camera.position.set(
-      playerX + Math.sin(ax) * dist * Math.cos(ay),
-      dist * Math.sin(ay) + 3,
-      playerZ + Math.cos(ax) * dist * Math.cos(ay)
-    );
-    state.camera.lookAt(playerX, 1, playerZ);
+function getAreaAtPosition(x, z) {
+  for (const area of AREAS) {
+    if (x >= area.x1 && x <= area.x2 && z >= area.z1 && z <= area.z2) return area;
   }
-
-  // 1. Remove ALL objects from scene (keep camera, renderer)
-  const keep = new Set([state.camera, state.renderer, state.sunLight, state.ambientLight, state.moonLight, state.sunMesh, state.moonMesh, state.moonGlow]);
-  const toRemove = [];
-  state.scene.traverse(obj => { if (!keep.has(obj) && obj !== state.scene) toRemove.push(obj); });
-  toRemove.forEach(obj => { obj.parent?.remove(obj); if (obj.geometry) obj.geometry.dispose(); if (obj.material) { if (Array.isArray(obj.material)) obj.material.forEach(m => m.dispose()); else obj.material.dispose(); } });
-  // Reset state maps
-  state.players = {};
-  state.npcs = {};
-  state.monsters = {};
-  state._npcRots = {};
-  state.playerModel = null;
-  state._gatherNodes = [];
-  state.groundLoot = {};
-  _zonePortals = [];
-  _zoneDecorations = [];
-
-  // 2. Rebuild terrain (same shared layout)
-  buildTerrain(state.scene);
-
-  // 3. Re-create player model
-  if (state.player) {
-    state.player.x = playerX;
-    state.player.z = playerZ;
-    createPlayerModelInWorld(state.player);
-    if (state.player.equipment) applyEquipment(state.playerModel, state.player.equipment);
-  }
-
-  // 4. Re-add NPCs from cached raw data
-  if (state._npcData) {
-    Object.values(state._npcData).forEach(npc => {
-      try {
-        const model = createNPCModel(npc);
-        state.scene.add(model);
-        state.npcs[npc.id] = model;
-        state._npcRots[npc.id] = npc.rot || 0;
-      } catch(e) {
-        // Fallback cylinder
-        const g = new THREE.Group();
-        const body = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.4, 1.5, 8), new THREE.MeshLambertMaterial({ color: 0xFFD700 }));
-        body.position.y = 0.75; g.add(body);
-        const head = new THREE.Mesh(new THREE.SphereGeometry(0.35, 8, 8), new THREE.MeshLambertMaterial({ color: 0xFFCC00 }));
-        head.position.y = 1.8; g.add(head);
-        g.position.set(npc.x, 0, npc.z);
-        g.userData = { id: npc.id, name: npc.name, type: 'npc' };
-        state.scene.add(g);
-        state.npcs[npc.id] = g;
-      }
-    });
-  }
+  return null;
 }
 
-function enterZone(zoneData) {
-  _currentZone = zoneData;
+function enterArea(areaData) {
+  _currentArea = areaData;
   // Update player position from server
-  if (zoneData.playerX !== undefined && state.player) {
-    state.player.x = zoneData.playerX;
-    state.player.z = zoneData.playerZ;
-    // Move player model
+  if (areaData.playerX !== undefined && state.player) {
+    state.player.x = areaData.playerX;
+    state.player.z = areaData.playerZ;
     if (state.playerModel) {
-      state.playerModel.position.set(zoneData.playerX, 0, zoneData.playerZ);
+      state.playerModel.position.set(areaData.playerX, 0, areaData.playerZ);
     }
-    // Move camera to follow player (instant snap, game loop will lerp from here)
     if (state.camera) {
       const dist = state.cameraDistance || 20;
       const ax = state.cameraAngleX || 0;
       const ay = state.cameraAngleY || 0.5;
       state.camera.position.set(
-        zoneData.playerX + Math.sin(ax) * dist * Math.cos(ay),
+        areaData.playerX + Math.sin(ax) * dist * Math.cos(ay),
         dist * Math.sin(ay) + 3,
-        zoneData.playerZ + Math.cos(ax) * dist * Math.cos(ay)
+        areaData.playerZ + Math.cos(ax) * dist * Math.cos(ay)
       );
-      state.camera.lookAt(zoneData.playerX, 1, zoneData.playerZ);
+      state.camera.lookAt(areaData.playerX, 1, areaData.playerZ);
     }
   }
-  // Apply zone ground color (terrain is shared — only color changes per zone)
+  // Apply ground color
   const ground = state.scene?.getObjectByName('ground');
   if (ground && ground.material) {
-    ground.material.color.setHex(zoneData.groundColor || 0x7CBA3F);
+    ground.material.color.setHex(areaData.groundColor || 0x7CBA3F);
   }
-  // Show zone name overlay
-  showZoneOverlay(zoneData.name, zoneData.subtitle, zoneData.level);
-  // Clear old portals + decorations
-  clearZoneObjects();
-  // Spawn portals
-  (zoneData.portals || []).forEach(p => spawnPortal(p));
-  // Spawn decorations
-  (zoneData.decorations || []).forEach(d => spawnDecoration(d));
-  // List portal directions in chat
-  const portals = zoneData.portals || [];
-  if (portals.length > 0) {
-    const portalList = portals.map(p => {
-      const dx = p.x - (state.player?.x || 0);
-      const dz = p.z - (state.player?.z || 0);
-      const angle = Math.atan2(dx, dz) * 180 / Math.PI;
-      let dir = '';
-      if (angle > -22.5 && angle <= 22.5) dir = 'Utara ↑';
-      else if (angle > 22.5 && angle <= 67.5) dir = 'Timur Laut ↗';
-      else if (angle > 67.5 && angle <= 112.5) dir = 'Timur →';
-      else if (angle > 112.5 && angle <= 157.5) dir = 'Tenggara ↘';
-      else if (angle > 157.5 || angle <= -157.5) dir = 'Selatan ↓';
-      else if (angle > -157.5 && angle <= -112.5) dir = 'Barat Daya ↙';
-      else if (angle > -112.5 && angle <= -67.5) dir = 'Barat ←';
-      else dir = 'Barat Laut ↖';
-      return `${p.name} [${dir}]`;
-    });
-    addChatMessage('System', '🌀 Portal: ' + portalList.join(' | '));
-  }
+  // Show area name overlay
+  showAreaOverlay(areaData.name, areaData.subtitle, areaData.level);
+  // Clear old decorations
+  clearAreaObjects();
+  // Spawn new decorations
+  (areaData.decorations || []).forEach(d => spawnAreaDecoration(d));
 }
 
-function showZoneOverlay(name, subtitle, level) {
+function showAreaOverlay(name, subtitle, level) {
   const existing = document.getElementById('zone-overlay');
   if (existing) existing.remove();
   const overlay = document.createElement('div');
@@ -2320,47 +2221,7 @@ function showZoneOverlay(name, subtitle, level) {
   setTimeout(() => { overlay.style.opacity = '0'; setTimeout(() => overlay.remove(), 600); }, 3000);
 }
 
-function spawnPortal(portalData) {
-  if (!state.scene) return;
-  const group = new THREE.Group();
-  // Glowing ring
-  const ringGeo = new THREE.TorusGeometry(1.2, 0.15, 8, 24);
-  const ringMat = new THREE.MeshBasicMaterial({ color: 0x9C27B0, transparent: true, opacity: 0.8 });
-  const ring = new THREE.Mesh(ringGeo, ringMat);
-  ring.rotation.x = -Math.PI / 2;
-  ring.position.y = 0.3;
-  group.add(ring);
-  // Inner glow
-  const glowGeo = new THREE.CircleGeometry(1.0, 16);
-  const glowMat = new THREE.MeshBasicMaterial({ color: 0xCE93D8, transparent: true, opacity: 0.3, side: THREE.DoubleSide });
-  const glow = new THREE.Mesh(glowGeo, glowMat);
-  glow.rotation.x = -Math.PI / 2;
-  glow.position.y = 0.25;
-  group.add(glow);
-  // Label
-  const canvas = document.createElement('canvas');
-  canvas.width = 256; canvas.height = 64;
-  const ctx = canvas.getContext('2d');
-  ctx.fillStyle = '#CE93D8';
-  ctx.font = 'bold 18px Arial';
-  ctx.textAlign = 'center';
-  ctx.fillText(portalData.name, 128, 36);
-  const tex = new THREE.CanvasTexture(canvas);
-  const labelMat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false });
-  const label = new THREE.Sprite(labelMat);
-  label.scale.set(3, 0.7, 1);
-  label.position.y = 2.0;
-  group.add(label);
-
-  group.position.set(portalData.x, 0, portalData.z);
-  group.userData = { type: 'portal', ...portalData };
-  state.scene.add(group);
-  _zonePortals.push(group);
-  if (!state._gatherNodes) state._gatherNodes = [];
-  state._gatherNodes.push(group);
-}
-
-function spawnDecoration(d) {
+function spawnAreaDecoration(d) {
   if (!state.scene) return;
   let mesh;
   if (d.type === 'box') {
@@ -2387,25 +2248,13 @@ function spawnDecoration(d) {
   if (mesh) {
     mesh.userData = { type: 'decoration', name: d.name || '' };
     state.scene.add(mesh);
-    _zoneDecorations.push(mesh);
+    _areaDecorations.push(mesh);
   }
 }
 
-function clearZoneObjects() {
-  _zonePortals.forEach(p => { state.scene?.remove(p); });
-  _zonePortals = [];
-  _zoneDecorations.forEach(d => { state.scene?.remove(d); });
-  _zoneDecorations = [];
-  // Remove from _gatherNodes
-  if (state._gatherNodes) {
-    state._gatherNodes = state._gatherNodes.filter(n => !_zonePortals.includes(n) && !_zoneDecorations.includes(n));
-  }
-}
-
-function handlePortalClick(portalData) {
-  addChatMessage('System', '🌀 Memasuki ' + portalData.name + '...');
-  state._expectedZone = portalData.targetZone;
-  wsSend(JSON.stringify({ type: 'zone_change', targetZone: portalData.targetZone, targetX: portalData.targetX, targetZ: portalData.targetZ }));
+function clearAreaObjects() {
+  _areaDecorations.forEach(d => { state.scene?.remove(d); });
+  _areaDecorations = [];
 }
 
 // ============================
@@ -3376,8 +3225,6 @@ canvas.addEventListener('click', (e) => {
           if (kd && kd.owner) {
             wsSend(JSON.stringify({ type: 'kiosk_browse', kioskId: ud.id }));
           }
-        } else if (ud.type === 'portal') {
-          handlePortalClick(ud);
         }
       } else {
         addChatMessage('System', 'Terlalu jauh! Dekati dulu.');
@@ -3592,6 +3439,14 @@ function updateMovement() {
   if (dir.length() < 0.1) {
     model.position.copy(state.targetPos);
     wsSend(JSON.stringify({ type: 'move', x: state.targetPos.x, y: 0, z: state.targetPos.z }));
+    // Area detection — update ground color when entering new area
+    const newArea = getAreaAtPosition(state.targetPos.x, state.targetPos.z);
+    if (newArea && (!_currentArea || newArea.id !== _currentArea.id)) {
+      const ground = state.scene?.getObjectByName('ground');
+      if (ground && ground.material) ground.material.color.setHex(newArea.groundColor);
+      showAreaOverlay(newArea.name, newArea.subtitle, newArea.level);
+      _currentArea = newArea;
+    }
 
     // Next waypoint
     if (state.pathWaypoints && state.pathWaypoints.length > 0) {
@@ -5475,21 +5330,7 @@ function gameLoop() {
   // Ground loot: bob animation + glow
   animateGroundLoot(time);
 
-  // Portal pulse animation — ring scales + glow pulses
-  _zonePortals.forEach(pg => {
-    const ring = pg.children[0]; // torus ring
-    const glow = pg.children[1]; // inner glow circle
-    if (ring) {
-      const pulse = 1.0 + Math.sin(time * 2.5) * 0.1;
-      ring.scale.set(pulse, pulse, 1);
-      ring.material.opacity = 0.6 + Math.sin(time * 3) * 0.25;
-    }
-    if (glow) {
-      glow.material.opacity = 0.15 + Math.sin(time * 2) * 0.15;
-      const gPulse = 1.0 + Math.sin(time * 2) * 0.15;
-      glow.scale.set(gPulse, gPulse, 1);
-    }
-  });
+  // Area decoration animations (if any)
 
   // Flashlight follows player
   if (state.flashlightOn && state.flashlight && playerModel) {

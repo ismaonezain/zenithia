@@ -18,7 +18,7 @@ const { SHOPS } = require('./shared/shop');
 const { CRAFTING_RECIPES } = require('./shared/crafting');
 const { FISHING_SPOTS, FISHING_LOOT, GATHERING_NODES, GATHERING_LOOT } = require('./shared/gathering');
 const { WORLD_BOSSES } = require('./shared/bosses');
-const { ZONES } = require('./shared/zones');
+const { AREAS, getAreaAtPosition, DEFAULT_SPAWN } = require('./shared/areas');
 const { DUNGEONS } = require('./shared/dungeons');
 
 // Module-level CLASS_STATS (used by getOrCreatePlayer + recalcClassStats)
@@ -311,7 +311,7 @@ function getOrCreatePlayer(playerId, name, wallet, customization, persistentId) 
   const player = {
     id: playerId, name: name || 'Adventurer', wallet: wallet || null,
     persistentId: persistentId || null,
-    x: 0, y: 0, z: 0, class: cls, className: null, level: 1, xp: 0,
+    x: -90, y: 0, z: -90, class: cls, className: null, level: 1, xp: 0,
     hp: s.hp, maxHp: s.hp, mp: s.mp, maxMp: s.mp, atk: s.atk, def: s.def, spd: s.spd, crit: s.crit,
     zen: 50, inventory: [], quests: {}, reputation: {}, region: 'willowmere',
     customization: customization || {}, equipment: {}, unlockedSkills: ['tier1'], skillPoints: 0,
@@ -819,8 +819,8 @@ setInterval(() => { try {
 // ═══════════════════════════════════════
 // ZONE-BASED MOB SPAWNING
 // ═══════════════════════════════════════
-function spawnZoneMobs(zoneId) {
-  const zone = ZONES[zoneId];
+function spawnZoneMobs(areaId) {
+  const zone = AREAS.find(a => a.id === areaId);
   if (!zone) return;
   // Count existing mobs in this zone
   const existing = Object.values(world.monsters).filter(m => m.alive && m.zone === zoneId);
@@ -860,8 +860,8 @@ function spawnZoneMobs(zoneId) {
 }
 
 // Spawn initial zone mobs
-for (const zoneId of Object.keys(ZONES)) {
-  spawnZoneMobs(zoneId);
+for (const area of AREAS) {
+  spawnZoneMobs(area.id);
 }
 
 // Legacy spawnMonsters() removed — zone system handles all spawning
@@ -872,7 +872,7 @@ setInterval(() => { try {
     if (m.isBoss) return; // bosses use their own spawn timer
     // Respawn zone mobs that are dead
     if (!m.alive && m.zone && m.respawnAt && Date.now() >= m.respawnAt) {
-      const zDef = ZONES[m.zone];
+      const zDef = AREAS.find(a => a.id === m.zone);
       const data = MONSTERS[m.type];
       if (zDef && data) {
         const area = zDef.spawnAreas[Math.floor(Math.random() * zDef.spawnAreas.length)];
@@ -1374,24 +1374,16 @@ function handleMessage(ws, playerId, msg) {
         onlinePlayers: Object.values(connectedPlayers).filter(p => p.id !== playerId),
         monsters: Object.values(world.monsters).filter(m => m.alive).map(sanitizeMonster),
       }));
-      // Send zone data AFTER join (player.region now exists)
-      const playerZone = player.region || 'willowmere';
-      const zoneDef = ZONES[playerZone];
-      console.log(`[JOIN] ${player.name} zone=${playerZone} zoneDef=${!!zoneDef} portals=${zoneDef?.portals?.length || 0}`);
-      if (zoneDef) {
-        const zonePayload = { id: zoneDef.id, name: zoneDef.name, subtitle: zoneDef.subtitle, level: zoneDef.level, groundColor: zoneDef.groundColor, portals: zoneDef.portals || [], decorations: zoneDef.decorations || [], playerX: player.x, playerZ: player.z };
-        console.log(`[ZONE] Sending zone_enter to ${player.name}: ${zonePayload.id} with ${zonePayload.portals.length} portals`);
-        ws.send(JSON.stringify({ type: 'zone_enter', zone: zonePayload }));
+      // Send area data AFTER join (player.region now exists)
+      const playerArea = player.region || 'willowmere';
+      const areaDef = AREAS.find(a => a.id === playerArea);
+      console.log(`[JOIN] ${player.name} area=${playerArea} areaDef=${!!areaDef}`);
+      if (areaDef) {
+        const areaPayload = { id: areaDef.id, name: areaDef.name, subtitle: areaDef.subtitle, level: areaDef.level, groundColor: areaDef.groundColor, decorations: areaDef.decorations || [], playerX: player.x, playerZ: player.z };
+        console.log(`[AREA] Sending area_enter to ${player.name}: ${areaPayload.id}`);
+        ws.send(JSON.stringify({ type: 'area_enter', area: areaPayload }));
       }
       broadcast({ type: 'player_joined', player }, ws);
-      break;
-    }
-    case 'move': {
-      const player = connectedPlayers[playerId];
-      if (player) {
-        player.x = msg.x; player.y = msg.y; player.z = msg.z;
-        broadcast({ type: 'player_moved', playerId, x: msg.x, y: msg.y, z: msg.z }, ws);
-      }
       break;
     }
     case 'chat': {
@@ -2194,44 +2186,23 @@ function handleMessage(ws, playerId, msg) {
     }
 
     // ═══════════════════════════════════════
-    // ZONE CHANGE (portals)
+    // AREA DETECTION (position-based)
     // ═══════════════════════════════════════
-    case 'zone_change': {
+    case 'move': {
       const player = connectedPlayers[playerId];
       if (!player) break;
-      const targetZone = msg.targetZone;
-      const zoneDef = ZONES[targetZone];
-      if (!zoneDef) { ws.send(JSON.stringify({ type: 'zone_error', error: 'Zone tidak ditemukan' })); break; }
-      // Change player zone
-      player.region = targetZone;
-      player.x = msg.targetX || 0;
-      player.z = msg.targetZ || 0;
-      // Send zone data to player
-      ws.send(JSON.stringify({ type: 'zone_enter', zone: { id: zoneDef.id, name: zoneDef.name, subtitle: zoneDef.subtitle, level: zoneDef.level, groundColor: zoneDef.groundColor, portals: zoneDef.portals || [], decorations: zoneDef.decorations || [], playerX: player.x, playerZ: player.z } }));
-      // Notify other players in OLD zone
-      broadcast({ type: 'player_left_zone', playerId, name: player.name }, ws);
-      // Send updated player position to all
-      broadcast({ type: 'player_moved', playerId, x: player.x, z: player.z });
-      // Spawn zone mobs for this player
-      spawnZoneMobs(targetZone);
-      saveWorld();
-      console.log('[ZONE] ' + player.name + ' → ' + zoneDef.name);
+      player.x = msg.x; player.y = msg.y; player.z = msg.z;
+      // Auto-detect area from position
+      const newArea = getAreaAtPosition(msg.x, msg.z);
+      if (newArea && newArea.id !== player.region) {
+        player.region = newArea.id;
+        // Send area_enter to this player
+        ws.send(JSON.stringify({ type: 'area_enter', area: { id: newArea.id, name: newArea.name, subtitle: newArea.subtitle, level: newArea.level, groundColor: newArea.groundColor, decorations: newArea.decorations || [], playerX: player.x, playerZ: player.z } }));
+        console.log('[AREA] ' + player.name + ' → ' + newArea.name);
+      }
+      broadcast({ type: 'player_moved', playerId, x: msg.x, y: msg.y, z: msg.z }, ws);
       break;
     }
-    case 'zone_sync': {
-          // Client requests current zone data (e.g. on reconnect)
-          const player = connectedPlayers[playerId];
-          if (!player) {
-            console.log('[ZONE_SYNC] player not found:', playerId, '| keys:', Object.keys(connectedPlayers).length);
-            break;
-          }
-          const z = ZONES[player.region || 'willowmere'];
-          console.log('[ZONE_SYNC] OK:', player.name, 'region:', player.region, 'zoneFound:', !!z, 'portals:', z?.portals?.length || 0);
-          if (z) {
-            ws.send(JSON.stringify({ type: 'zone_enter', zone: { id: z.id, name: z.name, subtitle: z.subtitle, level: z.level, groundColor: z.groundColor, portals: z.portals || [], decorations: z.decorations || [], playerX: player.x, playerZ: player.z } }));
-          }
-          break;
-        }
     case 'dungeon_list': {
       // List available dungeons
       const player = connectedPlayers[playerId];
