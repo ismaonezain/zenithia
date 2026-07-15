@@ -2151,6 +2151,7 @@ let _zonePortals = []; // 3D portal meshes
 let _zoneDecorations = []; // 3D decoration meshes
 
 function enterZone(zoneData) {
+  console.log('[ZONE] enterZone called:', zoneData?.id, 'portals:', zoneData?.portals?.length);
   _currentZone = zoneData;
   // Change ground color
   const ground = state.scene?.getObjectByName('ground');
@@ -2165,6 +2166,26 @@ function enterZone(zoneData) {
   (zoneData.portals || []).forEach(p => spawnPortal(p));
   // Spawn decorations
   (zoneData.decorations || []).forEach(d => spawnDecoration(d));
+  // List portal directions in chat
+  const portals = zoneData.portals || [];
+  if (portals.length > 0) {
+    const portalList = portals.map(p => {
+      const dx = p.x - (state.player?.x || 0);
+      const dz = p.z - (state.player?.z || 0);
+      const angle = Math.atan2(dx, dz) * 180 / Math.PI;
+      let dir = '';
+      if (angle > -22.5 && angle <= 22.5) dir = 'Utara ↑';
+      else if (angle > 22.5 && angle <= 67.5) dir = 'Timur Laut ↗';
+      else if (angle > 67.5 && angle <= 112.5) dir = 'Timur →';
+      else if (angle > 112.5 && angle <= 157.5) dir = 'Tenggara ↘';
+      else if (angle > 157.5 || angle <= -157.5) dir = 'Selatan ↓';
+      else if (angle > -157.5 && angle <= -112.5) dir = 'Barat Daya ↙';
+      else if (angle > -112.5 && angle <= -67.5) dir = 'Barat ←';
+      else dir = 'Barat Laut ↖';
+      return `${p.name} [${dir}]`;
+    });
+    addChatMessage('System', '🌀 Portal: ' + portalList.join(' | '));
+  }
 }
 
 function showZoneOverlay(name, subtitle, level) {
