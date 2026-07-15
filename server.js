@@ -134,14 +134,12 @@ function loadWorld() {
 function saveWorld() {
   try {
     if (!fs.existsSync(SAVE_DIR)) fs.mkdirSync(SAVE_DIR, { recursive: true });
-    // Clean transient properties from player objects before save
-    for (const p of Object.values(world.players)) {
-      if (p) {
-        delete p._lastAttack;
-        delete p.party; // transient, don't persist
-      }
+    // Deep copy to avoid mutating live player objects
+    const snapshot = JSON.parse(JSON.stringify(world));
+    for (const p of Object.values(snapshot.players)) {
+      if (p) { delete p._lastAttack; delete p.party; }
     }
-    fs.writeFileSync(SAVE_FILE, JSON.stringify(world, null, 2));
+    fs.writeFileSync(SAVE_FILE, JSON.stringify(snapshot, null, 2));
     const size = fs.statSync(SAVE_FILE).size;
     console.log(`[SAVE] OK (${size} bytes) players=${Object.keys(world.players).length}`);
   } catch (e) { console.error('[WARN] Save failed:', e.message); }
@@ -503,6 +501,7 @@ function handleAttack(ws, playerId, msg) {
   const monster = world.monsters[msg.monsterId];
   if (!player || !monster || !monster.alive) return;
   if (monster.hp <= 0) return;
+  if (player.hp <= 0) return; // dead players can't attack
 
   const now = Date.now();
   const spd = player.spd || 7;
@@ -786,10 +785,11 @@ function handleMessage(ws, playerId, msg) {
             }
             // Equip new
             player.equipment[itemDef.slot] = player.inventory.splice(itemIdx, 1)[0];
-            // Apply stats (use class base stats + equipment bonuses)
+            // Apply stats (use class base stats + level bonus + equipment)
             const baseStats = recalcClassStats(player.customization);
-            player.atk = baseStats.atk;
-            player.def = baseStats.def;
+            const lvlBonus = (player.level - 1);
+            player.atk = baseStats.atk + lvlBonus;
+            player.def = baseStats.def + lvlBonus;
             player.spd = baseStats.spd;
             player.crit = baseStats.crit;
             // Sum all equipped items (stats are in .stats sub-object)
@@ -814,10 +814,11 @@ function handleMessage(ws, playerId, msg) {
       if (player && player.equipment[msg.slot]) {
         player.inventory.push(player.equipment[msg.slot]);
         delete player.equipment[msg.slot];
-        // Recalc stats (restore class base, then add equipment bonuses)
+        // Recalc stats (restore class base + level bonus, then add equipment)
         const baseStats = recalcClassStats(player.customization);
-        player.atk = baseStats.atk;
-        player.def = baseStats.def;
+        const lvlBonus = (player.level - 1);
+        player.atk = baseStats.atk + lvlBonus;
+        player.def = baseStats.def + lvlBonus;
         player.spd = baseStats.spd;
         player.crit = baseStats.crit;
         Object.values(player.equipment).forEach(e => {
@@ -1134,9 +1135,9 @@ function handleMessage(ws, playerId, msg) {
       }
 
       // Attack skill
-      if (!msg.monsterId) break;
+      if (!msg.monsterId) { player.mp += skill.mpCost; break; }
       const monster = world.monsters[msg.monsterId];
-      if (!monster || !monster.alive) break;
+      if (!monster || !monster.alive) { player.mp += skill.mpCost; break; }
 
       const data = MONSTERS[monster.type];
       if (!data) break;
@@ -1169,7 +1170,7 @@ function handleMessage(ws, playerId, msg) {
       if (monster.hp <= 0) {
         monster.alive = false;
         monster.hp = 0;
-        const xpGain = data.xp;
+        const xpGain = data.xp || 0;
         const zenGain = data.zen ? data.zen[0] + Math.floor(Math.random() * (data.zen[1] - data.zen[0])) : 0;
         player.xp += xpGain;
         player.zen = (player.zen || 0) + zenGain;

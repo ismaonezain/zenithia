@@ -2660,13 +2660,11 @@ document.addEventListener('keydown', (e) => {
     e.preventDefault();
     if (state.isDead) return;
     if (!state.targetedMonster) {
-    if (!state.targetedMonster) {
       const nearest = findNearestMonster();
       if (nearest) {
         setTarget(nearest.userData.id);
       }
     } else {
-      // Already targeted — resume auto-attack
       state.autoAttacking = true;
     }
   }
@@ -2693,13 +2691,13 @@ function hideDeathScreen() {
 
 document.getElementById('respawn-city').addEventListener('click', () => {
   wsSend(JSON.stringify({ type: 'respawn', location: 'city' }));
-  hideDeathScreen();
+  // Don't hide here — wait for server's player_respawn/respawned response
 });
 
 document.getElementById('respawn-checkpoint').addEventListener('click', () => {
   if (pendingRespawn) {
     wsSend(JSON.stringify({ type: 'respawn', location: 'checkpoint', checkpointId: pendingRespawn }));
-    hideDeathScreen();
+    // Don't hide here — wait for server's player_respawn/respawned response
     pendingRespawn = null;
   }
 });
