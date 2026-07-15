@@ -185,6 +185,7 @@ setInterval(() => {
 // Startup diagnostics
 const playerCount = Object.keys(world.players).length;
 console.log(`[BOOT] World loaded: ${playerCount} players saved`);
+console.log(`[BOOT] SAVE_DIR=${SAVE_DIR} SAVE_FILE exists=${fs.existsSync(SAVE_FILE)}`);
 if (playerCount > 0) {
   Object.values(world.players).forEach(p => {
     console.log(`[BOOT]   - ${p.name} (Lv.${p.level}) inv=${(p.inventory||[]).length} equip=${Object.keys(p.equipment||{}).length} persistentId=${p.persistentId?.slice(0,12)||'none'}`);
