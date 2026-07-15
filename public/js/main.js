@@ -3212,33 +3212,41 @@ canvas.addEventListener('click', (e) => {
   if (state.isDead) return;
   if (state.dialogue?.container?.style.display === 'block') return;
 
-  // Check gathering nodes/fishing spots first
+  // Check gathering nodes/fishing spots/portals/kiosks first
   const raycaster = new THREE.Raycaster();
   const mouse = new THREE.Vector2();
   mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
   mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
   raycaster.setFromCamera(mouse, state.camera);
-  const gatherHits = raycaster.intersectObjects(state._gatherNodes || []);
+  const gatherHits = raycaster.intersectObjects(state._gatherNodes || [], true);
   if (gatherHits.length > 0) {
-    const hit = gatherHits[0].object;
-    const d = hit.position.distanceTo(state.players[state.playerId]?.position || new THREE.Vector3());
-    if (d < 5) {
-      if (hit.userData.type === 'fishing_spot') {
-        wsSend(JSON.stringify({ type: 'fish_cast', spotId: hit.userData.id }));
-      } else if (hit.userData.type === 'gather_node') {
-        wsSend(JSON.stringify({ type: 'gather_node', nodeId: hit.userData.id }));
-      } else if (hit.userData.type === 'kiosk_3d') {
-        const kd = _kioskData[hit.userData.id];
-        if (kd && kd.owner) {
-          wsSend(JSON.stringify({ type: 'kiosk_browse', kioskId: hit.userData.id }));
+    // Walk up from hit child to find parent Group with userData.type
+    let hitObj = gatherHits[0].object;
+    while (hitObj && !hitObj.userData?.type) hitObj = hitObj.parent;
+    if (hitObj?.userData?.type) {
+      const worldPos = new THREE.Vector3();
+      hitObj.getWorldPosition(worldPos);
+      const playerPos = state.players[state.playerId]?.position || new THREE.Vector3();
+      const d = worldPos.distanceTo(playerPos);
+      if (d < 5) {
+        const ud = hitObj.userData;
+        if (ud.type === 'fishing_spot') {
+          wsSend(JSON.stringify({ type: 'fish_cast', spotId: ud.id }));
+        } else if (ud.type === 'gather_node') {
+          wsSend(JSON.stringify({ type: 'gather_node', nodeId: ud.id }));
+        } else if (ud.type === 'kiosk_3d') {
+          const kd = _kioskData[ud.id];
+          if (kd && kd.owner) {
+            wsSend(JSON.stringify({ type: 'kiosk_browse', kioskId: ud.id }));
+          }
+        } else if (ud.type === 'portal') {
+          handlePortalClick(ud);
         }
-      } else if (hit.userData.type === 'portal') {
-        handlePortalClick(hit.userData);
+      } else {
+        addChatMessage('System', 'Terlalu jauh! Dekati dulu.');
       }
-      return; // don't process further
-    } else {
-      addChatMessage('System', 'Terlalu jauh! Dekati dulu.');
     }
+    return; // don't process further
   }
   // Check ground loot click first (screen-space)
   tryPickupGroundLoot(e);
