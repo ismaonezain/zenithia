@@ -2661,9 +2661,7 @@ function showLootPopup(loot) {
 
     const div = document.createElement('div');
     div.className = 'loot-item';
-    const iconBg = item.icon ? '#' + item.icon.bg.toString(16).padStart(6, '0') : '#555';
-    const iconFg = item.icon ? '#' + item.icon.fg.toString(16).padStart(6, '0') : '#fff';
-    const iconSymbol = item.icon?.symbol || '📦';
+    // icon data no longer needed — using canvas drawItemIcon
 
     // Stats text for equipment
     let statsText = '';
@@ -2683,7 +2681,7 @@ function showLootPopup(loot) {
     }
 
     div.innerHTML = `
-      <div class="loot-item-icon" style="background:${iconBg};color:${iconFg}">${iconSymbol}</div>
+      <canvas class="loot-item-canvas" width="32" height="32" data-item-id="${item.id || ''}" style="width:32px;height:32px;border-radius:6px;flex-shrink:0;"></canvas>
       <div class="loot-item-info">
         <div class="loot-item-name">${item.name}</div>
         <div class="loot-item-type">${item.type || 'item'}${item.slot ? ' • ' + item.slot : ''} ×${item.quantity || 1} <span class="loot-drop-${difficulty}">• ${diffLabel}</span></div>
@@ -2691,6 +2689,14 @@ function showLootPopup(loot) {
       </div>
     `;
     itemsEl.appendChild(div);
+    // Draw canvas icon after DOM insert
+    const canvas = div.querySelector('.loot-item-canvas');
+    if (canvas && item.id) {
+      requestAnimationFrame(() => {
+        const ctx = canvas.getContext('2d');
+        drawItemIcon(ctx, item.id, 32);
+      });
+    }
   });
 
   popup.style.display = 'block';
