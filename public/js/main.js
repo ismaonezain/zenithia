@@ -819,8 +819,22 @@ function handleServerMessage(msg) {
       // Sync inventory/equipment UI from server data
       state.inventoryUI.updatePlayer(state.player);
       // Request zone data (portals, ground color) — client-driven fallback
-      
       wsSend(JSON.stringify({ type: 'zone_sync' }));
+      // FALLBACK: if server doesn't send zone_enter in 3s, hardcode willowmere
+      if (!state._zoneReceived) {
+        setTimeout(() => {
+          if (!state._zoneReceived) {
+            console.log('[ZONE] No zone_enter received — using client fallback');
+            enterZone({ id: 'willowmere', name: 'Willowmere', subtitle: 'Desa Tercinta', level: 1, groundColor: 0x7CBA3F,
+              portals: [
+                { id: 'thornwood', name: 'Thornwood Forest', x: -25, z: -20, level: 3 },
+                { id: 'stormcrest', name: 'Stormcrest Mountains', x: 25, z: -20, level: 8 },
+                { id: 'mistmarsh', name: 'Mistmarsh Swamp', x: 0, z: 25, level: 5 }
+              ], decorations: []
+            });
+          }
+        }, 3000);
+      }
       break;
 
     case 'player_joined':
@@ -1020,7 +1034,7 @@ function handleServerMessage(msg) {
     }
     // Zone handlers
     case 'zone_enter': {
-      
+      state._zoneReceived = true;
       enterZone(msg.zone);
       break;
     }

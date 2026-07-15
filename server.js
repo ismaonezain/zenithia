@@ -1331,7 +1331,7 @@ wss.on('connection', (ws) => {
   console.log(`[CONNECT] ${playerId}`);
   ws.playerId = playerId;
 
-  ws.send(JSON.stringify({ type: 'welcome', playerId, version: 'v3-combat-rebuild', world: { time: Date.now(), region: 'willowmere' }, dayTime: getGameTime() }));
+  ws.send(JSON.stringify({ type: 'welcome', playerId, version: 'v3-combat-rebuild-v2', world: { time: Date.now(), region: 'willowmere' }, dayTime: getGameTime() }));
   // Zone data is sent AFTER join (when player object exists with region)
 
   ws.on('message', (data) => {
