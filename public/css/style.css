@@ -1153,6 +1153,26 @@ body {
   background: rgba(255,215,0,0.15);
   border-color: rgba(255,215,0,0.7);
 }
+#kiosk-btn {
+  position: fixed;
+  bottom: 84px;
+  right: 20px;
+  z-index: 80;
+  background: rgba(15,12,8,0.85);
+  border: 2px solid rgba(255,193,7,0.4);
+  border-radius: 8px;
+  padding: 4px 12px;
+  color: #FFC107;
+  font-size: 0.7rem;
+  font-family: 'Courier New', monospace;
+  cursor: pointer;
+  transition: all 0.2s;
+  pointer-events: auto;
+}
+#kiosk-btn:hover {
+  background: rgba(255,193,7,0.15);
+  border-color: rgba(255,193,7,0.7);
+}
 
 /* ============================
    SKILL TREE MODAL

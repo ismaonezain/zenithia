@@ -951,6 +951,9 @@ function handleServerMessage(msg) {
         spawnKiosk3D(k.id, k.x, k.z, k.owner?.name || '???');
         if (k.owner?.id === state.playerId) _kioskHasMyKiosk = true;
       });
+      // Update button text
+      const kb = document.getElementById('kiosk-btn');
+      if (kb) kb.textContent = _kioskHasMyKiosk ? '🏪 Kios Saya' : '🏪 Kios';
       break;
     }
     case 'kiosk_placed': {
@@ -4196,6 +4199,21 @@ function initSkillUI() {
   if (treeBtn) {
     treeBtn.style.display = 'block';
     treeBtn.onclick = () => renderSkillTree();
+  }
+
+  // Show kiosk button
+  const kioskBtn = document.getElementById('kiosk-btn');
+  if (kioskBtn) {
+    kioskBtn.style.display = 'block';
+    kioskBtn.onclick = () => {
+      if (_kioskHasMyKiosk) {
+        // Open my kiosk management
+        const myKioskId = 'kiosk_' + state.playerId;
+        wsSend(JSON.stringify({ type: 'kiosk_browse', kioskId: myKioskId }));
+      } else {
+        openKioskPlaceUI();
+      }
+    };
   }
 
   // Close skill tree on Escape
