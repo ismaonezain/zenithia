@@ -1035,6 +1035,12 @@ function handleServerMessage(msg) {
     // Zone handlers
     case 'zone_enter': {
       state._zoneReceived = true;
+      // Ignore stale zone_enter (e.g. from join handler arriving after zone_change)
+      if (state._expectedZone && msg.zone?.id !== state._expectedZone) {
+        console.log('[ZONE] Ignoring stale zone_enter:', msg.zone?.id, '(expected:', state._expectedZone + ')');
+        break;
+      }
+      state._expectedZone = null; // clear after match
       enterZone(msg.zone);
       break;
     }
@@ -2331,6 +2337,7 @@ function clearZoneObjects() {
 function handlePortalClick(portalData) {
   // Check level requirement (simple string comparison)
   addChatMessage('System', '🌀 Memasuki ' + portalData.name + '...');
+  state._expectedZone = portalData.targetZone;
   wsSend(JSON.stringify({ type: 'zone_change', targetZone: portalData.targetZone, targetX: portalData.targetX, targetZ: portalData.targetZ }));
 }
 
