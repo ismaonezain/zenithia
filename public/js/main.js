@@ -870,6 +870,75 @@ function handleServerMessage(msg) {
       // Don't auto-open shop — let dialogue add Buy/Sell button for merchants
       break;
 
+    // Trade handlers
+    case 'trade_invite': {
+      // Someone wants to trade with us
+      const tradeModal = document.createElement('div');
+      tradeModal.id = 'trade-invite-modal';
+      tradeModal.style.cssText = 'position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.7);';
+      tradeModal.innerHTML = `
+        <div style="background:#1a1a2e;border:2px solid #FFC107;border-radius:16px;padding:24px;width:300px;color:#fff;text-align:center;font-family:"Courier New",monospace;">
+          <h3 style="color:#FFC107;margin:0 0 12px;">💱 Trade Request</h3>
+          <p>${msg.fromName} ingin trade dengan kamu!</p>
+          <div style="display:flex;gap:8px;justify-content:center;margin-top:16px;">
+            <button id="trade-accept-btn" style="background:#4CAF50;color:#fff;border:none;padding:8px 20px;border-radius:8px;cursor:pointer;font-weight:bold;">✓ Accept</button>
+            <button id="trade-decline-btn" style="background:#F44336;color:#fff;border:none;padding:8px 20px;border-radius:8px;cursor:pointer;">✕ Decline</button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(tradeModal);
+      document.getElementById('trade-accept-btn').onclick = () => {
+        wsSend(JSON.stringify({ type: 'trade_accept', tradeId: msg.tradeId }));
+        tradeModal.remove();
+      };
+      document.getElementById('trade-decline-btn').onclick = () => {
+        wsSend(JSON.stringify({ type: 'trade_cancel', tradeId: msg.tradeId }));
+        tradeModal.remove();
+      };
+      // Auto-close after 10s
+      setTimeout(() => { const m = document.getElementById('trade-invite-modal'); if (m) m.remove(); }, 10000);
+      break;
+    }
+    case 'trade_invite_sent': {
+      addChatMessage('System', '💱 Trade invite sent to ' + msg.targetName + '...');
+      break;
+    }
+    case 'trade_open': {
+      openTradeUI(msg.tradeId, msg.playerA, msg.playerB);
+      break;
+    }
+    case 'trade_update': {
+      if (_currentTrade && _currentTrade.tradeId === msg.tradeId) {
+        _currentTrade.itemsA = msg.itemsA;
+        _currentTrade.itemsB = msg.itemsB;
+        _currentTrade.confirmedA = msg.confirmedA;
+        _currentTrade.confirmedB = msg.confirmedB;
+        renderTradeItems();
+        document.getElementById('trade-confirm-btn').disabled = false;
+      }
+      break;
+    }
+    case 'trade_complete': {
+      addChatMessage('System', '✅ Trade selesai!');
+      closeTradeUI();
+      break;
+    }
+    case 'trade_cancelled': {
+      addChatMessage('System', '❌ Trade dibatalkan.');
+      closeTradeUI();
+      break;
+    }
+    case 'trade_error': {
+      addChatMessage('System', '💱 ' + msg.error);
+      break;
+    }
+    case 'inventory_update': {
+      if (state.player && msg.inventory) {
+        state.player.inventory = msg.inventory;
+        if (state.inventoryUI) state.inventoryUI.updatePlayer(state.player);
+      }
+      break;
+    }
     case 'system_message': {
       addChatMessage('System', msg.message);
       break;
@@ -1594,6 +1663,151 @@ function showBossAbilityEffect(ability, x, z, radius) {
       }
     }, 30);
   }
+}
+
+
+// ============================
+// PLAYER TRADING
+// ============================
+let _currentTrade = null; // { tradeId, itemsA, itemsB, confirmedA, confirmedB, myId }
+
+function openTradeUI(tradeId, playerA, playerB) {
+  closeTradeUI();
+  const myId = state.playerId;
+  const isA = playerA.id === myId;
+  const me = isA ? playerA : playerB;
+  const them = isA ? playerB : playerA;
+  _currentTrade = { tradeId, itemsA: [], itemsB: [], confirmedA: false, confirmedB: false, myId, me, them };
+
+  const modal = document.createElement('div');
+  modal.id = 'trade-modal';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.7);';
+  modal.innerHTML = `
+    <div style="background:#1a1a2e;border:2px solid #FFC107;border-radius:16px;padding:20px;width:520px;color:#fff;font-family:"Courier New",monospace;">
+      <h3 style="color:#FFC107;margin:0 0 12px;text-align:center;">💱 Trade with ${them.name}</h3>
+      <div style="display:flex;gap:12px;">
+        <div style="flex:1;">
+          <div style="color:#4CAF50;font-weight:bold;margin-bottom:6px;">My Items:</div>
+          <div id="trade-my-items" style="background:#222;border-radius:8px;padding:8px;min-height:120px;max-height:200px;overflow-y:auto;"></div>
+          <button id="trade-add-btn" style="margin-top:6px;background:#4CAF50;color:#fff;border:none;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:0.8rem;">+ Add Item</button>
+        </div>
+        <div style="flex:1;">
+          <div style="color:#F44336;font-weight:bold;margin-bottom:6px;">${them.name}'s Items:</div>
+          <div id="trade-their-items" style="background:#222;border-radius:8px;padding:8px;min-height:120px;max-height:200px;overflow-y:auto;"></div>
+        </div>
+      </div>
+      <div id="trade-status" style="text-align:center;color:#aaa;font-size:0.8rem;margin:8px 0;">Add items and confirm</div>
+      <div style="display:flex;gap:8px;justify-content:center;margin-top:8px;">
+        <button id="trade-confirm-btn" style="background:#FFC107;color:#000;border:none;padding:8px 20px;border-radius:8px;cursor:pointer;font-weight:bold;">✓ Confirm</button>
+        <button id="trade-cancel-btn" style="background:#F44336;color:#fff;border:none;padding:8px 20px;border-radius:8px;cursor:pointer;">✕ Cancel</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+
+  // Render items
+  renderTradeItems();
+
+  // Add item button
+  document.getElementById('trade-add-btn').onclick = () => showTradeItemPicker();
+
+  // Confirm
+  document.getElementById('trade-confirm-btn').onclick = () => {
+    wsSend(JSON.stringify({ type: 'trade_confirm', tradeId }));
+    document.getElementById('trade-status').textContent = 'Waiting for other player...';
+    document.getElementById('trade-confirm-btn').disabled = true;
+  };
+
+  // Cancel
+  document.getElementById('trade-cancel-btn').onclick = () => {
+    wsSend(JSON.stringify({ type: 'trade_cancel', tradeId }));
+    closeTradeUI();
+  };
+}
+
+function renderTradeItems() {
+  if (!_currentTrade) return;
+  const myItems = document.getElementById('trade-my-items');
+  const theirItems = document.getElementById('trade-their-items');
+  if (!myItems || !theirItems) return;
+
+  const isA = _currentTrade.me.id === _currentTrade.myId;
+  const myTradeItems = isA ? _currentTrade.itemsA : _currentTrade.itemsB;
+  const theirTradeItems = isA ? _currentTrade.itemsB : _currentTrade.itemsA;
+
+  myItems.innerHTML = myTradeItems.length === 0 ? '<div style="color:#666;text-align:center;padding:20px;">No items</div>' :
+    myTradeItems.map(item => `
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 6px;border-bottom:1px solid #333;">
+        <span>${item.name} x${item.qty}</span>
+        <button onclick="removeTradeItem('${item.itemId}')" style="background:#F44336;color:#fff;border:none;padding:2px 6px;border-radius:4px;cursor:pointer;font-size:0.7rem;">✕</button>
+      </div>
+    `).join('');
+
+  theirItems.innerHTML = theirTradeItems.length === 0 ? '<div style="color:#666;text-align:center;padding:20px;">No items</div>' :
+    theirTradeItems.map(item => `<div style="padding:4px 6px;border-bottom:1px solid #333;">${item.name} x${item.qty}</div>`).join('');
+
+  // Status
+  const status = document.getElementById('trade-status');
+  if (status) {
+    const myConf = isA ? _currentTrade.confirmedA : _currentTrade.confirmedB;
+    const theirConf = isA ? _currentTrade.confirmedB : _currentTrade.confirmedA;
+    let s = '';
+    if (myConf) s += '✅ You confirmed  ';
+    if (theirConf) s += '✅ ' + _currentTrade.them.name + ' confirmed';
+    if (!myConf && !theirConf) s = 'Add items and confirm';
+    status.textContent = s;
+  }
+}
+
+function showTradeItemPicker() {
+  if (!_currentTrade || !state.player?.inventory) return;
+  const inv = state.player.inventory;
+  if (inv.length === 0) { addChatMessage('System', 'Inventory kosong!'); return; }
+
+  const picker = document.createElement('div');
+  picker.id = 'trade-picker';
+  picker.style.cssText = 'position:fixed;inset:0;z-index:210;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);';
+  picker.innerHTML = `
+    <div style="background:#1a1a2e;border:2px solid #4CAF50;border-radius:12px;padding:16px;width:280px;color:#fff;font-family:"Courier New",monospace;max-height:400px;overflow-y:auto;">
+      <h4 style="color:#4CAF50;margin:0 0 8px;">Pilih Item</h4>
+      <div id="trade-picker-list">
+        ${inv.map(item => `
+          <div class="trade-pick-item" data-item-id="${item.id}" style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;border-bottom:1px solid #333;cursor:pointer;border-radius:6px;"
+               onmouseover="this.style.background='#333'" onmouseout="this.style.background='transparent'">
+            <span>${item.name} x${item.quantity || 1}</span>
+            <span style="color:#4CAF50;font-size:0.8rem;">+</span>
+          </div>
+        `).join('')}
+      </div>
+      <button onclick="document.getElementById('trade-picker').remove()" style="margin-top:8px;width:100%;background:#F44336;color:#fff;border:none;padding:6px;border-radius:6px;cursor:pointer;">Close</button>
+    </div>
+  `;
+  document.body.appendChild(picker);
+
+  // Click handlers
+  picker.querySelectorAll('.trade-pick-item').forEach(el => {
+    el.onclick = () => {
+      const itemId = el.dataset.itemId;
+      const item = state.player.inventory.find(i => i.id === itemId);
+      if (item) {
+        wsSend(JSON.stringify({ type: 'trade_add_item', tradeId: _currentTrade.tradeId, itemId, qty: item.quantity || 1 }));
+      }
+      picker.remove();
+    };
+  });
+}
+
+function removeTradeItem(itemId) {
+  if (!_currentTrade) return;
+  wsSend(JSON.stringify({ type: 'trade_remove_item', tradeId: _currentTrade.tradeId, itemId }));
+}
+
+function closeTradeUI() {
+  _currentTrade = null;
+  const old = document.getElementById('trade-modal');
+  if (old) old.remove();
+  const picker = document.getElementById('trade-picker');
+  if (picker) picker.remove();
 }
 
 // ============================
@@ -2593,6 +2807,12 @@ canvas.addEventListener('click', (e) => {
     if (mob.isGroup || mob.isMesh) clickTargets.push(mob);
     mob.traverse?.(child => { if (child.isMesh) clickTargets.push(child); });
   }
+  // Other players — clickable for trading
+  for (const [pid, pm] of Object.entries(state.players)) {
+    if (pid === state.playerId) continue;
+    if (pm.isGroup || pm.isMesh) clickTargets.push(pm);
+    pm.traverse?.(child => { if (child.isMesh) clickTargets.push(child); });
+  }
 
   const hits = raycaster.intersectObjects(clickTargets, false);
   if (hits.length > 0) {
@@ -2634,6 +2854,29 @@ canvas.addEventListener('click', (e) => {
           } else if (path && path.length === 1) {
             state.targetPos = new THREE.Vector3(path[0].x, 0, path[0].z);
           }
+        }
+        return;
+      } else if (state.players[ud.id] && ud.id !== state.playerId) {
+        // Other player click — show trade option
+        const otherModel = state.players[ud.id];
+        const dist = model.position.distanceTo(otherModel.position);
+        if (dist < 5) {
+          // Show trade popup
+          const popup = document.createElement('div');
+          popup.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);z-index:180;background:#1a1a2e;border:2px solid #FFC107;border-radius:12px;padding:12px 20px;color:#fff;text-align:center;font-family:"Courier New",monospace;';
+          popup.innerHTML = `
+            <div style="margin-bottom:8px;">Trade with <b style="color:#FFC107;">${ud.name || ud.id}</b>?</div>
+            <button id="popup-trade-btn" style="background:#FFC107;color:#000;border:none;padding:6px 16px;border-radius:6px;cursor:pointer;font-weight:bold;margin-right:8px;">💱 Trade</button>
+            <button onclick="this.parentElement.remove()" style="background:#666;color:#fff;border:none;padding:6px 12px;border-radius:6px;cursor:pointer;">✕</button>
+          `;
+          document.body.appendChild(popup);
+          document.getElementById('popup-trade-btn').onclick = () => {
+            wsSend(JSON.stringify({ type: 'trade_invite', targetId: ud.id }));
+            popup.remove();
+          };
+          setTimeout(() => { if (popup.parentElement) popup.remove(); }, 8000);
+        } else {
+          addChatMessage('System', 'Terlalu jauh! Dekati ' + (ud.name || 'player') + ' dulu.');
         }
         return;
       } else {

@@ -182,6 +182,9 @@ const GATHERING_CAST_MS = 2000; // 2 seconds gathering
 // World Boss state
 const bossState = {}; // bossId → { alive, hp, maxHp, target, lastAbility, nextSpawn, adds }
 
+// Player Trading state
+const tradeSessions = {}; // tradeId → { playerA, playerB, itemsA, itemsB, confirmedA, confirmedB, createdAt }
+
 function spawnGroundLoot(lootItems, x, z, killerId) {
   if (!lootItems || lootItems.length === 0) return;
   const lootId = `gl_${++groundLootIdCounter}`;
@@ -1467,6 +1470,163 @@ function handleMessage(ws, playerId, msg) {
       else player.inventory.push({ id: recipe.result.itemId, name: resultDef.name, type: resultDef.type, quantity: recipe.result.qty, icon: resultDef.icon });
       saveWorld();
       ws.send(JSON.stringify({ type: 'craft_success', recipeId: recipe.id, name: recipe.name, inventory: player.inventory }));
+      break;
+    }
+
+    // ═══════════════════════════════════════
+    // PLAYER TRADING
+    // ═══════════════════════════════════════
+    case 'trade_invite': {
+      const player = connectedPlayers[playerId];
+      if (!player) break;
+      const targetId = msg.targetId;
+      const target = connectedPlayers[targetId];
+      if (!target) { ws.send(JSON.stringify({ type: 'trade_error', error: 'Player not found' })); break; }
+      if (targetId === playerId) { ws.send(JSON.stringify({ type: 'trade_error', error: 'Cannot trade with yourself' })); break; }
+      // Check distance
+      const tdx = (player.x || 0) - (target.x || 0);
+      const tdz = (player.z || 0) - (target.z || 0);
+      if (Math.sqrt(tdx*tdx + tdz*tdz) > 5) { ws.send(JSON.stringify({ type: 'trade_error', error: 'Terlalu jauh! Dekati player dulu.' })); break; }
+      // Check if either is already in a trade
+      for (const sess of Object.values(tradeSessions)) {
+        if (sess.playerA === playerId || sess.playerB === playerId || sess.playerA === targetId || sess.playerB === targetId) {
+          ws.send(JSON.stringify({ type: 'trade_error', error: 'Salah satu player sedang dalam trade' })); break;
+        }
+      }
+      // Create trade session
+      const tradeId = 'trade_' + Date.now() + '_' + playerId;
+      tradeSessions[tradeId] = { playerA: playerId, playerB: targetId, itemsA: [], itemsB: [], confirmedA: false, confirmedB: false, createdAt: Date.now() };
+      // Notify target
+      const targetWs = playerWs.get(targetId);
+      if (targetWs && targetWs.readyState === 1) {
+        targetWs.send(JSON.stringify({ type: 'trade_invite', tradeId, fromId: playerId, fromName: player.name }));
+      }
+      ws.send(JSON.stringify({ type: 'trade_invite_sent', tradeId, targetId, targetName: target.name }));
+      break;
+    }
+    case 'trade_accept': {
+      const player = connectedPlayers[playerId];
+      if (!player) break;
+      const sess = tradeSessions[msg.tradeId];
+      if (!sess || sess.playerB !== playerId) { ws.send(JSON.stringify({ type: 'trade_error', error: 'Invalid trade session' })); break; }
+      sess.confirmedB = false; sess.confirmedA = false;
+      // Open trade window for both
+      const aWs = playerWs.get(sess.playerA);
+      const bWs = playerWs.get(sess.playerB);
+      const playerA = connectedPlayers[sess.playerA];
+      const playerB = connectedPlayers[sess.playerB];
+      const tradeData = { tradeId: msg.tradeId, playerA: { id: sess.playerA, name: playerA?.name, inventory: playerA?.inventory || [] }, playerB: { id: sess.playerB, name: playerB?.name, inventory: playerB?.inventory || [] } };
+      if (aWs && aWs.readyState === 1) aWs.send(JSON.stringify({ type: 'trade_open', ...tradeData }));
+      if (bWs && bWs.readyState === 1) bWs.send(JSON.stringify({ type: 'trade_open', ...tradeData }));
+      break;
+    }
+    case 'trade_add_item': {
+      const player = connectedPlayers[playerId];
+      if (!player) break;
+      const sess = tradeSessions[msg.tradeId];
+      if (!sess) { ws.send(JSON.stringify({ type: 'trade_error', error: 'Trade not found' })); break; }
+      // Reset confirmations when items change
+      sess.confirmedA = false;
+      sess.confirmedB = false;
+      const isA = sess.playerA === playerId;
+      const slot = isA ? 'itemsA' : 'itemsB';
+      // Find item in player inventory
+      const invItem = player.inventory?.find(i => i.id === msg.itemId);
+      if (!invItem) { ws.send(JSON.stringify({ type: 'trade_error', error: 'Item not in inventory' })); break; }
+      const qty = Math.min(msg.qty || 1, invItem.quantity || 1);
+      // Check if already in trade
+      const existing = sess[slot].find(i => i.itemId === msg.itemId);
+      if (existing) {
+        existing.qty += qty;
+      } else {
+        sess[slot].push({ itemId: msg.itemId, name: invItem.name, type: invItem.type, qty, icon: invItem.icon });
+      }
+      // Update both clients
+      const aWs = playerWs.get(sess.playerA);
+      const bWs = playerWs.get(sess.playerB);
+      const update = { type: 'trade_update', tradeId: msg.tradeId, itemsA: sess.itemsA, itemsB: sess.itemsB, confirmedA: false, confirmedB: false };
+      if (aWs && aWs.readyState === 1) aWs.send(JSON.stringify(update));
+      if (bWs && bWs.readyState === 1) bWs.send(JSON.stringify(update));
+      break;
+    }
+    case 'trade_remove_item': {
+      const player = connectedPlayers[playerId];
+      if (!player) break;
+      const sess = tradeSessions[msg.tradeId];
+      if (!sess) break;
+      sess.confirmedA = false;
+      sess.confirmedB = false;
+      const isA = sess.playerA === playerId;
+      const slot = isA ? 'itemsA' : 'itemsB';
+      sess[slot] = sess[slot].filter(i => i.itemId !== msg.itemId);
+      const aWs = playerWs.get(sess.playerA);
+      const bWs = playerWs.get(sess.playerB);
+      const update = { type: 'trade_update', tradeId: msg.tradeId, itemsA: sess.itemsA, itemsB: sess.itemsB, confirmedA: false, confirmedB: false };
+      if (aWs && aWs.readyState === 1) aWs.send(JSON.stringify(update));
+      if (bWs && bWs.readyState === 1) bWs.send(JSON.stringify(update));
+      break;
+    }
+    case 'trade_confirm': {
+      const player = connectedPlayers[playerId];
+      if (!player) break;
+      const sess = tradeSessions[msg.tradeId];
+      if (!sess) break;
+      const isA = sess.playerA === playerId;
+      if (isA) sess.confirmedA = true; else sess.confirmedB = true;
+      // Notify both
+      const aWs = playerWs.get(sess.playerA);
+      const bWs = playerWs.get(sess.playerB);
+      const update = { type: 'trade_update', tradeId: msg.tradeId, itemsA: sess.itemsA, itemsB: sess.itemsB, confirmedA: sess.confirmedA, confirmedB: sess.confirmedB };
+      if (aWs && aWs.readyState === 1) aWs.send(JSON.stringify(update));
+      if (bWs && bWs.readyState === 1) bWs.send(JSON.stringify(update));
+      // Both confirmed → execute trade
+      if (sess.confirmedA && sess.confirmedB) {
+        const pA = connectedPlayers[sess.playerA];
+        const pB = connectedPlayers[sess.playerB];
+        if (!pA || !pB) { ws.send(JSON.stringify({ type: 'trade_error', error: 'Player disconnected' })); break; }
+        // Validate & execute: remove from A, give to B
+        for (const item of sess.itemsA) {
+          const idx = pA.inventory?.findIndex(i => i.id === item.itemId);
+          if (idx < 0) continue;
+          const inv = pA.inventory[idx];
+          if ((inv.quantity || 1) < item.qty) continue;
+          inv.quantity = (inv.quantity || 1) - item.qty;
+          if (inv.quantity <= 0) pA.inventory.splice(idx, 1);
+          const existing = pB.inventory?.find(i => i.id === item.itemId);
+          if (existing) existing.quantity = (existing.quantity || 1) + item.qty;
+          else pB.inventory.push({ id: item.itemId, name: item.name, type: item.type, quantity: item.qty, icon: item.icon });
+        }
+        // Validate & execute: remove from B, give to A
+        for (const item of sess.itemsB) {
+          const idx = pB.inventory?.findIndex(i => i.id === item.itemId);
+          if (idx < 0) continue;
+          const inv = pB.inventory[idx];
+          if ((inv.quantity || 1) < item.qty) continue;
+          inv.quantity = (inv.quantity || 1) - item.qty;
+          if (inv.quantity <= 0) pB.inventory.splice(idx, 1);
+          const existing = pA.inventory?.find(i => i.id === item.itemId);
+          if (existing) existing.quantity = (existing.quantity || 1) + item.qty;
+          else pA.inventory.push({ id: item.itemId, name: item.name, type: item.type, quantity: item.qty, icon: item.icon });
+        }
+        saveWorld();
+        // Notify both
+        const complete = { type: 'trade_complete', tradeId: msg.tradeId };
+        if (aWs && aWs.readyState === 1) { aWs.send(JSON.stringify(complete)); aWs.send(JSON.stringify({ type: 'inventory_update', inventory: pA.inventory })); }
+        if (bWs && bWs.readyState === 1) { bWs.send(JSON.stringify(complete)); bWs.send(JSON.stringify({ type: 'inventory_update', inventory: pB.inventory })); }
+        delete tradeSessions[msg.tradeId];
+        console.log('[TRADE] Completed: ' + sess.playerA + ' ↔ ' + sess.playerB);
+      }
+      break;
+    }
+    case 'trade_cancel': {
+      const sess = tradeSessions[msg.tradeId];
+      if (!sess) break;
+      const aWs = playerWs.get(sess.playerA);
+      const bWs = playerWs.get(sess.playerB);
+      const cancel = { type: 'trade_cancelled', tradeId: msg.tradeId };
+      if (aWs && aWs.readyState === 1) aWs.send(JSON.stringify(cancel));
+      if (bWs && bWs.readyState === 1) bWs.send(JSON.stringify(cancel));
+      delete tradeSessions[msg.tradeId];
       break;
     }
     case 'respawn': {
