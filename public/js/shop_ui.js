@@ -3,6 +3,9 @@
 
 import { ITEM_PRICES } from './items_client.js';
 
+import { drawItemIcon } from './item-icons.js';
+import { ITEM_PRICES } from './items_client.js';
+
 export class ShopUI {
   constructor(ws, playerState) {
     this.ws = ws;
@@ -37,6 +40,18 @@ export class ShopUI {
     this.tab = 'buy';
     this.render();
     this.container.style.display = 'flex';
+  }
+
+  drawShopIcons() {
+    requestAnimationFrame(() => {
+      this.container.querySelectorAll('.shop-item-canvas').forEach(canvas => {
+        const itemId = canvas.dataset.itemId;
+        if (itemId) {
+          const ctx = canvas.getContext('2d');
+          drawItemIcon(ctx, itemId, 36);
+        }
+      });
+    });
   }
 
   close() {
@@ -115,24 +130,22 @@ export class ShopUI {
     this.container.addEventListener('click', (e) => {
       if (e.target === this.container) this.close();
     });
+
+    // Draw canvas icons for all shop items
+    this.drawShopIcons();
   }
 
   renderBuyItems(zen) {
     if (!this.catalog.length) return '<div style="padding:20px; text-align:center; color:#666;">No items available</div>';
 
     return this.catalog.map(item => {
-      const iconBg = item.icon ? `#${item.icon.bg.toString(16).padStart(6, '0')}` : '#555';
-      const iconFg = item.icon ? `#${item.icon.fg.toString(16).padStart(6, '0')}` : '#fff';
-      const symbol = item.icon?.symbol || '?';
       const affordable = zen >= item.price;
       const statsText = item.stats ? Object.entries(item.stats).map(([k, v]) => `${k.toUpperCase()}+${v}`).join(' ') : '';
       const effectText = item.healAmount ? `Heal ${item.healAmount} HP` : item.manaAmount ? `Restore ${item.manaAmount} MP` : '';
 
       return `
         <div style="display:flex; align-items:center; padding:10px 12px; margin:4px 0; border-radius:8px; background:rgba(255,255,255,0.04); gap:12px;">
-          <div style="width:36px; height:36px; border-radius:6px; background:${iconBg}; display:flex; align-items:center; justify-content:center; color:${iconFg}; font-size:14px; font-weight:bold; flex-shrink:0;">
-            ${symbol}
-          </div>
+          <canvas class="shop-item-canvas" width="36" height="36" data-item-id="${item.itemId}" style="width:36px;height:36px;border-radius:6px;flex-shrink:0;"></canvas>
           <div style="flex:1; min-width:0;">
             <div style="font-size:12px; font-weight:bold; color:#eee;">${item.name}</div>
             <div style="font-size:10px; color:#999;">${item.description || ''}</div>
@@ -157,9 +170,6 @@ export class ShopUI {
     if (!sellable.length) return '<div style="padding:20px; text-align:center; color:#666;">No items to sell</div>';
 
     return sellable.map(item => {
-      const iconBg = item.icon ? `#${item.icon.bg.toString(16).padStart(6, '0')}` : '#555';
-      const iconFg = item.icon ? `#${item.icon.fg.toString(16).padStart(6, '0')}` : '#fff';
-      const symbol = item.icon?.symbol || '?';
       const itemPrice = ITEM_PRICES[item.id] || this.itemPrices?.[item.id] || this.catalog.find(c => c.itemId === item.id)?.price || 10;
       const shop = this.getShopDef();
       const sellPrice = Math.ceil(itemPrice * (shop?.sellMultiplier || 0.4));
@@ -167,9 +177,7 @@ export class ShopUI {
 
       return `
         <div class="sell-row" style="display:flex; align-items:center; padding:10px 12px; margin:4px 0; border-radius:8px; background:rgba(255,255,255,0.04); gap:8px;">
-          <div style="width:36px; height:36px; border-radius:6px; background:${iconBg}; display:flex; align-items:center; justify-content:center; color:${iconFg}; font-size:14px; font-weight:bold; flex-shrink:0;">
-            ${symbol}
-          </div>
+          <canvas class="shop-item-canvas" width="36" height="36" data-item-id="${item.id}" style="width:36px;height:36px;border-radius:6px;flex-shrink:0;"></canvas>
           <div style="flex:1; min-width:0;">
             <div style="font-size:12px; font-weight:bold; color:#eee;">${item.name} <span style="color:#666; font-size:10px;">x${qty}</span></div>
             <div style="font-size:10px; color:#999;">${item.description || ''}</div>
