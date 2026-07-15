@@ -990,6 +990,7 @@ function handleServerMessage(msg) {
     }
 
     case 'ground_loot_spawn': {
+      console.log('[LOOT] received ground_loot_spawn', msg.lootId, msg.items?.length, 'items');
       spawnGroundLoot3D(msg.lootId, msg.items, msg.x, msg.z);
       break;
     }
@@ -2681,43 +2682,41 @@ document.getElementById('respawn-checkpoint').addEventListener('click', () => {
 function spawnGroundLoot3D(lootId, items, x, z) {
   // Remove existing if any
   removeGroundLoot3D(lootId);
+  console.log('[LOOT] spawn', lootId, items?.length, 'items at', x, z);
 
   // Pick first item's icon for the visual
   const firstItem = items[0];
   const iconId = firstItem?.id || 'potion_small';
-  const totalQty = items.reduce((s, it) => s + (it.quantity || 1), 0);
 
   // Create canvas texture from drawItemIcon
   const texCanvas = document.createElement('canvas');
   texCanvas.width = 64;
   texCanvas.height = 64;
   const ctx = texCanvas.getContext('2d');
-  // Transparent background
   ctx.clearRect(0, 0, 64, 64);
-  // Draw a slight glow circle behind the item
-  const grad = ctx.createRadialGradient(32, 32, 8, 32, 32, 32);
-  grad.addColorStop(0, 'rgba(255, 255, 150, 0.6)');
-  grad.addColorStop(1, 'rgba(255, 255, 150, 0.0)');
-  ctx.fillStyle = grad;
-  ctx.fillRect(0, 0, 64, 64);
-  // Draw the item icon
-  drawItemIcon(ctx, iconId, 64);
+  // Solid gold circle fallback so it's ALWAYS visible
+  ctx.fillStyle = '#FFD700';
+  ctx.beginPath();
+  ctx.arc(32, 32, 28, 0, Math.PI * 2);
+  ctx.fill();
+  // Draw item icon on top
+  try { drawItemIcon(ctx, iconId, 64); } catch(e) { console.warn('[LOOT] drawItemIcon failed', e); }
   const texture = new THREE.CanvasTexture(texCanvas);
   texture.needsUpdate = true;
 
-  // Flat plane mesh on ground, slightly above Y=0
-  const planeGeo = new THREE.PlaneGeometry(1.2, 1.2);
+  // Billboard plane facing camera
+  const planeGeo = new THREE.PlaneGeometry(1.0, 1.0);
   const planeMat = new THREE.MeshBasicMaterial({
     map: texture,
-    transparent: true,
-    alphaTest: 0.1,
-    depthWrite: false,
+    transparent: false,
     side: THREE.DoubleSide,
+    depthWrite: false,
   });
   const mesh = new THREE.Mesh(planeGeo, planeMat);
-  mesh.position.set(x, 0.6, z);
-  mesh.renderOrder = 10;
+  mesh.position.set(x, 0.8, z);
+  mesh.renderOrder = 999;
   state.scene.add(mesh);
+  console.log('[LOOT] mesh added to scene, pos:', mesh.position.x, mesh.position.y, mesh.position.z);
 
   // Glow ring underneath
   const glowGeo = new THREE.RingGeometry(0.3, 0.6, 16);
