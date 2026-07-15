@@ -818,6 +818,9 @@ function handleServerMessage(msg) {
       initSkillUI();
       // Sync inventory/equipment UI from server data
       state.inventoryUI.updatePlayer(state.player);
+      // Request zone data (portals, ground color) — client-driven fallback
+      console.log('[ZONE] Requesting zone_sync after join');
+      wsSend(JSON.stringify({ type: 'zone_sync' }));
       break;
 
     case 'player_joined':
