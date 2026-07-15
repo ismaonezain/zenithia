@@ -125,6 +125,13 @@ function loadWorld() {
 function saveWorld() {
   try {
     if (!fs.existsSync(SAVE_DIR)) fs.mkdirSync(SAVE_DIR, { recursive: true });
+    // Clean transient properties from player objects before save
+    for (const p of Object.values(world.players)) {
+      if (p) {
+        delete p._lastAttack;
+        delete p.party; // transient, don't persist
+      }
+    }
     fs.writeFileSync(SAVE_FILE, JSON.stringify(world, null, 2));
     const size = fs.statSync(SAVE_FILE).size;
     console.log(`[SAVE] OK (${size} bytes) players=${Object.keys(world.players).length}`);
@@ -474,6 +481,7 @@ setInterval(() => {
             }
           }, 5000);
           m.state = 'idle';
+          saveWorld(); // persist death state
         }
       }
     } else {
@@ -1010,11 +1018,11 @@ function handleMessage(ws, playerId, msg) {
           return ws.send(JSON.stringify({ type: 'shop_error', error: `Not enough Zen. Need ${totalCost}, have ${player.zen}` }));
         }
         player.zen -= totalCost;
-        saveWorld();
         if (!player.inventory) player.inventory = [];
         const existing = player.inventory.find(i => i.id === msg.itemId);
         if (existing) existing.quantity = (existing.quantity || 1) + qty;
         else player.inventory.push({ id: msg.itemId, name: itemDef.name, type: itemDef.type, quantity: qty, icon: itemDef.icon });
+        saveWorld(); // save AFTER inventory + zen updated
         ws.send(JSON.stringify({ type: 'shop_result', action: 'buy', itemId: msg.itemId, quantity: qty, cost: totalCost, zen: player.zen, inventory: player.inventory }));
       }
       break;
