@@ -2340,10 +2340,10 @@ function clearZoneObjects() {
 }
 
 function handlePortalClick(portalData) {
-  // Check level requirement (simple string comparison)
   addChatMessage('System', '🌀 Memasuki ' + portalData.name + '...');
-  state._expectedZone = portalData.targetZone;
+  // Tell server to change zone, then reload fresh (like login)
   wsSend(JSON.stringify({ type: 'zone_change', targetZone: portalData.targetZone, targetX: portalData.targetX, targetZ: portalData.targetZ }));
+  setTimeout(() => { window.location.reload(); }, 800);
 }
 
 // ============================
