@@ -819,7 +819,7 @@ function handleServerMessage(msg) {
       // Sync inventory/equipment UI from server data
       state.inventoryUI.updatePlayer(state.player);
       // Request zone data (portals, ground color) — client-driven fallback
-      console.log('[ZONE] Requesting zone_sync after join');
+      
       wsSend(JSON.stringify({ type: 'zone_sync' }));
       break;
 
@@ -1020,7 +1020,7 @@ function handleServerMessage(msg) {
     }
     // Zone handlers
     case 'zone_enter': {
-      console.log('[ZONE] Received zone_enter:', msg.zone?.id, 'portals:', msg.zone?.portals?.length);
+      
       enterZone(msg.zone);
       break;
     }
@@ -2155,7 +2155,7 @@ let _zonePortals = []; // 3D portal meshes
 let _zoneDecorations = []; // 3D decoration meshes
 
 function enterZone(zoneData) {
-  console.log('[ZONE] enterZone called:', zoneData?.id, 'portals:', zoneData?.portals?.length);
+  
   _currentZone = zoneData;
   // Change ground color
   const ground = state.scene?.getObjectByName('ground');

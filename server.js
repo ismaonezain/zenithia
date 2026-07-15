@@ -2219,15 +2219,19 @@ function handleMessage(ws, playerId, msg) {
       break;
     }
     case 'zone_sync': {
-      // Client requests current zone data (e.g. on reconnect)
-      const player = connectedPlayers[playerId];
-      if (!player) break;
-      const z = ZONES[player.region || 'willowmere'];
-      if (z) {
-        ws.send(JSON.stringify({ type: 'zone_enter', zone: { id: z.id, name: z.name, subtitle: z.subtitle, level: z.level, groundColor: z.groundColor, portals: z.portals || [], decorations: z.decorations || [] } }));
-      }
-      break;
-    }
+          // Client requests current zone data (e.g. on reconnect)
+          const player = connectedPlayers[playerId];
+          if (!player) {
+            console.log('[ZONE_SYNC] player not found:', playerId, '| keys:', Object.keys(connectedPlayers).length);
+            break;
+          }
+          const z = ZONES[player.region || 'willowmere'];
+          console.log('[ZONE_SYNC] OK:', player.name, 'region:', player.region, 'zoneFound:', !!z, 'portals:', z?.portals?.length || 0);
+          if (z) {
+            ws.send(JSON.stringify({ type: 'zone_enter', zone: { id: z.id, name: z.name, subtitle: z.subtitle, level: z.level, groundColor: z.groundColor, portals: z.portals || [], decorations: z.decorations || [] } }));
+          }
+          break;
+        }
     case 'dungeon_list': {
       // List available dungeons
       const player = connectedPlayers[playerId];
