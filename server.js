@@ -1331,13 +1331,8 @@ wss.on('connection', (ws) => {
   console.log(`[CONNECT] ${playerId}`);
   ws.playerId = playerId;
 
-  const playerZone = player.region || 'willowmere';
-  const zoneDef = ZONES[playerZone];
-  ws.send(JSON.stringify({ type: 'welcome', playerId, version: 'v3-combat-rebuild', world: { time: Date.now(), region: playerZone }, dayTime: getGameTime() }));
-  // Send zone data (portals, ground color, etc.)
-  if (zoneDef) {
-    ws.send(JSON.stringify({ type: 'zone_enter', zone: { id: zoneDef.id, name: zoneDef.name, subtitle: zoneDef.subtitle, level: zoneDef.level, groundColor: zoneDef.groundColor, portals: zoneDef.portals || [], decorations: zoneDef.decorations || [] } }));
-  }
+  ws.send(JSON.stringify({ type: 'welcome', playerId, version: 'v3-combat-rebuild', world: { time: Date.now(), region: 'willowmere' }, dayTime: getGameTime() }));
+  // Zone data is sent AFTER join (when player object exists with region)
 
   ws.on('message', (data) => {
     try { handleMessage(ws, playerId, JSON.parse(data)); }
@@ -1379,6 +1374,12 @@ function handleMessage(ws, playerId, msg) {
         onlinePlayers: Object.values(connectedPlayers).filter(p => p.id !== playerId),
         monsters: Object.values(world.monsters).filter(m => m.alive).map(sanitizeMonster),
       }));
+      // Send zone data AFTER join (player.region now exists)
+      const playerZone = player.region || 'willowmere';
+      const zoneDef = ZONES[playerZone];
+      if (zoneDef) {
+        ws.send(JSON.stringify({ type: 'zone_enter', zone: { id: zoneDef.id, name: zoneDef.name, subtitle: zoneDef.subtitle, level: zoneDef.level, groundColor: zoneDef.groundColor, portals: zoneDef.portals || [], decorations: zoneDef.decorations || [] } }));
+      }
       broadcast({ type: 'player_joined', player }, ws);
       break;
     }
