@@ -1017,6 +1017,7 @@ function handleServerMessage(msg) {
     }
     // Zone handlers
     case 'zone_enter': {
+      console.log('[ZONE] Received zone_enter:', msg.zone?.id, 'portals:', msg.zone?.portals?.length);
       enterZone(msg.zone);
       break;
     }
