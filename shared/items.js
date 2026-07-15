@@ -29,7 +29,19 @@ const ITEMS = {
   boar_tusk:       { name: 'Boar Tusk',        type: 'material', description: 'Taring besar dari Bramble Boar. Cukup kuat buat jadi weapon.',     price: 8, icon: { bg: 0x5D4037, fg: 0xFFF9C4, symbol: '◄', image: '/assets/icons/boar_tusk.png' } },
   ancient_heart:   { name: 'Ancient Heart',    type: 'material', description: 'Jantung kuno dari World Boss. Mengandung kekuatan Aether murni. Sangat langka.', price: 100, icon: { bg: 0xFFD700, fg: 0xFFF8E1, symbol: '♥', image: '/assets/icons/ancient_heart.png' } },
   bramble_core:    { name: 'Bramble Core',     type: 'material', description: 'Inti langka dari Bramble Boar. Mengandung Aether yang sudah terkristalisasi.',      price: 25, icon: { bg: 0x33691E, fg: 0x76FF03, symbol: '◆', image: '/assets/icons/bramble_core.png' } },
-  turtle_shell:    { name: 'Turtle Shell',     type: 'material', description: 'Cangkang kura-kura raksasa dari Marsh Snapper. Sangat keras, cocok buat crafting shield.', price: 18, icon: { bg: 0x2E7D32, fg: 0xA5D6A7, symbol: '◎', image: '/assets/icons/turtle_shell.png' } },
+  turtle_shell:    { name: 'Turtle Shell',    type: 'material', description: 'Cangkang kura-kura raksasa dari Marsh Snapper. Sangat keras, cocok buat crafting shield.', price: 18, icon: { bg: 0x2E7D32, fg: 0xA5D6A7, symbol: '◎', image: '/assets/icons/turtle_shell.png' } },
+
+  // ═══════════════════════════════════════
+  // STORMCREST MOUNTAINS — Lv.5-8 materials
+  // ═══════════════════════════════════════
+  hawk_feather:    { name: 'Hawk Feather',     type: 'material', description: 'Bulu Storm Hawk yang charged dengan listrik statis. Bergetar saat dipegang.', price: 15, icon: { bg: 0x78909C, fg: 0xE3F2FD, symbol: '❧', image: '/assets/icons/hawk_feather.png' } },
+  golem_core:      { name: 'Golem Core',       type: 'material', description: 'Inti kristal dari Stone Golem. Mengandung kekuatan gunung yang sudah terkristalisasi.', price: 30, icon: { bg: 0x616161, fg: 0xFFD54F, symbol: '⬡', image: '/assets/icons/golem_core.png' } },
+
+  // ═══════════════════════════════════════
+  // MISTMARSH SWAMP — Lv.8-10 materials
+  // ═══════════════════════════════════════
+  lurker_fang:      { name: 'Lurker Fang',      type: 'material', description: 'Taring Swamp Lurker. Berbisa dan tajam — bisa dipake buat weapon tier tinggi.', price: 22, icon: { bg: 0x1B5E20, fg: 0xE8F5E9, symbol: '🦷', image: '/assets/icons/lurker_fang.png' } },
+  toxic_slime:     { name: 'Toxic Slime',      type: 'material', description: 'Lendir beracun dari Toxic Toad. Mengandung Aether tercemar yang powerful tapi berbahaya.', price: 20, icon: { bg: 0x7B1FA2, fg: 0xF3E5F5, symbol: '◉', image: '/assets/icons/toxic_slime.png' } },
 
   // ═══════════════════════════════════════
   // WEAPONS — Per job, 3 tiers
@@ -250,6 +262,102 @@ const LOOT_TABLES = {
     { itemId: 'arcane_treads', chance: 0.002, quantity: [1, 1] },
     { itemId: 'lightweave_step', chance: 0.002, quantity: [1, 1] },
     { itemId: 'void_stride', chance: 0.002, quantity: [1, 1] },
+  ],
+
+  // ═══════════════════════════════════════
+  // STORMCREST MOUNTAINS - Lv.5-8
+  // ═══════════════════════════════════════
+  storm_hawk: [
+    { itemId: 'hawk_feather', chance: 0.7, quantity: [1, 2] },
+    { itemId: 'wind_essence', chance: 0.15, quantity: [1, 1] },
+    { itemId: 'potion_medium', chance: 0.2, quantity: [1, 1] },
+    { itemId: 'ironclad_edge', chance: 0.015, quantity: [1, 1] },
+    { itemId: 'plains_slicer', chance: 0.012, quantity: [1, 1] },
+    { itemId: 'nightfang', chance: 0.01, quantity: [1, 1] },
+    { itemId: 'deepwood_rod', chance: 0.01, quantity: [1, 1] },
+    { itemId: 'shrine_scepter', chance: 0.01, quantity: [1, 1] },
+    { itemId: 'iron_sabatons', chance: 0.012, quantity: [1, 1] },
+    { itemId: 'plains_treads', chance: 0.01, quantity: [1, 1] },
+    { itemId: 'deepwood_walkers', chance: 0.01, quantity: [1, 1] },
+  ],
+
+  stone_golem: [
+    { itemId: 'stone_fragment', chance: 0.8, quantity: [2, 4] },
+    { itemId: 'golem_core', chance: 0.25, quantity: [1, 1] },
+    { itemId: 'potion_large', chance: 0.15, quantity: [1, 1] },
+    { itemId: 'guardian_cleaver', chance: 0.008, quantity: [1, 1] },
+    { itemId: 'tempest_dual', chance: 0.006, quantity: [1, 1] },
+    { itemId: 'arcane_focus', chance: 0.006, quantity: [1, 1] },
+    { itemId: 'lightbringer_rod', chance: 0.006, quantity: [1, 1] },
+    { itemId: 'void_edge', chance: 0.006, quantity: [1, 1] },
+    { itemId: 'bramble_mail', chance: 0.008, quantity: [1, 1] },
+    { itemId: 'storm_shroud', chance: 0.006, quantity: [1, 1] },
+    { itemId: 'arcane_mantle', chance: 0.006, quantity: [1, 1] },
+    { itemId: 'lightweave_raiment', chance: 0.006, quantity: [1, 1] },
+    { itemId: 'void_cloak', chance: 0.006, quantity: [1, 1] },
+    { itemId: 'guardian_aegis', chance: 0.006, quantity: [1, 1] },
+    { itemId: 'lightward_aegis', chance: 0.006, quantity: [1, 1] },
+  ],
+
+  // ═══════════════════════════════════════
+  // MISTMARSH SWAMP - Lv.8-10
+  // ═══════════════════════════════════════
+  marsh_snapper: [
+    { itemId: 'turtle_shell', chance: 0.6, quantity: [1, 2] },
+    { itemId: 'potion_large', chance: 0.25, quantity: [1, 1] },
+    { itemId: 'mp_potion_large', chance: 0.15, quantity: [1, 1] },
+    { itemId: 'guardian_cleaver', chance: 0.012, quantity: [1, 1] },
+    { itemId: 'tempest_dual', chance: 0.01, quantity: [1, 1] },
+    { itemId: 'arcane_focus', chance: 0.01, quantity: [1, 1] },
+    { itemId: 'lightbringer_rod', chance: 0.01, quantity: [1, 1] },
+    { itemId: 'void_edge', chance: 0.008, quantity: [1, 1] },
+    { itemId: 'bramble_mail', chance: 0.012, quantity: [1, 1] },
+    { itemId: 'storm_shroud', chance: 0.01, quantity: [1, 1] },
+    { itemId: 'arcane_mantle', chance: 0.01, quantity: [1, 1] },
+    { itemId: 'lightweave_raiment', chance: 0.01, quantity: [1, 1] },
+    { itemId: 'void_cloak', chance: 0.008, quantity: [1, 1] },
+    { itemId: 'guardian_signet', chance: 0.01, quantity: [1, 1] },
+    { itemId: 'bramble_legplates', chance: 0.01, quantity: [1, 1] },
+    { itemId: 'storm_legplates', chance: 0.008, quantity: [1, 1] },
+    { itemId: 'arcane_legguards', chance: 0.008, quantity: [1, 1] },
+    { itemId: 'lightweave_legs', chance: 0.008, quantity: [1, 1] },
+    { itemId: 'void_legguards', chance: 0.008, quantity: [1, 1] },
+    { itemId: 'guardian_treads', chance: 0.01, quantity: [1, 1] },
+    { itemId: 'storm_stride', chance: 0.008, quantity: [1, 1] },
+    { itemId: 'arcane_treads', chance: 0.008, quantity: [1, 1] },
+    { itemId: 'lightweave_step', chance: 0.008, quantity: [1, 1] },
+    { itemId: 'void_stride', chance: 0.008, quantity: [1, 1] },
+  ],
+
+  swamp_lurker: [
+    { itemId: 'lurker_fang', chance: 0.65, quantity: [1, 2] },
+    { itemId: 'wind_essence', chance: 0.1, quantity: [1, 1] },
+    { itemId: 'potion_large', chance: 0.2, quantity: [1, 1] },
+    { itemId: 'guardian_cleaver', chance: 0.01, quantity: [1, 1] },
+    { itemId: 'tempest_dual', chance: 0.008, quantity: [1, 1] },
+    { itemId: 'arcane_focus', chance: 0.008, quantity: [1, 1] },
+    { itemId: 'lightbringer_rod', chance: 0.008, quantity: [1, 1] },
+    { itemId: 'void_edge', chance: 0.006, quantity: [1, 1] },
+    { itemId: 'bramble_mail', chance: 0.01, quantity: [1, 1] },
+    { itemId: 'storm_shroud', chance: 0.008, quantity: [1, 1] },
+    { itemId: 'arcane_mantle', chance: 0.008, quantity: [1, 1] },
+  ],
+
+  toxic_toad: [
+    { itemId: 'toxic_slime', chance: 0.7, quantity: [1, 2] },
+    { itemId: 'frog_leg', chance: 0.3, quantity: [1, 1] },
+    { itemId: 'potion_large', chance: 0.2, quantity: [1, 1] },
+    { itemId: 'mp_potion_large', chance: 0.15, quantity: [1, 1] },
+    { itemId: 'guardian_cleaver', chance: 0.008, quantity: [1, 1] },
+    { itemId: 'tempest_dual', chance: 0.006, quantity: [1, 1] },
+    { itemId: 'arcane_focus', chance: 0.006, quantity: [1, 1] },
+    { itemId: 'lightbringer_rod', chance: 0.006, quantity: [1, 1] },
+    { itemId: 'void_edge', chance: 0.005, quantity: [1, 1] },
+    { itemId: 'bramble_mail', chance: 0.008, quantity: [1, 1] },
+    { itemId: 'storm_shroud', chance: 0.006, quantity: [1, 1] },
+    { itemId: 'arcane_mantle', chance: 0.006, quantity: [1, 1] },
+    { itemId: 'lightweave_raiment', chance: 0.006, quantity: [1, 1] },
+    { itemId: 'void_cloak', chance: 0.005, quantity: [1, 1] },
   ],
 };
 

@@ -414,6 +414,7 @@ function spawnWorldBoss(bossId) {
     lastAttack: 0,
     lastAbility: {},
     isBoss: true,
+    zone: data.zone || null,
     adds: [],
   };
   world.monsters[boss.id] = boss;
@@ -899,6 +900,34 @@ function handleAttack(ws, playerId, msg) {
     const zenGain = data.zen ? data.zen[0] + Math.floor(Math.random() * (data.zen[1] - data.zen[0])) : 0;
     player.xp += xpGain;
     player.zen = (player.zen || 0) + zenGain;
+
+    // Party XP share — nearby party members get 30% XP each
+    if (player.party && player.party.members.length > 1) {
+      const partyShare = Math.floor(xpGain * 0.3);
+      player.party.members.forEach(mId => {
+        if (mId === playerId) return; // skip killer
+        const memberWs = playerWs.get(mId);
+        if (!memberWs || memberWs.readyState !== 1) return;
+        const member = connectedPlayers[mId];
+        if (!member) return;
+        // Check distance (must be within 15 units)
+        const dx = (member.x || 0) - monster.x;
+        const dz = (member.z || 0) - monster.z;
+        const dist = Math.sqrt(dx * dx + dz * dz);
+        if (dist > 15) return; // too far
+        member.xp = (member.xp || 0) + partyShare;
+        memberWs.send(JSON.stringify({
+          type: 'party_xp',
+          xp: partyShare,
+          xpGain: partyShare,
+          from: player.name,
+          monster: monster.name,
+          currentXp: member.xp,
+          level: member.level,
+          expToNext: 100 + ((member.level || 1) - 1) * 200,
+        }));
+      });
+    }
 
     // Level up check
     const xpNeeded = 100 + (player.level - 1) * 200;

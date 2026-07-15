@@ -1137,6 +1137,17 @@ function handleServerMessage(msg) {
       }
       break;
     }
+    case 'party_xp': {
+      // Party member got XP from our kill
+      addChatMessage(`⚡ Party +${msg.xp} XP dari ${msg.monster} (dibunuh ${msg.from})`, '#FFD54F');
+      // Update XP bar if we have the state
+      if (msg.currentXp !== undefined && msg.level !== undefined) {
+        state.player.xp = msg.currentXp;
+        state.player.level = msg.level;
+        updateXPBar(msg.currentXp, msg.expToNext || 100 + (msg.level - 1) * 200);
+      }
+      break;
+    }
     case 'online_list': {
       state.partyUI.updateOnline(msg.players);
       break;

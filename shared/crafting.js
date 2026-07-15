@@ -178,6 +178,82 @@ const CRAFTING_RECIPES = [
     ],
     result: { itemId: 'wooden_buckler', qty: 1 },
   },
+
+  // ═══════════════════════════════════════
+  // STORMCREST RECIPES — Lv.5-8
+  // ═══════════════════════════════════════
+  {
+    id: 'craft_storm_wings',
+    name: 'Storm Wings',
+    description: 'Sepatu bersayap dari bulu hawk. SPD+4, AGI+2.',
+    category: 'boots',
+    ingredients: [
+      { itemId: 'hawk_feather', qty: 3 },
+      { itemId: 'wind_essence', qty: 2 },
+    ],
+    result: { itemId: 'iron_sabatons', qty: 1 },
+  },
+  {
+    id: 'craft_golem_fist',
+    name: 'Golem Fist',
+    description: 'Palu dari inti golem. ATK+8, DEF+3, slow tapi powerful.',
+    category: 'weapon',
+    ingredients: [
+      { itemId: 'golem_core', qty: 2 },
+      { itemId: 'stone_fragment', qty: 4 },
+    ],
+    result: { itemId: 'guardian_cleaver', qty: 1 },
+  },
+  {
+    id: 'craft_mountain_plate',
+    name: 'Mountain Plate',
+    description: 'Armor dari inti golem dan bulu hawk. DEF+7, HP+25.',
+    category: 'armor',
+    ingredients: [
+      { itemId: 'golem_core', qty: 2 },
+      { itemId: 'hawk_feather', qty: 2 },
+      { itemId: 'stone_fragment', qty: 3 },
+    ],
+    result: { itemId: 'bramble_mail', qty: 1 },
+  },
+
+  // ═══════════════════════════════════════
+  // MISTMARSH RECIPES — Lv.8-10
+  // ═══════════════════════════════════════
+  {
+    id: 'craft_venom_fang',
+    name: 'Venom Fang',
+    description: 'Pedang beracun dari taring lurker. ATK+9, bisa apply DoT.',
+    category: 'weapon',
+    ingredients: [
+      { itemId: 'lurker_fang', qty: 3 },
+      { itemId: 'toxic_slime', qty: 2 },
+    ],
+    result: { itemId: 'void_edge', qty: 1 },
+  },
+  {
+    id: 'craft_swamp_shield',
+    name: 'Swamp Shield',
+    description: 'Perisai dari cangkang kura-kura raksasa. DEF+6, HP+30.',
+    category: 'shield',
+    ingredients: [
+      { itemId: 'turtle_shell', qty: 3 },
+      { itemId: 'lurker_fang', qty: 2 },
+    ],
+    result: { itemId: 'guardian_aegis', qty: 1 },
+  },
+  {
+    id: 'craft_toxic_brew',
+    name: 'Toxic Brew',
+    description: 'Minuman beracun yang meningkatkan ATK+5 dan SPD+3 selama 30 detik.',
+    category: 'consumable',
+    ingredients: [
+      { itemId: 'toxic_slime', qty: 2 },
+      { itemId: 'hawk_feather', qty: 1 },
+      { itemId: 'wind_essence', qty: 1 },
+    ],
+    result: { itemId: 'potion_large', qty: 2 },
+  },
 ];
 
 module.exports = { CRAFTING_RECIPES };
