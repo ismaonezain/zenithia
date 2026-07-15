@@ -2082,6 +2082,21 @@ canvas.addEventListener('click', (e) => {
   if (state.isDead) return;
   if (state.dialogue.container.style.display === 'block') return;
 
+  // Check ground loot click first
+  tryPickupGroundLoot(e);
+  if (Object.keys(state.groundLoot || {}).length > 0) {
+    // Don't move if we clicked on loot
+    const rect = canvas.getBoundingClientRect();
+    const mouse = new THREE.Vector2(
+      ((e.clientX - rect.left) / rect.width) * 2 - 1,
+      -((e.clientY - rect.top) / rect.height) * 2 + 1
+    );
+    const raycaster = new THREE.Raycaster();
+    raycaster.setFromCamera(mouse, state.camera);
+    const meshes = Object.values(state.groundLoot).map(l => l.mesh).filter(Boolean);
+    if (raycaster.intersectObjects(meshes).length > 0) return;
+  }
+
   const mouse = new THREE.Vector2(
     (e.clientX / window.innerWidth) * 2 - 1,
     -(e.clientY / window.innerHeight) * 2 + 1
@@ -2691,7 +2706,7 @@ function spawnGroundLoot3D(lootId, items, x, z) {
   texture.needsUpdate = true;
 
   // Flat plane mesh on ground, slightly above Y=0
-  const planeGeo = new THREE.PlaneGeometry(0.8, 0.8);
+  const planeGeo = new THREE.PlaneGeometry(1.2, 1.2);
   const planeMat = new THREE.MeshBasicMaterial({
     map: texture,
     transparent: true,
@@ -2700,8 +2715,7 @@ function spawnGroundLoot3D(lootId, items, x, z) {
     side: THREE.DoubleSide,
   });
   const mesh = new THREE.Mesh(planeGeo, planeMat);
-  mesh.rotation.x = -Math.PI / 2; // flat on ground
-  mesh.position.set(x, 0.3, z);
+  mesh.position.set(x, 0.6, z);
   mesh.renderOrder = 10;
   state.scene.add(mesh);
 
@@ -2749,30 +2763,32 @@ function removeGroundLoot3D(lootId) {
   delete state.groundLoot[lootId];
 }
 
-// Auto-pickup ground loot when player walks near
-function checkGroundLootPickup() {
-  const playerModel = state.players[state.playerId];
-  if (!playerModel) return;
-  const px = playerModel.position.x;
-  const pz = playerModel.position.z;
-  const PICKUP_RADIUS = 1.5;
-
-  Object.keys(state.groundLoot).forEach(lootId => {
-    const entry = state.groundLoot[lootId];
-    const dx = px - entry.x;
-    const dz = pz - entry.z;
-    const dist = Math.sqrt(dx * dx + dz * dz);
-    if (dist < PICKUP_RADIUS) {
-      // Pick up!
+// Click-to-pickup ground loot via raycaster
+function tryPickupGroundLoot(mouseEvent) {
+  if (!state.groundLoot || Object.keys(state.groundLoot).length === 0) return;
+  const rect = state.renderer?.domElement?.getBoundingClientRect();
+  if (!rect) return;
+  const mouse = new THREE.Vector2(
+    ((mouseEvent.clientX - rect.left) / rect.width) * 2 - 1,
+    -((mouseEvent.clientY - rect.top) / rect.height) * 2 + 1
+  );
+  const raycaster = new THREE.Raycaster();
+  raycaster.setFromCamera(mouse, state.camera);
+  // Check all loot meshes
+  const meshes = Object.values(state.groundLoot).map(e => e.mesh).filter(Boolean);
+  const hits = raycaster.intersectObjects(meshes);
+  if (hits.length > 0) {
+    const hitMesh = hits[0].object;
+    const lootId = Object.keys(state.groundLoot).find(id => state.groundLoot[id].mesh === hitMesh);
+    if (lootId) {
+      const entry = state.groundLoot[lootId];
       const names = entry.items.map(i => `${i.name} x${i.quantity || 1}`).join(', ');
       addChatMessage('System', `📦 Picked up: ${names}`);
       window.ZenSFX?.pickup();
-      // Send pickup to server
       wsSend(JSON.stringify({ type: 'pickup_loot', lootId }));
-      // Remove locally immediately (server will also broadcast remove)
       removeGroundLoot3D(lootId);
     }
-  });
+  }
 }
 
 // Animate ground loot bobbing
@@ -2780,9 +2796,9 @@ function animateGroundLoot(time) {
   Object.values(state.groundLoot).forEach(entry => {
     if (entry.mesh) {
       // Gentle Y bob: float between 0.2 and 0.5
-      entry.mesh.position.y = 0.3 + Math.sin(time * 2 + entry.x * 3) * 0.15;
-      // Slow rotation
-      entry.mesh.rotation.z = time * 0.5;
+      entry.mesh.position.y = 0.4 + Math.sin(time * 2 + entry.x * 3) * 0.2;
+      // Billboard: always face camera
+      if (state.camera) entry.mesh.lookAt(state.camera.position);
     }
     if (entry.glowMesh) {
       // Pulsing glow
@@ -4077,9 +4093,8 @@ function gameLoop() {
   // Day/night cycle + compass
   updateDayNight(dt);
 
-  // Ground loot: bob animation + auto-pickup
+  // Ground loot: bob animation + glow
   animateGroundLoot(time);
-  checkGroundLootPickup();
 
   // Flashlight follows player
   if (state.flashlightOn && state.flashlight && playerModel) {
