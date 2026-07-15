@@ -1379,7 +1379,7 @@ function handleMessage(ws, playerId, msg) {
       const zoneDef = ZONES[playerZone];
       console.log(`[JOIN] ${player.name} zone=${playerZone} zoneDef=${!!zoneDef} portals=${zoneDef?.portals?.length || 0}`);
       if (zoneDef) {
-        const zonePayload = { id: zoneDef.id, name: zoneDef.name, subtitle: zoneDef.subtitle, level: zoneDef.level, groundColor: zoneDef.groundColor, portals: zoneDef.portals || [], decorations: zoneDef.decorations || [] };
+        const zonePayload = { id: zoneDef.id, name: zoneDef.name, subtitle: zoneDef.subtitle, level: zoneDef.level, groundColor: zoneDef.groundColor, portals: zoneDef.portals || [], decorations: zoneDef.decorations || [], playerX: player.x, playerZ: player.z };
         console.log(`[ZONE] Sending zone_enter to ${player.name}: ${zonePayload.id} with ${zonePayload.portals.length} portals`);
         ws.send(JSON.stringify({ type: 'zone_enter', zone: zonePayload }));
       }
@@ -2228,7 +2228,7 @@ function handleMessage(ws, playerId, msg) {
           const z = ZONES[player.region || 'willowmere'];
           console.log('[ZONE_SYNC] OK:', player.name, 'region:', player.region, 'zoneFound:', !!z, 'portals:', z?.portals?.length || 0);
           if (z) {
-            ws.send(JSON.stringify({ type: 'zone_enter', zone: { id: z.id, name: z.name, subtitle: z.subtitle, level: z.level, groundColor: z.groundColor, portals: z.portals || [], decorations: z.decorations || [] } }));
+            ws.send(JSON.stringify({ type: 'zone_enter', zone: { id: z.id, name: z.name, subtitle: z.subtitle, level: z.level, groundColor: z.groundColor, portals: z.portals || [], decorations: z.decorations || [], playerX: player.x, playerZ: player.z } }));
           }
           break;
         }
