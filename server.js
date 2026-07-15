@@ -148,6 +148,7 @@ function initNPCs() {
 
 let world = loadWorld();
 const connectedPlayers = {};
+const playerWs = new Map(); // playerId → ws (kept off player objects to avoid JSON.stringify issues)
 
 // --- Ground Loot System ---
 let groundLootIdCounter = 0;
@@ -455,8 +456,8 @@ setInterval(() => {
           // XP penalty: lose 10% of current XP (min 0)
           const xpLoss = Math.max(1, Math.floor(closestPlayer.xp * 0.1));
           closestPlayer.xp = Math.max(0, closestPlayer.xp - xpLoss);
-          // Use _ws back-reference (set on join) — Object.entries stringifies ws keys
-          const dyingWs = closestPlayer._ws;
+          // Use playerWs Map — _ws on player objects breaks JSON.stringify
+          const dyingWs = playerWs.get(closestPlayer.id);
           broadcast({ type: 'player_died', targetId: closestPlayer.id, xpLoss });
           if (dyingWs && dyingWs.readyState === 1) {
             dyingWs.send(JSON.stringify({ type: 'xp_penalty', xpLoss, xp: closestPlayer.xp }));
@@ -468,8 +469,8 @@ setInterval(() => {
             closestPlayer.x = 0;
             closestPlayer.z = 0;
             broadcast({ type: 'player_respawn', targetId: closestPlayer.id, hp: closestPlayer.hp, maxHp: closestPlayer.maxHp, mp: closestPlayer.mp, maxMp: closestPlayer.maxMp, x: 0, z: 0 });
-            if (closestPlayer._ws && closestPlayer._ws.readyState === 1) {
-              closestPlayer._ws.send(JSON.stringify({ type: 'respawned', x: 0, z: 0, hp: closestPlayer.hp, maxHp: closestPlayer.maxHp, mp: closestPlayer.mp, maxMp: closestPlayer.maxMp }));
+            if (dyingWs && dyingWs.readyState === 1) {
+              dyingWs.send(JSON.stringify({ type: 'respawned', x: 0, z: 0, hp: closestPlayer.hp, maxHp: closestPlayer.maxHp, mp: closestPlayer.mp, maxMp: closestPlayer.maxMp }));
             }
           }, 5000);
           m.state = 'idle';
@@ -596,8 +597,9 @@ function trackQuestKills(player, monsterType) {
         if (!qState.progress) qState.progress = {};
         qState.progress[obj.id] = (qState.progress[obj.id] || 0) + 1;
         // Notify client
-        if (player._ws && player._ws.readyState === 1) {
-          player._ws.send(JSON.stringify({
+        const qWs = playerWs.get(player.id);
+        if (qWs && qWs.readyState === 1) {
+          qWs.send(JSON.stringify({
             type: 'quest_progress', questId, objectiveId: obj.id,
             current: qState.progress[obj.id],
           }));
@@ -622,8 +624,9 @@ function trackQuestTalk(player, npcId) {
     );
     if (obj) {
       qState.progress[obj.id] = (qState.progress[obj.id] || 0) + 1;
-      if (player._ws && player._ws.readyState === 1) {
-        player._ws.send(JSON.stringify({
+      const qWs = playerWs.get(player.id);
+      if (qWs && qWs.readyState === 1) {
+        qWs.send(JSON.stringify({
           type: 'quest_progress', questId, objectiveId: obj.id,
           current: qState.progress[obj.id],
         }));
@@ -689,6 +692,7 @@ wss.on('connection', (ws) => {
 
   ws.on('close', () => {
     console.log(`[DISCONNECT] ${playerId}`);
+    playerWs.delete(playerId);
     saveWorld();
     delete connectedPlayers[ws];
     broadcast({ type: 'player_left', playerId });
@@ -704,7 +708,7 @@ function handleMessage(ws, playerId, msg) {
       const player = getOrCreatePlayer(playerId, msg.name, msg.wallet, msg.customization, msg.persistentId);
       hydrateInventory(player); // merge latest item defs (icons, descriptions)
       connectedPlayers[ws] = player;
-      player._ws = ws; // back-reference for monster AI to send messages
+      playerWs.set(playerId, ws);
       ws.playerId = playerId;
       ws.send(JSON.stringify({
         type: 'joined', player, npcs: world.npcs,
