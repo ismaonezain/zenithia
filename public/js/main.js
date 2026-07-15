@@ -1041,10 +1041,9 @@ function handleServerMessage(msg) {
         console.log('[ZONE] Ignoring stale zone_enter:', msg.zone?.id, '(expected:', state._expectedZone + ')');
         break;
       }
-      // Portal click: full scene rebuild (like login, no reload)
+      // Portal click: enter zone directly (no rebuild — world is persistent)
       if (state._expectedZone) {
         state._expectedZone = null;
-        rebuildScene(msg.zone?.playerX, msg.zone?.playerZ);
         enterZone(msg.zone);
         break;
       }
