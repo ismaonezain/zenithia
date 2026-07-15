@@ -2207,7 +2207,7 @@ function handleMessage(ws, playerId, msg) {
       player.x = msg.targetX || 0;
       player.z = msg.targetZ || 0;
       // Send zone data to player
-      ws.send(JSON.stringify({ type: 'zone_enter', zone: { id: zoneDef.id, name: zoneDef.name, subtitle: zoneDef.subtitle, level: zoneDef.level, groundColor: zoneDef.groundColor, portals: zoneDef.portals || [], decorations: zoneDef.decorations || [] } }));
+      ws.send(JSON.stringify({ type: 'zone_enter', zone: { id: zoneDef.id, name: zoneDef.name, subtitle: zoneDef.subtitle, level: zoneDef.level, groundColor: zoneDef.groundColor, portals: zoneDef.portals || [], decorations: zoneDef.decorations || [], playerX: player.x, playerZ: player.z } }));
       // Notify other players in OLD zone
       broadcast({ type: 'player_left_zone', playerId, name: player.name }, ws);
       // Send updated player position to all

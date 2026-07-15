@@ -2171,7 +2171,28 @@ let _zoneDecorations = []; // 3D decoration meshes
 function enterZone(zoneData) {
   
   _currentZone = zoneData;
-  // Change ground color
+  // Update player position from server
+  if (zoneData.playerX !== undefined && state.player) {
+    state.player.x = zoneData.playerX;
+    state.player.z = zoneData.playerZ;
+    // Move player model
+    if (state.playerModel) {
+      state.playerModel.position.set(zoneData.playerX, 0, zoneData.playerZ);
+    }
+    // Move camera to follow player
+    if (state.camera) {
+      state.camera.position.x = zoneData.playerX;
+      state.camera.position.z = zoneData.playerZ + 10;
+      state.camera.lookAt(zoneData.playerX, 0, zoneData.playerZ);
+    }
+  }
+  // Rebuild terrain for new zone
+  const oldTerrain = state.scene?.getObjectByName('terrain');
+  if (oldTerrain) {
+    state.scene.remove(oldTerrain);
+  }
+  buildTerrain(state.scene);
+  // Change ground color (after rebuild)
   const ground = state.scene?.getObjectByName('ground');
   if (ground && ground.material) {
     ground.material.color.setHex(zoneData.groundColor || 0x7CBA3F);
