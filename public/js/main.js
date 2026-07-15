@@ -684,6 +684,7 @@ function enterSinglePlayer(playerName, wallet) {
 
   // Spawn player in world
   spawnPlayer(state.player);
+  spawnGatheringNodes();
   updatePlayerHP(state.player.hp, state.player.maxHp);
   updatePlayerMP(state.player.mp, state.player.maxMp);
   updatePlayerXP(state.player.xp, 100);
@@ -1213,6 +1214,41 @@ function handleServerMessage(msg) {
       }
       break;
     }
+    // Fishing handlers
+    case 'fish_started': {
+      openFishingUI(msg.spotId);
+      break;
+    }
+    case 'fish_result': {
+      if (msg.success) {
+        state.player.inventory = msg.item.inventory || state.player.inventory;
+        if (state.inventoryUI) state.inventoryUI.updatePlayer(state.player);
+        addChatMessage('System', `🎣 Caught ${msg.item.name} x${msg.item.qty}!`);
+      } else {
+        addChatMessage('System', `🎣 ${msg.message}`);
+      }
+      closeFishingUI();
+      break;
+    }
+    case 'fish_error': {
+      addChatMessage('System', `🎣 ${msg.error}`);
+      break;
+    }
+    // Gathering handlers
+    case 'gather_result': {
+      if (msg.success) {
+        state.player.inventory = msg.item.inventory || state.player.inventory;
+        if (state.inventoryUI) state.inventoryUI.updatePlayer(state.player);
+        addChatMessage('System', `⛏️ Got ${msg.item.name} x${msg.item.qty}!`);
+      } else {
+        addChatMessage('System', `⛏️ ${msg.message}`);
+      }
+      break;
+    }
+    case 'gather_error': {
+      addChatMessage('System', `⛏️ ${msg.error}`);
+      break;
+    }
     // Crafting handlers
     case 'crafting_recipes': {
       openCraftingUI(msg.recipes);
@@ -1313,6 +1349,120 @@ function openCraftingUI(recipes) {
 
     list.appendChild(catDiv);
   }
+}
+
+// ============================
+// FISHING UI
+// ============================
+let _fishingInterval = null;
+let _fishingBarPos = 0;
+let _fishingDir = 1;
+
+function openFishingUI(spotId) {
+  closeFishingUI();
+  const modal = document.createElement('div');
+  modal.id = 'fishing-modal';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.7);';
+
+  const panel = document.createElement('div');
+  panel.style.cssText = 'background:#1a1a2e;border:2px solid #2196F3;border-radius:16px;padding:24px;width:320px;color:#fff;font-family:"Courier New",monospace;text-align:center;';
+  panel.innerHTML = `
+    <h3 style="color:#2196F3;margin:0 0 12px;">🎣 Fishing</h3>
+    <p style="color:#aaa;font-size:0.85rem;margin:0 0 16px;">Klik saat bar di zona hijau!</p>
+    <div style="background:#333;border-radius:8px;height:24px;position:relative;overflow:hidden;margin-bottom:16px;">
+      <div id="fishing-green" style="position:absolute;left:35%;width:30%;height:100%;background:rgba(76,175,80,0.4);border-left:2px solid #4CAF50;border-right:2px solid #4CAF50;"></div>
+      <div id="fishing-bar" style="position:absolute;left:0%;width:4px;height:100%;background:#fff;border-radius:2px;transition:none;"></div>
+    </div>
+    <button id="fishing-catch" style="background:#2196F3;color:#fff;border:none;padding:10px 24px;border-radius:8px;font-size:1rem;cursor:pointer;font-weight:bold;">🎣 Catch!</button>
+  `;
+
+  modal.appendChild(panel);
+  document.body.appendChild(modal);
+
+  // Animate bar
+  _fishingBarPos = 0;
+  _fishingDir = 1;
+  const bar = document.getElementById('fishing-bar');
+  _fishingInterval = setInterval(() => {
+    _fishingBarPos += _fishingDir * 2;
+    if (_fishingBarPos >= 96) _fishingDir = -1;
+    if (_fishingBarPos <= 0) _fishingDir = 1;
+    if (bar) bar.style.left = _fishingBarPos + '%';
+  }, 30);
+
+  // Catch button
+  document.getElementById('fishing-catch').onclick = () => {
+    // Check if bar is in green zone (35%-65%)
+    const inGreen = _fishingBarPos >= 35 && _fishingBarPos <= 65;
+    closeFishingUI();
+    if (inGreen) {
+      wsSend(JSON.stringify({ type: 'fish_reel' }));
+    } else {
+      addChatMessage('System', '🎣 Ikan lepas! Coba lagi...');
+    }
+  };
+
+  // Click anywhere on modal to catch
+  modal.onclick = (e) => {
+    if (e.target === modal) {
+      const inGreen = _fishingBarPos >= 35 && _fishingBarPos <= 65;
+      closeFishingUI();
+      if (inGreen) {
+        wsSend(JSON.stringify({ type: 'fish_reel' }));
+      } else {
+        addChatMessage('System', '🎣 Ikan lepas! Coba lagi...');
+      }
+    }
+  };
+}
+
+function closeFishingUI() {
+  if (_fishingInterval) { clearInterval(_fishingInterval); _fishingInterval = null; }
+  const old = document.getElementById('fishing-modal');
+  if (old) old.remove();
+}
+
+// ============================
+// GATHERING NODES (3D markers)
+// ============================
+function spawnGatheringNodes() {
+  if (!state.scene) return;
+  const COLORS = { herb: 0x4CAF50, rock: 0x9E9E9E, wood: 0x795548 };
+  const SYMBOLS = { herb: '🌿', rock: '⛏️', wood: '🪵' };
+
+  // Fishing spots — blue markers
+  const fishingSpots = [
+    { id: 'fish_1', x: -8, z: 1 }, { id: 'fish_2', x: 8, z: 2 }, { id: 'fish_3', x: 0, z: -1 },
+  ];
+  fishingSpots.forEach(spot => {
+    const geo = new THREE.SphereGeometry(0.4, 8, 8);
+    const mat = new THREE.MeshBasicMaterial({ color: 0x2196F3, transparent: true, opacity: 0.7 });
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.position.set(spot.x, 0.5, spot.z);
+    mesh.userData = { type: 'fishing_spot', id: spot.id, name: 'Fishing Spot' };
+    state.scene.add(mesh);
+    if (!state._gatherNodes) state._gatherNodes = [];
+    state._gatherNodes.push(mesh);
+  });
+
+  // Gathering nodes — colored markers
+  const nodes = [
+    { id: 'herb_1', type: 'herb', x: -12, z: 8 }, { id: 'herb_2', type: 'herb', x: -18, z: -5 },
+    { id: 'herb_3', type: 'herb', x: 14, z: 10 }, { id: 'herb_4', type: 'herb', x: -6, z: -15 },
+    { id: 'rock_1', type: 'rock', x: -20, z: -12 }, { id: 'rock_2', type: 'rock', x: 18, z: -8 },
+    { id: 'rock_3', type: 'rock', x: -15, z: 18 },
+    { id: 'wood_1', type: 'wood', x: 10, z: 15 }, { id: 'wood_2', type: 'wood', x: -10, z: -20 },
+    { id: 'wood_3', type: 'wood', x: 20, z: 5 },
+  ];
+  nodes.forEach(node => {
+    const geo = new THREE.BoxGeometry(0.5, 0.8, 0.5);
+    const mat = new THREE.MeshBasicMaterial({ color: COLORS[node.type] || 0xffffff, transparent: true, opacity: 0.8 });
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.position.set(node.x, 0.4, node.z);
+    mesh.userData = { type: 'gather_node', id: node.id, nodeType: node.type, name: node.type.charAt(0).toUpperCase() + node.type.slice(1) + ' Node' };
+    state.scene.add(mesh);
+    state._gatherNodes.push(mesh);
+  });
 }
 
 // ============================
@@ -2212,6 +2362,27 @@ canvas.addEventListener('click', (e) => {
   if (state.isDead) return;
   if (state.dialogue?.container?.style.display === 'block') return;
 
+  // Check gathering nodes/fishing spots first
+  const raycaster = new THREE.Raycaster();
+  const mouse = new THREE.Vector2();
+  mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+  mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+  raycaster.setFromCamera(mouse, state.camera);
+  const gatherHits = raycaster.intersectObjects(state._gatherNodes || []);
+  if (gatherHits.length > 0) {
+    const hit = gatherHits[0].object;
+    const d = hit.position.distanceTo(state.players[state.playerId]?.position || new THREE.Vector3());
+    if (d < 5) {
+      if (hit.userData.type === 'fishing_spot') {
+        wsSend(JSON.stringify({ type: 'fish_cast', spotId: hit.userData.id }));
+      } else if (hit.userData.type === 'gather_node') {
+        wsSend(JSON.stringify({ type: 'gather_node', nodeId: hit.userData.id }));
+      }
+      return; // don't process further
+    } else {
+      addChatMessage('System', 'Terlalu jauh! Dekati dulu.');
+    }
+  }
   // Check ground loot click first (screen-space)
   tryPickupGroundLoot(e);
   // Skip movement if click was near a loot icon

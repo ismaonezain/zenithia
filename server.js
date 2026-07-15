@@ -16,6 +16,7 @@ const { ITEMS, LOOT_TABLES } = require('./shared/items');
 const { QUESTS, NPC_QUESTS } = require('./shared/quests');
 const { SHOPS } = require('./shared/shop');
 const { CRAFTING_RECIPES } = require('./shared/crafting');
+const { FISHING_SPOTS, FISHING_LOOT, GATHERING_NODES, GATHERING_LOOT } = require('./shared/gathering');
 
 // Module-level CLASS_STATS (used by getOrCreatePlayer + recalcClassStats)
 const CLASS_STATS = {
@@ -169,6 +170,9 @@ const playerWs = new Map(); // playerId → ws (kept off player objects to avoid
 let groundLootIdCounter = 0;
 const groundLoot = {}; // lootId → { id, items, x, z, killerId, spawnTime }
 const GROUND_LOOT_DESPAWN_MS = 30000; // 30 seconds
+
+// Gathering node state (tracks cooldowns per node per player)
+const gatherCooldowns = {}; // nodeId → Date.now() when available again
 
 function spawnGroundLoot(lootItems, x, z, killerId) {
   if (!lootItems || lootItems.length === 0) return;
@@ -1044,9 +1048,97 @@ function handleMessage(ws, playerId, msg) {
         player.zen = (player.zen || 0) + totalGold;
         saveWorld();
         ws.send(JSON.stringify({ type: 'shop_result', action: 'sell', itemId: item.id, quantity: qty, earned: totalGold, zen: player.zen, inventory: player.inventory }));
-      }
+        }
+        break;
+        }
+        // Fishing handlers
+    case 'fish_cast': {
+      const player = connectedPlayers[playerId];
+      if (!player) break;
+      const spot = FISHING_SPOTS.find(s => s.id === msg.spotId);
+      if (!spot) { ws.send(JSON.stringify({ type: 'fish_error', error: 'Fishing spot not found' })); break; }
+      // Check distance (must be near the spot)
+      const fdx = (player.x || 0) - spot.x;
+      const fdz = (player.z || 0) - spot.z;
+      if (Math.sqrt(fdx*fdx + fdz*fdz) > 5) { ws.send(JSON.stringify({ type: 'fish_error', error: 'Too far from fishing spot!' })); break; }
+      // Start fishing — server validates timing
+      ws.send(JSON.stringify({ type: 'fish_started', spotId: spot.id }));
       break;
     }
+    case 'fish_reel': {
+      const player = connectedPlayers[playerId];
+      if (!player) break;
+      // Determine catch based on luck (simple random)
+      const roll = Math.random();
+      let caught = null;
+      let cumulative = 0;
+      for (const entry of FISHING_LOOT) {
+        cumulative += entry.chance;
+        if (roll <= cumulative) {
+          const qty = entry.qty[0] + Math.floor(Math.random() * (entry.qty[1] - entry.qty[0] + 1));
+          caught = { itemId: entry.itemId, name: entry.name, qty };
+          break;
+        }
+      }
+      if (!caught) { ws.send(JSON.stringify({ type: 'fish_result', success: false, message: 'Ikan lepas!' })); break; }
+      // Give item
+      if (!player.inventory) player.inventory = [];
+      const existing = player.inventory.find(i => i.id === caught.itemId);
+      if (existing) existing.quantity = (existing.quantity || 1) + caught.qty;
+      else {
+        const def = ITEMS[caught.itemId];
+        player.inventory.push({ id: caught.itemId, name: caught.name, type: def?.type || 'material', quantity: caught.qty, icon: def?.icon });
+      }
+      saveWorld();
+      ws.send(JSON.stringify({ type: 'fish_result', success: true, item: caught, inventory: player.inventory }));
+      break;
+    }
+    // Gathering handlers
+    case 'gather_node': {
+      const player = connectedPlayers[playerId];
+      if (!player) break;
+      const node = GATHERING_NODES.find(n => n.id === msg.nodeId);
+      if (!node) { ws.send(JSON.stringify({ type: 'gather_error', error: 'Node not found' })); break; }
+      // Check cooldown
+      if (gatherCooldowns[node.id] && Date.now() < gatherCooldowns[node.id]) {
+        const waitSec = Math.ceil((gatherCooldowns[node.id] - Date.now()) / 1000);
+        ws.send(JSON.stringify({ type: 'gather_error', error: `Node ini masihcooldown ${waitSec}s lagi` }));
+        break;
+      }
+      // Check distance
+      const gdx = (player.x || 0) - node.x;
+      const gdz = (player.z || 0) - node.z;
+      if (Math.sqrt(gdx*gdx + gdz*gdz) > 5) { ws.send(JSON.stringify({ type: 'gather_error', error: 'Too far from node!' })); break; }
+      // Roll loot
+      const table = GATHERING_LOOT[node.type];
+      if (!table) { ws.send(JSON.stringify({ type: 'gather_error', error: 'Invalid node type' })); break; }
+      const gRoll = Math.random();
+      let gCaught = null;
+      let gCum = 0;
+      for (const entry of table) {
+        gCum += entry.chance;
+        if (gRoll <= gCum) {
+          const qty = entry.qty[0] + Math.floor(Math.random() * (entry.qty[1] - entry.qty[0] + 1));
+          gCaught = { itemId: entry.itemId, name: entry.name, qty };
+          break;
+        }
+      }
+      if (!gCaught) { ws.send(JSON.stringify({ type: 'gather_result', success: false, message: 'Tidak ada yang didapat...' })); break; }
+      // Give item
+      if (!player.inventory) player.inventory = [];
+      const gExisting = player.inventory.find(i => i.id === gCaught.itemId);
+      if (gExisting) gExisting.quantity = (gExisting.quantity || 1) + gCaught.qty;
+      else {
+        const def = ITEMS[gCaught.itemId];
+        player.inventory.push({ id: gCaught.itemId, name: gCaught.name, type: def?.type || 'material', quantity: gCaught.qty, icon: def?.icon });
+      }
+      // Set cooldown
+      gatherCooldowns[node.id] = Date.now() + (node.respawnTime || 60) * 1000;
+      saveWorld();
+      ws.send(JSON.stringify({ type: 'gather_result', success: true, item: gCaught, inventory: player.inventory }));
+      break;
+    }
+    // Crafting handlers
     case 'crafting_open': {
       const player = connectedPlayers[playerId];
       if (player) {
