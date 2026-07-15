@@ -1216,7 +1216,20 @@ function handleServerMessage(msg) {
     }
     // Fishing handlers
     case 'fish_started': {
-      openFishingUI(msg.spotId);
+      openFishingUI(msg.spotId, msg.duration);
+      // Dim the fishing spot visually
+      const fishMesh = (state._gatherNodes || []).find(n => n.userData && n.userData.id === msg.spotId);
+      if (fishMesh && fishMesh.material) {
+        fishMesh.material.color.setHex(FISH_COOLDOWN_COLOR);
+        fishMesh.material.opacity = 0.4;
+        setTimeout(() => {
+          const spot = (state._gatherNodes || []).find(n => n.userData && n.userData.id === msg.spotId);
+          if (spot && spot.material) {
+            spot.material.color.setHex(FISH_SPOT_COLOR);
+            spot.material.opacity = 0.7;
+          }
+        }, 8000);
+      }
       break;
     }
     case 'fish_result': {
@@ -1232,10 +1245,34 @@ function handleServerMessage(msg) {
     }
     case 'fish_error': {
       addChatMessage('System', `🎣 ${msg.error}`);
+      closeFishingUI();
       break;
     }
     // Gathering handlers
+    case 'gather_started': {
+      openGatheringUI(msg.nodeId, msg.nodeType, msg.duration);
+      // Dim the node visually + schedule restoration
+      const nodeMesh = (state._gatherNodes || []).find(n => n.userData && n.userData.id === msg.nodeId);
+      if (nodeMesh && nodeMesh.material) {
+        nodeMesh.material.color.setHex(NODE_COOLDOWN_COLOR);
+        nodeMesh.material.opacity = 0.4;
+        // Restore after respawn time
+        const respawnMs = msg.respawnTime || 60000;
+        _nodeCooldowns[msg.nodeId] = Date.now() + respawnMs;
+        setTimeout(() => {
+          const original = (state._gatherNodes || []).find(n => n.userData && n.userData.id === msg.nodeId);
+          if (original && original.material) {
+            const baseColor = NODE_COLORS[msg.nodeType] || 0xffffff;
+            original.material.color.setHex(baseColor);
+            original.material.opacity = 0.8;
+          }
+          delete _nodeCooldowns[msg.nodeId];
+        }, respawnMs);
+      }
+      break;
+    }
     case 'gather_result': {
+      closeGatheringUI();
       if (msg.success) {
         state.player.inventory = msg.item.inventory || state.player.inventory;
         if (state.inventoryUI) state.inventoryUI.updatePlayer(state.player);
@@ -1246,6 +1283,7 @@ function handleServerMessage(msg) {
       break;
     }
     case 'gather_error': {
+      closeGatheringUI();
       addChatMessage('System', `⛏️ ${msg.error}`);
       break;
     }
@@ -1352,73 +1390,105 @@ function openCraftingUI(recipes) {
 }
 
 // ============================
-// FISHING UI
+// FISHING UI (Auto — no mini-game)
 // ============================
 let _fishingInterval = null;
-let _fishingBarPos = 0;
-let _fishingDir = 1;
 
-function openFishingUI(spotId) {
+function openFishingUI(spotId, duration) {
   closeFishingUI();
+  const dur = duration || 3000;
   const modal = document.createElement('div');
   modal.id = 'fishing-modal';
-  modal.style.cssText = 'position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.7);';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);pointer-events:none;';
 
   const panel = document.createElement('div');
-  panel.style.cssText = 'background:#1a1a2e;border:2px solid #2196F3;border-radius:16px;padding:24px;width:320px;color:#fff;font-family:"Courier New",monospace;text-align:center;';
+  panel.style.cssText = 'background:#1a1a2e;border:2px solid #2196F3;border-radius:16px;padding:20px 28px;color:#fff;font-family:"Courier New",monospace;text-align:center;pointer-events:auto;';
   panel.innerHTML = `
-    <h3 style="color:#2196F3;margin:0 0 12px;">🎣 Fishing</h3>
-    <p style="color:#aaa;font-size:0.85rem;margin:0 0 16px;">Klik saat bar di zona hijau!</p>
-    <div style="background:#333;border-radius:8px;height:24px;position:relative;overflow:hidden;margin-bottom:16px;">
-      <div id="fishing-green" style="position:absolute;left:35%;width:30%;height:100%;background:rgba(76,175,80,0.4);border-left:2px solid #4CAF50;border-right:2px solid #4CAF50;"></div>
-      <div id="fishing-bar" style="position:absolute;left:0%;width:4px;height:100%;background:#fff;border-radius:2px;transition:none;"></div>
+    <h3 style="color:#2196F3;margin:0 0 8px;">🎣 Memancing...</h3>
+    <div style="background:#333;border-radius:8px;height:16px;overflow:hidden;margin:10px 0;">
+      <div id="fishing-progress" style="height:100%;width:0%;background:linear-gradient(90deg,#2196F3,#64B5F6);border-radius:8px;transition:none;"></div>
     </div>
-    <button id="fishing-catch" style="background:#2196F3;color:#fff;border:none;padding:10px 24px;border-radius:8px;font-size:1rem;cursor:pointer;font-weight:bold;">🎣 Catch!</button>
+    <p id="fishing-timer" style="color:#64B5F6;font-size:0.95rem;font-weight:bold;margin:4px 0 0;">3.0s</p>
   `;
 
   modal.appendChild(panel);
   document.body.appendChild(modal);
 
-  // Animate bar
-  _fishingBarPos = 0;
-  _fishingDir = 1;
-  const bar = document.getElementById('fishing-bar');
+  const progressBar = document.getElementById('fishing-progress');
+  const timerText = document.getElementById('fishing-timer');
+  const startTime = Date.now();
+
   _fishingInterval = setInterval(() => {
-    _fishingBarPos += _fishingDir * 2;
-    if (_fishingBarPos >= 96) _fishingDir = -1;
-    if (_fishingBarPos <= 0) _fishingDir = 1;
-    if (bar) bar.style.left = _fishingBarPos + '%';
-  }, 30);
-
-  // Catch button
-  document.getElementById('fishing-catch').onclick = () => {
-    // Check if bar is in green zone (35%-65%)
-    const inGreen = _fishingBarPos >= 35 && _fishingBarPos <= 65;
-    closeFishingUI();
-    if (inGreen) {
-      wsSend(JSON.stringify({ type: 'fish_reel' }));
-    } else {
-      addChatMessage('System', '🎣 Ikan lepas! Coba lagi...');
+    const elapsed = Date.now() - startTime;
+    const pct = Math.min(100, (elapsed / dur) * 100);
+    progressBar.style.width = pct + '%';
+    const remaining = Math.max(0, (dur - elapsed) / 1000);
+    timerText.textContent = remaining > 0.1 ? remaining.toFixed(1) + 's' : '🎣';
+    if (pct >= 100) {
+      clearInterval(_fishingInterval);
+      _fishingInterval = null;
     }
-  };
-
-  // Click anywhere on modal to catch
-  modal.onclick = (e) => {
-    if (e.target === modal) {
-      const inGreen = _fishingBarPos >= 35 && _fishingBarPos <= 65;
-      closeFishingUI();
-      if (inGreen) {
-        wsSend(JSON.stringify({ type: 'fish_reel' }));
-      } else {
-        addChatMessage('System', '🎣 Ikan lepas! Coba lagi...');
-      }
-    }
-  };
+  }, 50);
 }
 
 function closeFishingUI() {
   if (_fishingInterval) { clearInterval(_fishingInterval); _fishingInterval = null; }
   const old = document.getElementById('fishing-modal');
+  if (old) old.remove();
+}
+
+// ============================
+// GATHERING UI (Auto — progress bar)
+// ============================
+let _gatherInterval = null;
+const GATHER_SYMBOLS = { herb: '🌿', rock: '⛏️', wood: '🪵' };
+const _nodeCooldowns = {}; // nodeId → Date.now() when available again
+const NODE_COLORS = { herb: 0x4CAF50, rock: 0x9E9E9E, wood: 0x795548 };
+const NODE_COOLDOWN_COLOR = 0x555555; // grey when on cooldown
+const FISH_SPOT_COLOR = 0x2196F3; // blue
+const FISH_COOLDOWN_COLOR = 0x37474F; // dark grey when on cooldown
+
+function openGatheringUI(nodeId, nodeType, duration) {
+  closeGatheringUI();
+  const dur = duration || 2000;
+  const sym = GATHER_SYMBOLS[nodeType] || '⛏️';
+  const modal = document.createElement('div');
+  modal.id = 'gather-modal';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.4);pointer-events:none;';
+
+  const panel = document.createElement('div');
+  panel.style.cssText = 'background:#1a1a2e;border:2px solid #4CAF50;border-radius:16px;padding:20px 28px;color:#fff;font-family:"Courier New",monospace;text-align:center;pointer-events:auto;';
+  panel.innerHTML = `
+    <h3 style="color:#4CAF50;margin:0 0 8px;">${sym} Gathering...</h3>
+    <div style="background:#333;border-radius:8px;height:16px;overflow:hidden;margin:10px 0;">
+      <div id="gather-progress" style="height:100%;width:0%;background:linear-gradient(90deg,#4CAF50,#81C784);border-radius:8px;transition:none;"></div>
+    </div>
+    <p id="gather-timer" style="color:#81C784;font-size:0.95rem;font-weight:bold;margin:4px 0 0;">2.0s</p>
+  `;
+
+  modal.appendChild(panel);
+  document.body.appendChild(modal);
+
+  const progressBar = document.getElementById('gather-progress');
+  const timerText = document.getElementById('gather-timer');
+  const startTime = Date.now();
+
+  _gatherInterval = setInterval(() => {
+    const elapsed = Date.now() - startTime;
+    const pct = Math.min(100, (elapsed / dur) * 100);
+    progressBar.style.width = pct + '%';
+    const remaining = Math.max(0, (dur - elapsed) / 1000);
+    timerText.textContent = remaining > 0.1 ? remaining.toFixed(1) + 's' : sym;
+    if (pct >= 100) {
+      clearInterval(_gatherInterval);
+      _gatherInterval = null;
+    }
+  }, 50);
+}
+
+function closeGatheringUI() {
+  if (_gatherInterval) { clearInterval(_gatherInterval); _gatherInterval = null; }
+  const old = document.getElementById('gather-modal');
   if (old) old.remove();
 }
 

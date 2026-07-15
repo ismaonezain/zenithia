@@ -63,11 +63,10 @@ const GATHERING_LOOT = {
   ],
 };
 
-// Fishing mini-game settings
+// Fishing auto settings (server-driven)
 const FISHING_settings = {
-  castTime: 2000,      // 2 seconds to cast
-  biteWindow: 3000,    // 3 second window for fish to bite
-  reelTime: 1500,      // 1.5 seconds to reel in
+  castTime: 3000,      // 3 seconds auto-fishing
+  cooldown: 8000,      // 8 seconds cooldown between casts
   difficulty: 0.6,     // 60% success rate base
 };
 
