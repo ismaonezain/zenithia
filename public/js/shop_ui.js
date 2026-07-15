@@ -27,10 +27,11 @@ export class ShopUI {
     document.body.appendChild(this.container);
   }
 
-  open(shopId, shopName, catalog) {
+  open(shopId, shopName, catalog, itemPrices) {
     this.shopId = shopId;
     this.shopName = shopName;
     this.catalog = catalog;
+    this.itemPrices = itemPrices || {};
     this.tab = 'buy';
     this.render();
     this.container.style.display = 'flex';
@@ -157,8 +158,7 @@ export class ShopUI {
       const iconBg = item.icon ? `#${item.icon.bg.toString(16).padStart(6, '0')}` : '#555';
       const iconFg = item.icon ? `#${item.icon.fg.toString(16).padStart(6, '0')}` : '#fff';
       const symbol = item.icon?.symbol || '?';
-      const itemDef = typeof ITEMS !== 'undefined' ? ITEMS[item.id] : null;
-      const itemPrice = itemDef?.price || this.catalog.find(c => c.itemId === item.id)?.price || 10;
+      const itemPrice = this.itemPrices[item.id] || this.catalog.find(c => c.itemId === item.id)?.price || 10;
       const shop = this.getShopDef();
       const sellPrice = Math.ceil(itemPrice * (shop?.sellMultiplier || 0.4));
       const qty = item.quantity || 1;
@@ -205,7 +205,7 @@ export class ShopUI {
   // Handle server responses
   handleMsg(msg) {
     if (msg.type === 'shop_catalog') {
-      this.open(msg.shopId, msg.shopName, msg.catalog);
+      this.open(msg.shopId, msg.shopName, msg.catalog, msg.itemPrices);
     } else if (msg.type === 'shop_result') {
       if (msg.action === 'buy') {
         this.showMsg(`✅ Bought ${msg.quantity}x ${msg.itemId} for ${msg.cost} Zen`, '#4CAF50');

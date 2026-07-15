@@ -949,7 +949,11 @@ function handleMessage(ws, playerId, msg) {
             healAmount: itemDef.healAmount, manaAmount: itemDef.manaAmount,
           } : null;
         }).filter(Boolean);
-        ws.send(JSON.stringify({ type: 'shop_catalog', shopId: msg.npcId, shopName: shop.name, catalog }));
+        const itemPrices = {};
+        for (const [id, def] of Object.entries(ITEMS)) {
+          if (def && def.price) itemPrices[id] = def.price;
+        }
+        ws.send(JSON.stringify({ type: 'shop_catalog', shopId: msg.npcId, shopName: shop.name, catalog, itemPrices }));
       }
       break;
     }
