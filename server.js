@@ -380,6 +380,7 @@ setInterval(() => {
 // --- Monster AI (Cahaya v2 pattern) ---
 let aiDebugCounter = 0;
 setInterval(() => {
+  try {
   const now = Date.now();
   const playerCount = Object.keys(connectedPlayers).length;
   const aliveMonsters = Object.values(world.monsters).filter(m => m.alive).length;
@@ -489,6 +490,7 @@ setInterval(() => {
       }
     }
   }
+  } catch(e) { console.error('[AI-LOOP ERROR]', e.message); }
 }, 200);
 
 function handleAttack(ws, playerId, msg) {
@@ -1212,8 +1214,10 @@ function sanitizeMonster(m) {
 }
 
 function broadcast(data, exclude = null) {
-  const payload = JSON.stringify(data);
-  wss.clients.forEach(c => { if (c !== exclude && c.readyState === 1) c.send(payload); });
+  try {
+    const payload = JSON.stringify(data);
+    wss.clients.forEach(c => { try { if (c !== exclude && c.readyState === 1) c.send(payload); } catch(_) {} });
+  } catch(_) {}
 }
 
 // --- Game Time (authoritative) ---
