@@ -51,6 +51,7 @@ const state = {
   lastMouseX: 0,
   lastMouseY: 0,
   monsters: {},
+  groundLoot: {},      // lootId → { mesh, glowMesh, items, x, z, spawnTime }
   damageNumbers: [],
   // Combat system
   targetedMonster: null,  // currently targeted monster id
@@ -897,7 +898,10 @@ function handleServerMessage(msg) {
         showLevelUpEffect();
         addChatMessage('System', `🎉 Level Up! Now Lv.${msg.level} (+1 SP)`);
       }
-      if (msg.loot?.length > 0) showLootPopup(msg.loot);
+      // Ground loot system: loot spawns as 3D objects, no popup
+      if (msg.loot?.length > 0) {
+        addChatMessage('System', `📦 Loot dropped on the ground nearby!`);
+      }
       break;
     }
 
@@ -982,6 +986,16 @@ function handleServerMessage(msg) {
         animateMonsterDeath(mob);
       }
       if (state.targetedMonster === msg.monsterId) cancelTarget();
+      break;
+    }
+
+    case 'ground_loot_spawn': {
+      spawnGroundLoot3D(msg.lootId, msg.items, msg.x, msg.z);
+      break;
+    }
+
+    case 'ground_loot_remove': {
+      removeGroundLoot3D(msg.lootId);
       break;
     }
 
@@ -2645,6 +2659,141 @@ document.getElementById('respawn-checkpoint').addEventListener('click', () => {
 // ============================
 // LOOT POPUP
 // ============================
+
+// ============================
+// GROUND LOOT (3D)
+// ============================
+function spawnGroundLoot3D(lootId, items, x, z) {
+  // Remove existing if any
+  removeGroundLoot3D(lootId);
+
+  // Pick first item's icon for the visual
+  const firstItem = items[0];
+  const iconId = firstItem?.id || 'potion_small';
+  const totalQty = items.reduce((s, it) => s + (it.quantity || 1), 0);
+
+  // Create canvas texture from drawItemIcon
+  const texCanvas = document.createElement('canvas');
+  texCanvas.width = 64;
+  texCanvas.height = 64;
+  const ctx = texCanvas.getContext('2d');
+  // Transparent background
+  ctx.clearRect(0, 0, 64, 64);
+  // Draw a slight glow circle behind the item
+  const grad = ctx.createRadialGradient(32, 32, 8, 32, 32, 32);
+  grad.addColorStop(0, 'rgba(255, 255, 150, 0.6)');
+  grad.addColorStop(1, 'rgba(255, 255, 150, 0.0)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, 64, 64);
+  // Draw the item icon
+  drawItemIcon(ctx, iconId, 64);
+  const texture = new THREE.CanvasTexture(texCanvas);
+  texture.needsUpdate = true;
+
+  // Flat plane mesh on ground, slightly above Y=0
+  const planeGeo = new THREE.PlaneGeometry(0.8, 0.8);
+  const planeMat = new THREE.MeshBasicMaterial({
+    map: texture,
+    transparent: true,
+    alphaTest: 0.1,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+  });
+  const mesh = new THREE.Mesh(planeGeo, planeMat);
+  mesh.rotation.x = -Math.PI / 2; // flat on ground
+  mesh.position.set(x, 0.3, z);
+  mesh.renderOrder = 10;
+  state.scene.add(mesh);
+
+  // Glow ring underneath
+  const glowGeo = new THREE.RingGeometry(0.3, 0.6, 16);
+  const glowMat = new THREE.MeshBasicMaterial({
+    color: 0xFFD700,
+    transparent: true,
+    opacity: 0.4,
+    side: THREE.DoubleSide,
+    depthWrite: false,
+  });
+  const glowMesh = new THREE.Mesh(glowGeo, glowMat);
+  glowMesh.rotation.x = -Math.PI / 2;
+  glowMesh.position.set(x, 0.05, z);
+  glowMesh.renderOrder = 9;
+  state.scene.add(glowMesh);
+
+  state.groundLoot[lootId] = {
+    mesh,
+    glowMesh,
+    items,
+    x,
+    z,
+    spawnTime: Date.now(),
+  };
+}
+
+function removeGroundLoot3D(lootId) {
+  const entry = state.groundLoot[lootId];
+  if (!entry) return;
+  if (entry.mesh) {
+    state.scene.remove(entry.mesh);
+    if (entry.mesh.geometry) entry.mesh.geometry.dispose();
+    if (entry.mesh.material) {
+      if (entry.mesh.material.map) entry.mesh.material.map.dispose();
+      entry.mesh.material.dispose();
+    }
+  }
+  if (entry.glowMesh) {
+    state.scene.remove(entry.glowMesh);
+    if (entry.glowMesh.geometry) entry.glowMesh.geometry.dispose();
+    if (entry.glowMesh.material) entry.glowMesh.material.dispose();
+  }
+  delete state.groundLoot[lootId];
+}
+
+// Auto-pickup ground loot when player walks near
+function checkGroundLootPickup() {
+  const playerModel = state.players[state.playerId];
+  if (!playerModel) return;
+  const px = playerModel.position.x;
+  const pz = playerModel.position.z;
+  const PICKUP_RADIUS = 1.5;
+
+  Object.keys(state.groundLoot).forEach(lootId => {
+    const entry = state.groundLoot[lootId];
+    const dx = px - entry.x;
+    const dz = pz - entry.z;
+    const dist = Math.sqrt(dx * dx + dz * dz);
+    if (dist < PICKUP_RADIUS) {
+      // Pick up!
+      const names = entry.items.map(i => `${i.name} x${i.quantity || 1}`).join(', ');
+      addChatMessage('System', `📦 Picked up: ${names}`);
+      window.ZenSFX?.pickup();
+      // Send pickup to server
+      wsSend(JSON.stringify({ type: 'pickup_loot', lootId }));
+      // Remove locally immediately (server will also broadcast remove)
+      removeGroundLoot3D(lootId);
+    }
+  });
+}
+
+// Animate ground loot bobbing
+function animateGroundLoot(time) {
+  Object.values(state.groundLoot).forEach(entry => {
+    if (entry.mesh) {
+      // Gentle Y bob: float between 0.2 and 0.5
+      entry.mesh.position.y = 0.3 + Math.sin(time * 2 + entry.x * 3) * 0.15;
+      // Slow rotation
+      entry.mesh.rotation.z = time * 0.5;
+    }
+    if (entry.glowMesh) {
+      // Pulsing glow
+      const pulse = 0.3 + Math.sin(time * 3) * 0.15;
+      entry.glowMesh.material.opacity = pulse;
+      const scale = 1 + Math.sin(time * 2) * 0.2;
+      entry.glowMesh.scale.set(scale, scale, 1);
+    }
+  });
+}
+
 function showLootPopup(loot) {
   if (!loot || loot.length === 0) return;
   pendingLoot = loot;
@@ -3927,6 +4076,11 @@ function gameLoop() {
 
   // Day/night cycle + compass
   updateDayNight(dt);
+
+  // Ground loot: bob animation + auto-pickup
+  animateGroundLoot(time);
+  checkGroundLootPickup();
+
   // Flashlight follows player
   if (state.flashlightOn && state.flashlight && playerModel) {
     state.flashlight.position.set(playerModel.position.x, playerModel.position.y + 2.5, playerModel.position.z);

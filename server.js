@@ -149,6 +149,31 @@ function initNPCs() {
 let world = loadWorld();
 const connectedPlayers = {};
 
+// --- Ground Loot System ---
+let groundLootIdCounter = 0;
+const groundLoot = {}; // lootId → { id, items, x, z, killerId, spawnTime }
+const GROUND_LOOT_DESPAWN_MS = 30000; // 30 seconds
+
+function spawnGroundLoot(lootItems, x, z, killerId) {
+  if (!lootItems || lootItems.length === 0) return;
+  const lootId = `gl_${++groundLootIdCounter}`;
+  groundLoot[lootId] = { id: lootId, items: lootItems, x, z, killerId, spawnTime: Date.now() };
+  broadcast({ type: 'ground_loot_spawn', lootId, items: lootItems, x, z });
+  return lootId;
+}
+
+// Despawn old ground loot every 5 seconds
+setInterval(() => {
+  const now = Date.now();
+  Object.keys(groundLoot).forEach(id => {
+    if (now - groundLoot[id].spawnTime > GROUND_LOOT_DESPAWN_MS) {
+      delete groundLoot[id];
+      broadcast({ type: 'ground_loot_remove', lootId: id });
+    }
+  });
+}, 5000);
+
+
 // Startup diagnostics
 const playerCount = Object.keys(world.players).length;
 console.log(`[BOOT] World loaded: ${playerCount} players saved`);
@@ -524,11 +549,11 @@ function handleAttack(ws, playerId, msg) {
     }
 
     // Loot
-    const loot = rollLoot(monster.type);
-    addLootToPlayer(player, loot);
-    trackQuestKills(player, monster.type);
+      const loot = rollLoot(monster.type);
+      trackQuestKills(player, monster.type);
+      spawnGroundLoot(loot, monster.x, monster.z, playerId);
 
-    broadcast({
+      broadcast({
       type: 'monster_killed',
       monsterId: monster.id,
       killerId: playerId,
@@ -1146,8 +1171,8 @@ function handleMessage(ws, playerId, msg) {
           ws.send(JSON.stringify({ type: 'level_up', level: player.level, xp: player.xp, maxHp: player.maxHp, maxMp: player.maxMp, unlockedSkills: player.unlockedSkills }));
         }
         const loot = rollLoot(monster.type);
-        addLootToPlayer(player, loot);
         trackQuestKills(player, monster.type);
+        spawnGroundLoot(loot, monster.x, monster.z, playerId);
         broadcast({
           type: 'monster_killed', monsterId: monster.id, killerId: playerId,
           xp: xpGain, zen: zenGain, loot, level: player.level,
@@ -1161,9 +1186,11 @@ function handleMessage(ws, playerId, msg) {
     }
     case 'pickup_loot': {
       const player = connectedPlayers[ws];
-      if (player) {
-        // Loot already added to inventory by addLootToPlayer on kill
-        // This just confirms pickup — update inventory UI
+      if (player && msg.lootId && groundLoot[msg.lootId]) {
+        const lootEntry = groundLoot[msg.lootId];
+        addLootToPlayer(player, lootEntry.items);
+        delete groundLoot[msg.lootId];
+        broadcast({ type: 'ground_loot_remove', lootId: msg.lootId });
         ws.send(JSON.stringify({ type: 'inventory_update', inventory: player.inventory }));
       }
       break;
