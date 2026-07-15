@@ -2772,12 +2772,12 @@ function tryPickupGroundLoot(mouseEvent) {
   if (!state.groundLoot || Object.keys(state.groundLoot).length === 0) return;
   if (!state.camera || !state.renderer) return;
   const PICKUP_PIXEL_RADIUS = 40; // click within 40px of loot icon
-  constClicked = new THREE.Vector3(mouseEvent.clientX, mouseEvent.clientY, 0.5);
-  constClicked.project(state.camera);
+  const clicked = new THREE.Vector3(mouseEvent.clientX, mouseEvent.clientY, 0.5);
+  clicked.project(state.camera);
   const halfW = window.innerWidth / 2;
   const halfH = window.innerHeight / 2;
-  const clickScreenX = (constClicked.x * halfW) + halfW;
-  const clickScreenY = -(constClicked.y * halfH) + halfH;
+  const clickScreenX = (clicked.x * halfW) + halfW;
+  const clickScreenY = -(clicked.y * halfH) + halfH;
 
   let closestId = null;
   let closestDist = Infinity;
