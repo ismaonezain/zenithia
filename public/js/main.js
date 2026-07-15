@@ -686,6 +686,8 @@ function enterSinglePlayer(playerName, wallet) {
   // Spawn player in world
   spawnPlayer(state.player);
   spawnGatheringNodes();
+  spawnKioskSpots();
+  wsSend(JSON.stringify({ type: 'kiosk_list' }));
   updatePlayerHP(state.player.hp, state.player.maxHp);
   updatePlayerMP(state.player.mp, state.player.maxMp);
   updatePlayerXP(state.player.xp, 100);
@@ -937,6 +939,65 @@ function handleServerMessage(msg) {
         state.player.inventory = msg.inventory;
         if (state.inventoryUI) state.inventoryUI.updatePlayer(state.player);
       }
+      break;
+    }
+    // Kiosk handlers
+    case 'kiosk_list': {
+      (msg.kiosks || []).forEach(k => {
+        _kioskData[k.id] = k;
+        updateKioskVisual(k.id, k.owner?.name);
+      });
+      break;
+    }
+    case 'kiosk_placed': {
+      if (state.player && msg.inventory) state.player.inventory = msg.inventory;
+      addChatMessage('System', '🏪 Kios dipasang!');
+      wsSend(JSON.stringify({ type: 'kiosk_list' }));
+      break;
+    }
+    case 'kiosk_browse': {
+      _kioskData[msg.spotId] = { owner: msg.owner, items: msg.items };
+      openKioskManageUI(msg.spotId);
+      break;
+    }
+    case 'kiosk_bought': {
+      if (state.player) {
+        state.player.inventory = msg.inventory;
+        state.player.zen = msg.zen;
+        if (state.inventoryUI) state.inventoryUI.updatePlayer(state.player);
+      }
+      addChatMessage('System', '✅ Beli ' + msg.qty + 'x item! -' + msg.cost + 'z');
+      wsSend(JSON.stringify({ type: 'kiosk_list' }));
+      break;
+    }
+    case 'kiosk_sale': {
+      if (state.player) state.player.zen = msg.zen;
+      addChatMessage('System', '💰 ' + msg.buyerName + ' beli ' + msg.qty + 'x ' + msg.itemName + ' — +' + msg.total + 'z');
+      break;
+    }
+    case 'kiosk_updated': {
+      if (state.player && msg.inventory) state.player.inventory = msg.inventory;
+      wsSend(JSON.stringify({ type: 'kiosk_list' }));
+      break;
+    }
+    case 'kiosk_removed_ok': {
+      if (state.player && msg.inventory) state.player.inventory = msg.inventory;
+      addChatMessage('System', '🏪 Kios dicabut, item dikembalikan.');
+      wsSend(JSON.stringify({ type: 'kiosk_list' }));
+      break;
+    }
+    case 'kiosk_update': {
+      _kioskData[msg.spotId] = { owner: msg.owner, itemCount: msg.itemCount };
+      updateKioskVisual(msg.spotId, msg.owner?.name);
+      break;
+    }
+    case 'kiosk_removed': {
+      delete _kioskData[msg.spotId];
+      updateKioskVisual(msg.spotId, null);
+      break;
+    }
+    case 'kiosk_error': {
+      addChatMessage('System', '🏪 ' + msg.error);
       break;
     }
     case 'system_message': {
@@ -1808,6 +1869,166 @@ function closeTradeUI() {
   if (old) old.remove();
   const picker = document.getElementById('trade-picker');
   if (picker) picker.remove();
+}
+
+
+// ============================
+// PLAYER KIOSKS
+// ============================
+const KIOSK_SPOTS_CLIENT = [
+  { id: 'kiosk_1', x: 8, z: -4, name: 'Kios Utara 1' },
+  { id: 'kiosk_2', x: 10, z: -2, name: 'Kios Utara 2' },
+  { id: 'kiosk_3', x: 8, z: 0, name: 'Kios Tengah 1' },
+  { id: 'kiosk_4', x: 10, z: 2, name: 'Kios Tengah 2' },
+  { id: 'kiosk_5', x: 6, z: 4, name: 'Kios Selatan 1' },
+  { id: 'kiosk_6', x: 4, z: 6, name: 'Kios Selatan 2' },
+];
+let _kioskMarkers = []; // 3D meshes for kiosk spots
+let _kioskData = {}; // spotId → { owner, itemCount }
+
+function spawnKioskSpots() {
+  if (!state.scene) return;
+  KIOSK_SPOTS_CLIENT.forEach(spot => {
+    // Flat cylinder as kiosk base
+    const geo = new THREE.CylinderGeometry(0.8, 0.8, 0.15, 8);
+    const mat = new THREE.MeshBasicMaterial({ color: 0xFFC107, transparent: true, opacity: 0.5 });
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.position.set(spot.x, 0.1, spot.z);
+    mesh.userData = { type: 'kiosk_spot', id: spot.id, name: spot.name };
+    state.scene.add(mesh);
+    _kioskMarkers.push(mesh);
+    if (!state._gatherNodes) state._gatherNodes = [];
+    state._gatherNodes.push(mesh);
+  });
+}
+
+function updateKioskVisual(spotId, ownerName) {
+  const mesh = _kioskMarkers.find(m => m.userData?.id === spotId);
+  if (!mesh) return;
+  if (ownerName) {
+    mesh.material.color.setHex(0x4CAF50);
+    mesh.material.opacity = 0.8;
+  } else {
+    mesh.material.color.setHex(0xFFC107);
+    mesh.material.opacity = 0.5;
+  }
+}
+
+function openKioskManageUI(spotId) {
+  closeKioskUI();
+  const spot = KIOSK_SPOTS_CLIENT.find(s => s.id === spotId);
+  const data = _kioskData[spotId];
+  const isOwner = data && state.player && data.owner && data.owner.id === state.playerId;
+  const myInventory = state.player?.inventory || [];
+
+  const modal = document.createElement('div');
+  modal.id = 'kiosk-modal';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.7);';
+
+  let html = '';
+  if (!data) {
+    // Empty kiosk spot — can place
+    html = `
+      <div style="background:#1a1a2e;border:2px solid #FFC107;border-radius:16px;padding:20px;width:400px;color:#fff;font-family:"Courier New",monospace;">
+        <h3 style="color:#FFC107;margin:0 0 12px;text-align:center;">🏪 ${spot.name}</h3>
+        <p style="color:#aaa;text-align:center;margin-bottom:12px;">Spot kosong — pasang kios kamu!</p>
+        <div id="kiosk-inventory" style="max-height:250px;overflow-y:auto;margin-bottom:12px;">
+          ${myInventory.length === 0 ? '<p style="color:#666;text-align:center;">Inventory kosong</p>' :
+            myInventory.map(item => `
+              <div class="kiosk-inv-item" data-item-id="${item.id}" style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;border-bottom:1px solid #333;cursor:pointer;" onmouseover="this.style.background='#333'" onmouseout="this.style.background='transparent'">
+                <span>${item.name} x${item.quantity || 1}</span>
+                <div>
+                  <input type="number" class="kiosk-price-input" data-item-id="${item.id}" value="${item.price || 1}" min="1" style="width:60px;background:#222;color:#FFC107;border:1px solid #FFC107;border-radius:4px;padding:2px 4px;text-align:center;font-size:0.8rem;"> <span style="color:#FFC107;font-size:0.8rem;">z</span>
+                </div>
+              </div>
+            `).join('')}
+        </div>
+        <button id="kiosk-place-btn" style="width:100%;background:#FFC107;color:#000;border:none;padding:10px;border-radius:8px;cursor:pointer;font-weight:bold;">🏪 Pasang Kios</button>
+      </div>
+    `;
+  } else if (isOwner) {
+    // My kiosk — manage
+    html = `
+      <div style="background:#1a1a2e;border:2px solid #4CAF50;border-radius:16px;padding:20px;width:400px;color:#fff;font-family:"Courier New",monospace;">
+        <h3 style="color:#4CAF50;margin:0 0 12px;text-align:center;">🏪 Kios Saya — ${spot.name}</h3>
+        <div id="kiosk-manage-items" style="max-height:250px;overflow-y:auto;margin-bottom:12px;">
+          ${data.items.length === 0 ? '<p style="color:#666;text-align:center;">Kios kosong</p>' :
+            data.items.map(item => `
+              <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;border-bottom:1px solid #333;">
+                <span>${item.name} x${item.quantity}</span>
+                <span style="color:#FFC107;">${item.price}z</span>
+              </div>
+            `).join('')}
+        </div>
+        <button id="kiosk-remove-btn" style="width:100%;background:#F44336;color:#fff;border:none;padding:10px;border-radius:8px;cursor:pointer;font-weight:bold;">✕ Cabut Kios</button>
+      </div>
+    `;
+  } else {
+    // Someone else's kiosk — browse & buy
+    html = `
+      <div style="background:#1a1a2e;border:2px solid #2196F3;border-radius:16px;padding:20px;width:400px;color:#fff;font-family:"Courier New",monospace;">
+        <h3 style="color:#2196F3;margin:0 0 4px;text-align:center;">🏪 ${data.owner.name}</h3>
+        <p style="color:#aaa;text-align:center;margin-bottom:12px;font-size:0.85rem;">${spot.name}</p>
+        <div style="max-height:250px;overflow-y:auto;margin-bottom:12px;">
+          ${data.items.length === 0 ? '<p style="color:#666;text-align:center;">Habis terjual</p>' :
+            data.items.map(item => `
+              <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;border-bottom:1px solid #333;">
+                <span>${item.name} x${item.quantity}</span>
+                <div>
+                  <span style="color:#FFC107;font-weight:bold;">${item.price}z</span>
+                  <button class="kiosk-buy-btn" data-item-id="${item.id}" data-price="${item.price}" style="background:#2196F3;color:#fff;border:none;padding:2px 8px;border-radius:4px;cursor:pointer;margin-left:4px;font-size:0.75rem;">Beli</button>
+                </div>
+              </div>
+            `).join('')}
+        </div>
+        <div style="color:#aaa;text-align:center;font-size:0.8rem;">Zen kamu: <span style="color:#FFC107;">${state.player?.zen || 0}z</span></div>
+      </div>
+    `;
+  }
+
+  modal.innerHTML = html;
+  document.body.appendChild(modal);
+
+  // Place kiosk button
+  if (!data) {
+    document.getElementById('kiosk-place-btn')?.addEventListener('click', () => {
+      const items = [];
+      document.querySelectorAll('.kiosk-price-input').forEach(input => {
+        const itemId = input.dataset.itemId;
+        const price = parseInt(input.value) || 1;
+        items.push({ itemId, price, quantity: 999 }); // qty 999 = all available
+      });
+      if (items.length === 0) { addChatMessage('System', 'Pilih item dulu!'); return; }
+      wsSend(JSON.stringify({ type: 'kiosk_place', spotId, items }));
+      closeKioskUI();
+    });
+  }
+
+  // Remove kiosk button
+  if (isOwner) {
+    document.getElementById('kiosk-remove-btn')?.addEventListener('click', () => {
+      wsSend(JSON.stringify({ type: 'kiosk_remove' }));
+      closeKioskUI();
+    });
+  }
+
+  // Buy buttons
+  modal.querySelectorAll('.kiosk-buy-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const itemId = btn.dataset.itemId;
+      const price = parseInt(btn.dataset.price);
+      if ((state.player?.zen || 0) < price) {
+        addChatMessage('System', 'Zen tidak cukup!');
+        return;
+      }
+      wsSend(JSON.stringify({ type: 'kiosk_buy', spotId, itemId, quantity: 1 }));
+    });
+  });
+}
+
+function closeKioskUI() {
+  const old = document.getElementById('kiosk-modal');
+  if (old) old.remove();
 }
 
 // ============================
@@ -2766,6 +2987,15 @@ canvas.addEventListener('click', (e) => {
         wsSend(JSON.stringify({ type: 'fish_cast', spotId: hit.userData.id }));
       } else if (hit.userData.type === 'gather_node') {
         wsSend(JSON.stringify({ type: 'gather_node', nodeId: hit.userData.id }));
+      } else if (hit.userData.type === 'kiosk_spot') {
+        const kd = _kioskData[hit.userData.id];
+        if (kd && kd.owner) {
+          // Someone's kiosk — browse
+          wsSend(JSON.stringify({ type: 'kiosk_browse', spotId: hit.userData.id }));
+        } else {
+          // Empty spot — open place UI
+          openKioskManageUI(hit.userData.id);
+        }
       }
       return; // don't process further
     } else {
