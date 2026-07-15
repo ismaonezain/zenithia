@@ -5029,13 +5029,7 @@ function updateDayNight(dt) {
   state.ambientLight.intensity = ambientIntensity;
   state.ambientLight.color.set(ambientColor);
 
-  // DEBUG: log lighting values every 5 seconds
-  if (!state._lastLightLog || Date.now() - state._lastLightLog > 5000) {
-    const sunHex = state.sunLight.color.getHexString ? state.sunLight.color.getHexString() : String(state.sunLight.color);
-    const bgHex = state.scene.background?.getHexString ? state.scene.background.getHexString() : 'N/A';
-    console.log(`[LIGHT] t=${t.toFixed(3)} h=${(t*24).toFixed(1)} sunInt=${state.sunLight.intensity.toFixed(3)} ambInt=${state.ambientLight.intensity.toFixed(3)} sunColor=${sunHex} bg=${bgHex}`);
-    state._lastLightLog = Date.now();
-  }
+
 
   // Update sun mesh position (follows light)
   if (state.sunMesh) {
