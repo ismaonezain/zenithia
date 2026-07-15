@@ -1040,7 +1040,16 @@ function handleServerMessage(msg) {
         console.log('[ZONE] Ignoring stale zone_enter:', msg.zone?.id, '(expected:', state._expectedZone + ')');
         break;
       }
-      state._expectedZone = null; // clear after match
+      // Portal click: full scene reload (like fresh login)
+      if (state._expectedZone) {
+        state._expectedZone = null;
+        // Show zone overlay first, then reload
+        showZoneOverlay(msg.zone?.name, msg.zone?.subtitle, msg.zone?.level);
+        console.log('[ZONE] Reloading for zone:', msg.zone?.id);
+        setTimeout(() => { window.location.reload(); }, 1500);
+        break;
+      }
+      state._expectedZone = null;
       enterZone(msg.zone);
       break;
     }
