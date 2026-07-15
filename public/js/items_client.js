@@ -4,6 +4,7 @@
 
 export const ITEM_PRICES = {
   aether_pendant: 350,
+  ancient_heart: 100,
   antidote: 40,
   arcane_focus: 700,
   arcane_legguards: 500,

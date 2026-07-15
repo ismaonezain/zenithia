@@ -22,6 +22,7 @@ const state = {
   players: {},
   npcs: {},
   connected: false,
+  activeBoss: null,
   targetPos: null,
   interactTarget: null,
   persistentId: (() => {
@@ -869,6 +870,50 @@ function handleServerMessage(msg) {
       // Don't auto-open shop — let dialogue add Buy/Sell button for merchants
       break;
 
+    case 'system_message': {
+      addChatMessage('System', msg.message);
+      break;
+    }
+    case 'boss_spawn': {
+      state.activeBoss = msg.boss;
+      showBossHPBar(msg.boss.name, msg.boss.title, msg.boss.hp, msg.boss.maxHp);
+      addChatMessage('System', '⚔️ BOSS: ' + msg.boss.name + ' (' + msg.boss.title + ') Level ' + msg.boss.level + ' — HP: ' + msg.boss.hp + '/' + msg.boss.maxHp);
+      break;
+    }
+    case 'boss_killed': {
+      state.activeBoss = null;
+      closeBossHPBar();
+      if (msg.killerName) {
+        addChatMessage('System', '🏆 ' + msg.killerName + ' defeated the boss!');
+      } else {
+        addChatMessage('System', '🏆 Boss defeated!');
+      }
+      break;
+    }
+    case 'boss_hp_update': {
+      if (state.activeBoss) {
+        state.activeBoss.hp = msg.hp;
+        state.activeBoss.maxHp = msg.maxHp;
+        updateBossHPBar(msg.hp, msg.maxHp);
+      }
+      break;
+    }
+    case 'boss_ability': {
+      if (msg.ability === 'slam') {
+        addChatMessage('System', '💥 Boss uses SLAM! AoE damage!');
+        showBossAbilityEffect('slam', msg.x, msg.z, msg.radius);
+      } else if (msg.ability === 'summon') {
+        addChatMessage('System', '📢 Boss summoned ' + msg.count + ' minions!');
+      } else if (msg.ability === 'charge') {
+        addChatMessage('System', '⚡ Boss CHARGES at target!');
+      }
+      break;
+    }
+    case 'boss_hit_you': {
+      const dmg = msg.damage;
+      addChatMessage('System', '⚠️ Boss ' + msg.ability.toUpperCase() + ' hit you for ' + dmg + ' damage!');
+      break;
+    }
     case 'monster_killed': {
       window.ZenSFX?.monsterDeath();
       // Server confirmed kill — update loot, XP, etc.
@@ -1068,9 +1113,13 @@ function handleServerMessage(msg) {
 
     case 'xp_penalty': {
       state.player.xp = msg.xp;
-      addChatMessage('System', `💀 XP penalty: -${msg.xpLoss} XP`);
+      if (msg.zen !== undefined) state.player.zen = msg.zen;
+      let deathMsg = '💀 XP penalty: -' + msg.xpLoss + ' XP';
+      if (msg.goldLoss) deathMsg += ' & -' + msg.goldLoss + ' Zen';
+      addChatMessage('System', deathMsg);
       const xpNeeded = 100 + ((state.player.level || 1) - 1) * 200;
       updatePlayerXP(state.player.xp, xpNeeded);
+      if (state.inventoryUI) state.inventoryUI.updatePlayer(state.player);
       break;
     }
 
@@ -1492,6 +1541,61 @@ function closeGatheringUI() {
   if (old) old.remove();
 }
 
+
+// ============================
+// WORLD BOSS UI
+// ============================
+function showBossHPBar(name, title, hp, maxHp) {
+  closeBossHPBar();
+  const bar = document.createElement('div');
+  bar.id = 'boss-hp-bar';
+  bar.style.cssText = 'position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:150;background:#1a1a2e;border:2px solid #F44336;border-radius:12px;padding:8px 20px;color:#fff;font-family:"Courier New",monospace;text-align:center;min-width:300px;box-shadow:0 0 20px rgba(244,67,54,0.4);';
+  bar.innerHTML = `
+    <div style="color:#F44336;font-weight:bold;font-size:0.9rem;">⚔️ ${name} <span style="color:#aaa;font-size:0.75rem;">${title}</span></div>
+    <div style="background:#333;border-radius:6px;height:14px;overflow:hidden;margin:6px 0;">
+      <div id="boss-hp-fill" style="height:100%;width:${(hp/maxHp*100)}%;background:linear-gradient(90deg,#F44336,#FF5722);border-radius:6px;transition:width 0.3s;"></div>
+    </div>
+    <div style="font-size:0.75rem;color:#aaa;"><span id="boss-hp-text">${hp}/${maxHp}</span></div>
+  `;
+  document.body.appendChild(bar);
+}
+
+function updateBossHPBar(hp, maxHp) {
+  const fill = document.getElementById('boss-hp-fill');
+  const text = document.getElementById('boss-hp-text');
+  if (fill) fill.style.width = (hp/maxHp*100) + '%';
+  if (text) text.textContent = hp + '/' + maxHp;
+}
+
+function closeBossHPBar() {
+  const old = document.getElementById('boss-hp-bar');
+  if (old) old.remove();
+}
+
+function showBossAbilityEffect(ability, x, z, radius) {
+  if (!state.scene) return;
+  if (ability === 'slam') {
+    // Red expanding ring
+    const geo = new THREE.RingGeometry(0.5, 1, 32);
+    const mat = new THREE.MeshBasicMaterial({ color: 0xFF0000, transparent: true, opacity: 0.6, side: THREE.DoubleSide });
+    const ring = new THREE.Mesh(geo, mat);
+    ring.rotation.x = -Math.PI / 2;
+    ring.position.set(x, 0.2, z);
+    state.scene.add(ring);
+    // Animate expand
+    let scale = 1;
+    const expand = setInterval(() => {
+      scale += 0.15;
+      ring.scale.set(scale, scale, scale);
+      mat.opacity -= 0.04;
+      if (mat.opacity <= 0) {
+        clearInterval(expand);
+        state.scene.remove(ring);
+      }
+    }, 30);
+  }
+}
+
 // ============================
 // GATHERING NODES (3D markers)
 // ============================
@@ -1762,6 +1866,7 @@ const MONSTER_DATA = {
   wind_sprite: { name: 'Wind Sprite', color: 0x81D4FA, accentColor: 0xB3E5FC, size: 0.4 },
   rock_crawler: { name: 'Rock Crawler', color: 0x9E9E9E, accentColor: 0xBDBDBD, size: 0.45 },
   bramble_boar: { name: 'Bramble Boar', color: 0x5D4037, accentColor: 0x8D6E63, size: 1.2 },
+  thornback_ancient: { name: 'Thornback Ancient', color: 0x33691E, accentColor: 0x76FF03, size: 2.0, isBoss: true },
 };
 
 function spawnMonsterClient(m) {

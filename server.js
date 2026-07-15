@@ -17,6 +17,7 @@ const { QUESTS, NPC_QUESTS } = require('./shared/quests');
 const { SHOPS } = require('./shared/shop');
 const { CRAFTING_RECIPES } = require('./shared/crafting');
 const { FISHING_SPOTS, FISHING_LOOT, GATHERING_NODES, GATHERING_LOOT } = require('./shared/gathering');
+const { WORLD_BOSSES } = require('./shared/bosses');
 
 // Module-level CLASS_STATS (used by getOrCreatePlayer + recalcClassStats)
 const CLASS_STATS = {
@@ -177,6 +178,9 @@ const fishingCooldowns = {}; // playerId → Date.now() when available again
 const FISHING_CAST_MS = 3000; // 3 seconds auto-fishing
 const FISHING_COOLDOWN_MS = 8000; // 8 seconds cooldown
 const GATHERING_CAST_MS = 2000; // 2 seconds gathering
+
+// World Boss state
+const bossState = {}; // bossId → { alive, hp, maxHp, target, lastAbility, nextSpawn, adds }
 
 function spawnGroundLoot(lootItems, x, z, killerId) {
   if (!lootItems || lootItems.length === 0) return;
@@ -368,12 +372,179 @@ function respawnMonster(monster) {
   monster.state = 'idle';
 }
 
+
+
+// ═══════════════════════════════════════
+// WORLD BOSS SYSTEM
+// ═══════════════════════════════════════
+function spawnWorldBoss(bossId) {
+  const data = WORLD_BOSSES[bossId];
+  if (!data) return;
+  const area = data.spawnAreas[Math.floor(Math.random() * data.spawnAreas.length)];
+  const angle = Math.random() * Math.PI * 2;
+  const dist = Math.random() * area.radius;
+  const boss = {
+    id: `boss_${bossId}`,
+    type: bossId,
+    name: data.name,
+    title: data.title,
+    x: area.x + Math.cos(angle) * dist,
+    y: 0,
+    z: area.z + Math.sin(angle) * dist,
+    spawnX: area.x + Math.cos(angle) * dist,
+    spawnZ: area.z + Math.sin(angle) * dist,
+    hp: data.hp,
+    maxHp: data.hp,
+    atk: data.atk,
+    def: data.def,
+    spd: data.spd,
+    level: data.level,
+    alive: true,
+    targetId: null,
+    state: 'idle',
+    lastAttack: 0,
+    lastAbility: {},
+    isBoss: true,
+    adds: [],
+  };
+  world.monsters[boss.id] = boss;
+  bossState[bossId] = { alive: true, hp: data.hp, nextSpawn: Date.now() + data.spawnInterval };
+  broadcast({ type: 'boss_spawn', boss: { id: boss.id, name: data.name, title: data.title, level: data.level, hp: data.hp, maxHp: data.hp, x: boss.x, z: boss.z } });
+  broadcast({ type: 'monster_spawn', monster: sanitizeMonster(boss) });
+  broadcast({ type: 'system_message', message: '⚠️ ' + data.name + ' (' + data.title + ') telah muncul! Level ' + data.level + ' — kumpulkan party!' });
+  console.log('[BOSS] ' + data.name + ' spawned at (' + boss.x.toFixed(0) + ',' + boss.z.toFixed(0) + ')');
+}
+
+function bossUseAbility(boss, data, target, abilityDef) {
+  const now = Date.now();
+  if (boss.lastAbility[abilityDef.name] && now - boss.lastAbility[abilityDef.name] < abilityDef.cooldown) return;
+  if (Math.random() > abilityDef.chance) return;
+  boss.lastAbility[abilityDef.name] = now;
+
+  if (abilityDef.name === 'slam') {
+    // AoE damage to all nearby players
+    broadcast({ type: 'boss_ability', bossId: boss.id, ability: 'slam', x: boss.x, z: boss.z, radius: abilityDef.radius });
+    for (const p of Object.values(connectedPlayers)) {
+      if (!p || p.hp <= 0) continue;
+      const dx = (p.x || 0) - boss.x;
+      const dz = (p.z || 0) - boss.z;
+      const d = Math.sqrt(dx * dx + dz * dz);
+      if (d <= abilityDef.radius) {
+        const dmg = Math.max(1, abilityDef.damage - (p.def || 0));
+        p.hp = Math.max(0, p.hp - dmg);
+        const pWs = playerWs.get(p.id);
+        if (pWs && pWs.readyState === 1) {
+          pWs.send(JSON.stringify({ type: 'boss_hit_you', bossId: boss.id, ability: 'slam', damage: dmg }));
+        }
+        if (p.hp <= 0) {
+          const xpLoss = Math.max(1, Math.floor(p.xp * 0.1));
+          p.xp = Math.max(0, p.xp - xpLoss);
+          broadcast({ type: 'player_died', targetId: p.id, xpLoss });
+          if (pWs && pWs.readyState === 1) {
+            pWs.send(JSON.stringify({ type: 'xp_penalty', xpLoss, xp: p.xp }));
+            setTimeout(() => {
+              p.hp = p.maxHp; p.mp = p.maxMp; p.x = 0; p.z = 0;
+              const freshWs = playerWs.get(p.id);
+              if (freshWs && freshWs.readyState === 1) {
+                freshWs.send(JSON.stringify({ type: 'respawned', x: 0, z: 0, hp: p.hp, maxHp: p.maxHp, mp: p.mp, maxMp: p.maxMp }));
+              }
+              broadcast({ type: 'player_respawn', targetId: p.id, hp: p.hp, maxHp: p.maxHp, x: 0, z: 0 });
+            }, 5000);
+          }
+          m.state = 'idle';
+        }
+      }
+    }
+    console.log('[BOSS] ' + boss.id + ' used SLAM — radius ' + abilityDef.radius);
+  } else if (abilityDef.name === 'summon') {
+    // Spawn minions
+    for (let i = 0; i < abilityDef.count; i++) {
+      const addType = abilityDef.type;
+      const addData = MONSTERS[addType];
+      if (!addData) continue;
+      const addAngle = Math.random() * Math.PI * 2;
+      const addDist = 2 + Math.random() * 2;
+      const add = {
+        id: `boss_add_${boss.id}_${Date.now()}_${i}`,
+        type: addType,
+        name: addData.name + ' (Minion)',
+        x: boss.x + Math.cos(addAngle) * addDist,
+        y: 0,
+        z: boss.z + Math.sin(addAngle) * addDist,
+        spawnX: boss.x + Math.cos(addAngle) * addDist,
+        spawnZ: boss.z + Math.sin(addAngle) * addDist,
+        hp: Math.floor(addData.hp * 0.5),
+        maxHp: Math.floor(addData.hp * 0.5),
+        atk: addData.atk,
+        def: addData.def,
+        spd: addData.spd,
+        level: addData.level,
+        alive: true,
+        targetId: null,
+        state: 'idle',
+        lastAttack: 0,
+      };
+      world.monsters[add.id] = add;
+      boss.adds.push(add.id);
+      broadcast({ type: 'monster_spawn', monster: sanitizeMonster(add) });
+    }
+    broadcast({ type: 'boss_ability', bossId: boss.id, ability: 'summon', count: abilityDef.count });
+    console.log('[BOSS] ' + boss.id + ' summoned ' + abilityDef.count + ' adds');
+  } else if (abilityDef.name === 'charge') {
+    // High single-target damage
+    if (!target) return;
+    const dx = (target.x || 0) - boss.x;
+    const dz = (target.z || 0) - boss.z;
+    const d = Math.sqrt(dx * dx + dz * dz);
+    if (d > abilityDef.range) return;
+    const dmg = Math.max(1, abilityDef.damage - (target.def || 0));
+    target.hp = Math.max(0, target.hp - dmg);
+    const tWs = playerWs.get(target.id);
+    if (tWs && tWs.readyState === 1) {
+      tWs.send(JSON.stringify({ type: 'boss_hit_you', bossId: boss.id, ability: 'charge', damage: dmg }));
+    }
+    broadcast({ type: 'boss_ability', bossId: boss.id, ability: 'charge', targetId: target.id, damage: dmg });
+    if (target.hp <= 0) {
+      const xpLoss = Math.max(1, Math.floor(target.xp * 0.1));
+      target.xp = Math.max(0, target.xp - xpLoss);
+      broadcast({ type: 'player_died', targetId: target.id, xpLoss });
+      if (tWs && tWs.readyState === 1) {
+        tWs.send(JSON.stringify({ type: 'xp_penalty', xpLoss, xp: target.xp }));
+        setTimeout(() => {
+          target.hp = target.maxHp; target.mp = target.maxMp; target.x = 0; target.z = 0;
+          const freshWs = playerWs.get(target.id);
+          if (freshWs && freshWs.readyState === 1) {
+            freshWs.send(JSON.stringify({ type: 'respawned', x: 0, z: 0, hp: target.hp, maxHp: target.maxHp, mp: target.mp, maxMp: target.maxMp }));
+          }
+          broadcast({ type: 'player_respawn', targetId: target.id, hp: target.hp, maxHp: target.maxHp, x: 0, z: 0 });
+        }, 5000);
+      }
+      boss.targetId = null;
+    }
+    console.log('[BOSS] ' + boss.id + ' CHARGED ' + target.id + ' for ' + dmg + ' damage');
+  }
+}
+
+// Boss spawn timer
+setInterval(() => { try {
+  for (const [bossId, data] of Object.entries(WORLD_BOSSES)) {
+    const state = bossState[bossId];
+    // Check if boss needs to spawn
+    if (!state || (!state.alive && Date.now() >= (state.nextSpawn || 0))) {
+      // Clean up dead boss
+      if (state && state.alive) continue;
+      spawnWorldBoss(bossId);
+    }
+  }
+} catch(e) { console.error('[BOSS-TIMER ERROR]', e.message); } }, 10000);
+
 // Spawn initial monsters
 spawnMonsters();
 
 // Respawn timer
 setInterval(() => { try {
   Object.values(world.monsters).forEach(m => {
+    if (m.isBoss) return; // bosses use their own spawn timer
     if (!m.alive && !m.respawnAt) {
       m.respawnAt = Date.now() + (MONSTERS[m.type]?.respawnTime || 30) * 1000;
       console.log(`[RESPAWN] ${m.id}(${m.type}) scheduled respawn in ${MONSTERS[m.type]?.respawnTime || 30}s`);
@@ -409,9 +580,41 @@ setInterval(() => {
 
     // Dead check
     if (m.hp <= 0) {
+      // Boss cleanup in AI loop
+      if (m.isBoss) {
+        const bd = WORLD_BOSSES[m.type];
+        if (bd && bossState[m.type]) {
+          bossState[m.type].alive = false;
+          bossState[m.type].nextSpawn = Date.now() + bd.spawnInterval;
+        }
+        if (m.adds) {
+          for (const addId of m.adds) {
+            if (world.monsters[addId] && world.monsters[addId].alive) {
+              world.monsters[addId].alive = false;
+              broadcast({ type: 'monster_killed', monsterId: addId, killerId: 'system' });
+            }
+          }
+          m.adds = [];
+        }
+        broadcast({ type: 'boss_killed', bossId: m.id, bossType: m.type });
+        broadcast({ type: 'system_message', message: '💀 ' + (bd?.name || 'Boss') + ' telah dikalahkan!' });
+      }
       m.alive = false;
       m.state = 'idle';
       continue;
+    }
+
+    // Boss AI — use abilities
+    if (m.isBoss) {
+      const bossData = WORLD_BOSSES[m.type];
+      if (bossData && m.targetId) {
+        const targetPlayer = connectedPlayers[m.targetId];
+        if (targetPlayer && targetPlayer.hp > 0) {
+          for (const ability of bossData.abilities) {
+            bossUseAbility(m, bossData, targetPlayer, ability);
+          }
+        }
+      }
     }
 
     // Find closest player
@@ -465,11 +668,14 @@ setInterval(() => {
           // XP penalty: lose 10% of current XP (min 0)
           const xpLoss = Math.max(1, Math.floor(closestPlayer.xp * 0.1));
           closestPlayer.xp = Math.max(0, closestPlayer.xp - xpLoss);
+          // Gold penalty: lose 10% of gold (capped at 50z)
+          const goldLoss = Math.min(50, Math.max(1, Math.floor((closestPlayer.zen || 0) * 0.1)));
+          closestPlayer.zen = Math.max(0, (closestPlayer.zen || 0) - goldLoss);
           // Use playerWs Map — _ws on player objects breaks JSON.stringify
           const dyingWs = playerWs.get(closestPlayer.id);
-          broadcast({ type: 'player_died', targetId: closestPlayer.id, xpLoss });
+          broadcast({ type: 'player_died', targetId: closestPlayer.id, xpLoss, goldLoss });
           if (dyingWs && dyingWs.readyState === 1) {
-            dyingWs.send(JSON.stringify({ type: 'xp_penalty', xpLoss, xp: closestPlayer.xp }));
+            dyingWs.send(JSON.stringify({ type: 'xp_penalty', xpLoss, xp: closestPlayer.xp, goldLoss, zen: closestPlayer.zen }));
           }
           // Auto-respawn after 5 seconds
           setTimeout(() => {
@@ -548,12 +754,70 @@ function handleAttack(ws, playerId, msg) {
     maxHp: monster.maxHp,
   });
 
+  // Boss HP update to all clients
+  if (monster.isBoss) {
+    broadcast({
+      type: 'boss_hp_update',
+      bossId: monster.id,
+      hp: Math.max(0, monster.hp),
+      maxHp: monster.maxHp,
+    });
+  }
+
   // Monster died
   if (monster.hp <= 0) {
     monster.alive = false;
     monster.hp = 0;
 
-    // XP + Gold reward
+    // Boss death — special handling
+    if (monster.isBoss) {
+      const bossData = WORLD_BOSSES[monster.type];
+      if (bossData) {
+        // Remove adds
+        if (monster.adds) {
+          for (const addId of monster.adds) {
+            if (world.monsters[addId]) {
+              world.monsters[addId].alive = false;
+              broadcast({ type: 'monster_killed', monsterId: addId, killerId: playerId });
+            }
+          }
+          monster.adds = [];
+        }
+        // Boss loot
+        const bossLoot = [];
+        for (const entry of bossData.loot) {
+          if (Math.random() <= entry.chance) {
+            const qty = entry.qty[0] + Math.floor(Math.random() * (entry.qty[1] - entry.qty[0] + 1));
+            const def = ITEMS[entry.itemId];
+            bossLoot.push({ id: entry.itemId, name: def?.name || entry.itemId, type: def?.type || 'material', quantity: qty, icon: def?.icon });
+          }
+        }
+        spawnGroundLoot(bossLoot, monster.x, monster.z, playerId);
+        player.xp += bossData.xpReward;
+        // Level up check
+        const xpNeeded = 100 + (player.level - 1) * 200;
+        let leveledUp = false;
+        if (player.xp >= xpNeeded) {
+          player.level++;
+          player.xp -= xpNeeded;
+          player.maxHp += 10; player.hp = player.maxHp;
+          player.maxMp += 5; player.mp = player.maxMp;
+          player.atk += 1; player.def += 1;
+          leveledUp = true;
+        }
+        // Mark boss dead + schedule next spawn
+        if (bossState[monster.type]) {
+          bossState[monster.type].alive = false;
+          bossState[monster.type].nextSpawn = Date.now() + bossData.spawnInterval;
+        }
+        broadcast({ type: 'boss_killed', bossId: monster.id, bossType: monster.type, killerId: playerId, killerName: player.name });
+        broadcast({ type: 'system_message', message: '🏆 ' + player.name + ' telah mengalahkan ' + bossData.name + '! +500 XP!' });
+        saveWorld();
+        return; // skip normal monster loot (boss handled)
+      }
+    }
+
+    // XP + Gold reward (normal mobs)
     const xpGain = data.xp || 0;
     const zenGain = data.zen ? data.zen[0] + Math.floor(Math.random() * (data.zen[1] - data.zen[0])) : 0;
     player.xp += xpGain;
@@ -1384,7 +1648,7 @@ function handleMessage(ws, playerId, msg) {
 }
 
 function sanitizeMonster(m) {
-  return { id: m.id, type: m.type, name: m.name, x: m.x, y: m.y, z: m.z, hp: m.hp, maxHp: m.maxHp, level: m.level, alive: m.alive };
+  return { id: m.id, type: m.type, name: m.name, x: m.x, y: m.y, z: m.z, hp: m.hp, maxHp: m.maxHp, level: m.level, alive: m.alive, isBoss: m.isBoss || false };
 }
 
 function broadcast(data, exclude = null) {
