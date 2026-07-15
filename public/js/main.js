@@ -2584,7 +2584,7 @@ const MONSTER_DATA = {
 };
 
 function spawnMonsterClient(m) {
-  const data = MONSTER_DATA[m.type] || { name: m.name, color: 0x999999, size: 0.5 };
+  const data = MONSTER_DATA[m.type] || { name: m.name, color: 0x999999, accentColor: 0xBBBBBB, size: 0.5 };
   const model = createMonsterModel(m.type, { ...data, name: m.name, size: data.size });
   model.position.set(m.x, 0, m.z);
   // Preserve hpBar reference from createMonsterModel, add our fields

@@ -1794,6 +1794,9 @@ const MONSTER_MODELS = {
 
 // Create monster model
 export function createMonsterModel(monsterType, monsterData) {
+  // Ensure color/accentColor are always defined to prevent THREE.Material warnings
+  if (!monsterData.color) monsterData.color = 0x999999;
+  if (!monsterData.accentColor) monsterData.accentColor = 0xBBBBBB;
   const group = new THREE.Group();
 
   const modelFn = MONSTER_MODELS[monsterType];
