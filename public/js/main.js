@@ -4933,7 +4933,7 @@ function updateDayNight(dt) {
 
   state.sunLight.position.set(sunX, Math.max(sunY, -10), 30);
 
-  // Sky color phases — smoother transitions
+  // Sky color phases — BEAUTIFUL BLUE NIGHT (not dark)
   let skyColor;
   let fogColor;
   let sunIntensity;
@@ -4942,30 +4942,30 @@ function updateDayNight(dt) {
   let sunColor;
 
   if (t < 0.15) {
-    // Deep night (0 → 0.15)
-    skyColor = new THREE.Color(0x0a0a2a);
-    fogColor = new THREE.Color(0x0a0a2a);
-    sunIntensity = 0.05;
-    ambientIntensity = 0.08;
-    ambientColor = new THREE.Color(0x111133);
-    sunColor = new THREE.Color(0x334466);
+    // Deep night — beautiful deep blue, NOT dark
+    skyColor = new THREE.Color(0x0d1b3e);
+    fogColor = new THREE.Color(0x0d1b3e);
+    sunIntensity = 0.1;
+    ambientIntensity = 0.35;
+    ambientColor = new THREE.Color(0x2a3d6e);
+    sunColor = new THREE.Color(0x4466aa);
   } else if (t < 0.25) {
-    // Pre-dawn (0.15 → 0.25) — sky lightens slowly
+    // Pre-dawn (0.15 → 0.25) — blue softens to purple-pink
     const p = (t - 0.15) / 0.1;
-    skyColor = lerpColor(0x0a0a2a, 0x1a1a3a, p);
-    fogColor = lerpColor(0x0a0a2a, 0x1a1a3a, p);
-    sunIntensity = 0.05 + p * 0.1;
-    ambientIntensity = 0.08 + p * 0.07;
-    ambientColor = lerpColor(0x111133, 0x222244, p);
-    sunColor = lerpColor(0x334466, 0x665544, p);
+    skyColor = lerpColor(0x0d1b3e, 0x3a2a5a, p);
+    fogColor = lerpColor(0x0d1b3e, 0x3a2a5a, p);
+    sunIntensity = 0.1 + p * 0.15;
+    ambientIntensity = 0.35 + p * 0.05;
+    ambientColor = lerpColor(0x2a3d6e, 0x554488, p);
+    sunColor = lerpColor(0x4466aa, 0x886677, p);
   } else if (t < 0.35) {
-    // Sunrise (0.25 → 0.35) — orange/pink horizon, gradual blue
+    // Sunrise (0.25 → 0.35) — warm orange/pink rising
     const p = (t - 0.25) / 0.1;
-    skyColor = lerpColor(0x1a1a3a, 0x87CEEB, p);
+    skyColor = lerpColor(0x3a2a5a, 0x87CEEB, p);
     fogColor = lerpColor(0x2a1a2a, 0x87CEEB, p);
-    sunIntensity = 0.15 + p * 0.85;
-    ambientIntensity = 0.15 + p * 0.25;
-    ambientColor = lerpColor(0x332233, 0xffffff, p);
+    sunIntensity = 0.25 + p * 0.75;
+    ambientIntensity = 0.4 + p * 0.05;
+    ambientColor = lerpColor(0x554488, 0xffffff, p);
     sunColor = lerpColor(0xff8866, 0xfff5e0, p);
   } else if (t < 0.5) {
     // Morning → noon (0.35 → 0.5) — bright day
@@ -4982,35 +4982,35 @@ function updateDayNight(dt) {
     skyColor = lerpColor(0x5eb8f5, 0xFFB347, p);
     fogColor = lerpColor(0x5eb8f5, 0xFFB347, p);
     sunIntensity = 1.0 - p * 0.2;
-    ambientIntensity = 0.4 - p * 0.1;
+    ambientIntensity = 0.4 - p * 0.05;
     ambientColor = lerpColor(0xffffff, 0xffccaa, p);
     sunColor = lerpColor(0xfff5e0, 0xffaa44, p);
   } else if (t < 0.8) {
-    // Sunset (0.65 → 0.8) — slow transition to dusk
+    // Sunset (0.65 → 0.8) — transition to dusk
     const p = (t - 0.65) / 0.15;
-    skyColor = lerpColor(0xFFB347, 0x2a1a3a, p);
-    fogColor = lerpColor(0xFFB347, 0x2a1a3a, p);
-    sunIntensity = 0.8 - p * 0.7;
-    ambientIntensity = 0.3 - p * 0.2;
-    ambientColor = lerpColor(0xffccaa, 0x332244, p);
-    sunColor = lerpColor(0xffaa44, 0x443355, p);
+    skyColor = lerpColor(0xFFB347, 0x2a2050, p);
+    fogColor = lerpColor(0xFFB347, 0x2a2050, p);
+    sunIntensity = 0.8 - p * 0.65;
+    ambientIntensity = 0.35 - p * 0.05;
+    ambientColor = lerpColor(0xffccaa, 0x4455aa, p);
+    sunColor = lerpColor(0xffaa44, 0x5566aa, p);
   } else if (t < 0.9) {
-    // Dusk → night (0.8 → 0.9) — last light fades
+    // Dusk → night (0.8 → 0.9) — settle into blue
     const p = (t - 0.8) / 0.1;
-    skyColor = lerpColor(0x2a1a3a, 0x0a0a2a, p);
-    fogColor = lerpColor(0x2a1a3a, 0x0a0a2a, p);
-    sunIntensity = 0.1 - p * 0.05;
-    ambientIntensity = 0.1 - p * 0.02;
-    ambientColor = lerpColor(0x332244, 0x111133, p);
-    sunColor = lerpColor(0x443355, 0x334466, p);
+    skyColor = lerpColor(0x2a2050, 0x0d1b3e, p);
+    fogColor = lerpColor(0x2a2050, 0x0d1b3e, p);
+    sunIntensity = 0.15 - p * 0.05;
+    ambientIntensity = 0.3 - p * 0.05;
+    ambientColor = lerpColor(0x4455aa, 0x2a3d6e, p);
+    sunColor = lerpColor(0x5566aa, 0x4466aa, p);
   } else {
-    // Night (0.9 → 1.0)
-    skyColor = new THREE.Color(0x0a0a2a);
-    fogColor = new THREE.Color(0x0a0a2a);
-    sunIntensity = 0.05;
-    ambientIntensity = 0.08;
-    ambientColor = new THREE.Color(0x111133);
-    sunColor = new THREE.Color(0x334466);
+    // Night (0.9 → 1.0) — beautiful deep blue
+    skyColor = new THREE.Color(0x0d1b3e);
+    fogColor = new THREE.Color(0x0d1b3e);
+    sunIntensity = 0.1;
+    ambientIntensity = 0.35;
+    ambientColor = new THREE.Color(0x2a3d6e);
+    sunColor = new THREE.Color(0x4466aa);
   }
 
   state.scene.background.set(skyColor);
@@ -5051,9 +5051,10 @@ function updateDayNight(dt) {
       state.moonGlow.material.opacity = alpha * 0.15;
       state.moonGlow.material.transparent = true;
     }
-    // Moon light at night
+    // Moon light at night — strong blue glow
     if (state.moonLight) {
-      state.moonLight.intensity = alpha * 0.3;
+      state.moonLight.intensity = alpha * 0.5;
+      state.moonLight.color.setHex(0x6688cc);
       state.moonLight.position.set(moonX, moonY, -30);
     }
   } else {
