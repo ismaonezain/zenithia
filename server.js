@@ -823,26 +823,26 @@ function spawnZoneMobs(areaId) {
   const zone = AREAS.find(a => a.id === areaId);
   if (!zone) return;
   // Count existing mobs in this zone
-  const existing = Object.values(world.monsters).filter(m => m.alive && m.zone === zoneId);
+  const existing = Object.values(world.monsters).filter(m => m.alive && m.zone === areaId);
   const toSpawn = (zone.maxMobs || 10) - existing.length;
   if (toSpawn <= 0) return;
   for (let i = 0; i < toSpawn; i++) {
     const mobType = zone.mobTypes[Math.floor(Math.random() * zone.mobTypes.length)];
     const data = MONSTERS[mobType];
     if (!data) continue;
-    const area = zone.spawnAreas[Math.floor(Math.random() * zone.spawnAreas.length)];
+    const spawnArea = zone.spawnAreas[Math.floor(Math.random() * zone.spawnAreas.length)];
     const angle = Math.random() * Math.PI * 2;
-    const dist = Math.random() * area.radius;
+    const dist = Math.random() * spawnArea.radius;
     const monster = {
-      id: `zmob_${zoneId}_${++monsterIdCounter}`,
+      id: `zmob_${areaId}_${++monsterIdCounter}`,
       type: mobType,
-      zone: zoneId,
+      zone: areaId,
       name: data.name,
-      x: area.x + Math.cos(angle) * dist,
+      x: spawnArea.x + Math.cos(angle) * dist,
       y: 0,
-      z: area.z + Math.sin(angle) * dist,
-      spawnX: area.x + Math.cos(angle) * dist,
-      spawnZ: area.z + Math.sin(angle) * dist,
+      z: spawnArea.z + Math.sin(angle) * dist,
+      spawnX: spawnArea.x + Math.cos(angle) * dist,
+      spawnZ: spawnArea.z + Math.sin(angle) * dist,
       hp: data.hp,
       maxHp: data.hp,
       atk: data.atk,
@@ -856,7 +856,7 @@ function spawnZoneMobs(areaId) {
     };
     world.monsters[monster.id] = monster;
   }
-  console.log('[ZONE-SPAWN] ' + zoneId + ': spawned ' + Math.min(toSpawn, zone.mobTypes.length) + ' mobs');
+  console.log('[ZONE-SPAWN] ' + areaId + ': spawned ' + Math.min(toSpawn, zone.mobTypes.length) + ' mobs');
 }
 
 // Spawn initial zone mobs
