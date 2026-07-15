@@ -990,7 +990,7 @@ function handleServerMessage(msg) {
     }
 
     case 'ground_loot_spawn': {
-      console.log('[LOOT] received ground_loot_spawn', msg.lootId, msg.items?.length, 'items');
+
       spawnGroundLoot3D(msg.lootId, msg.items, msg.x, msg.z);
       break;
     }
@@ -2682,7 +2682,7 @@ document.getElementById('respawn-checkpoint').addEventListener('click', () => {
 function spawnGroundLoot3D(lootId, items, x, z) {
   // Remove existing if any
   removeGroundLoot3D(lootId);
-  console.log('[LOOT] spawn', lootId, items?.length, 'items at', x, z);
+
 
   // Pick first item's icon for the visual
   const firstItem = items[0];
@@ -2708,7 +2708,8 @@ function spawnGroundLoot3D(lootId, items, x, z) {
   const planeGeo = new THREE.PlaneGeometry(1.0, 1.0);
   const planeMat = new THREE.MeshBasicMaterial({
     map: texture,
-    transparent: false,
+    transparent: true,
+    alphaTest: 0.05,
     side: THREE.DoubleSide,
     depthWrite: false,
   });
@@ -2716,7 +2717,7 @@ function spawnGroundLoot3D(lootId, items, x, z) {
   mesh.position.set(x, 0.8, z);
   mesh.renderOrder = 999;
   state.scene.add(mesh);
-  console.log('[LOOT] mesh added to scene, pos:', mesh.position.x, mesh.position.y, mesh.position.z);
+
 
   // Glow ring underneath
   const glowGeo = new THREE.RingGeometry(0.3, 0.6, 16);
