@@ -2771,13 +2771,14 @@ function removeGroundLoot3D(lootId) {
 function tryPickupGroundLoot(mouseEvent) {
   if (!state.groundLoot || Object.keys(state.groundLoot).length === 0) return;
   if (!state.camera || !state.renderer) return;
-  const PICKUP_PIXEL_RADIUS = 40; // click within 40px of loot icon
+  const PICKUP_PIXEL_RADIUS = 80; // click within 80px of loot icon
   const clicked = new THREE.Vector3(mouseEvent.clientX, mouseEvent.clientY, 0.5);
   clicked.project(state.camera);
   const halfW = window.innerWidth / 2;
   const halfH = window.innerHeight / 2;
   const clickScreenX = (clicked.x * halfW) + halfW;
   const clickScreenY = -(clicked.y * halfH) + halfH;
+  console.log('[LOOT] click at screen', Math.round(clickScreenX), Math.round(clickScreenY), 'loot count:', Object.keys(state.groundLoot).length);
 
   let closestId = null;
   let closestDist = Infinity;
@@ -2791,6 +2792,7 @@ function tryPickupGroundLoot(mouseEvent) {
     const dx = clickScreenX - sx;
     const dy = clickScreenY - sy;
     const dist = Math.sqrt(dx * dx + dy * dy);
+    console.log('[LOOT] loot', lootId, 'mesh pos:', entry.mesh.position.x.toFixed(1), entry.mesh.position.y.toFixed(1), entry.mesh.position.z.toFixed(1), 'screen:', Math.round(sx), Math.round(sy), 'dist:', Math.round(dist));
     if (dist < PICKUP_PIXEL_RADIUS && dist < closestDist) {
       closestDist = dist;
       closestId = lootId;
