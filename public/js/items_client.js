@@ -1,4 +1,7 @@
-// Zenithia — Client-side item prices (mirrored from shared/items.js)
+// Zenithia — Client-side item prices
+// AUTO-GENERATED from shared/items.js — DO NOT EDIT
+// Run: node scripts/generate-items-client.js
+
 export const ITEM_PRICES = {
   aether_pendant: 350,
   antidote: 40,
