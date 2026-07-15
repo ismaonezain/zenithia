@@ -2083,9 +2083,8 @@ canvas.addEventListener('click', (e) => {
   if (state.isDead) return;
   if (state.dialogue.container.style.display === 'block') return;
 
-  // Check ground loot click first (screen-space, works from any range)
+  // Check ground loot click first (screen-space)
   tryPickupGroundLoot(e);
-  // If loot was picked up, the entry is already removed — check if any remain near click
   // Skip movement if click was near a loot icon
   if (Object.keys(state.groundLoot || {}).length > 0 && state.camera) {
     const v = new THREE.Vector3();
@@ -2096,9 +2095,7 @@ canvas.addEventListener('click', (e) => {
       v.copy(entry.mesh.position).project(state.camera);
       const sx = (v.x * halfW) + halfW;
       const sy = -(v.y * halfH) + halfH;
-      const dx = e.clientX - sx;
-      const dy = e.clientY - sy;
-      if (Math.sqrt(dx*dx + dy*dy) < 40) return;
+      if (Math.sqrt((e.clientX - sx)**2 + (e.clientY - sy)**2) < 80) return;
     }
   }
 
@@ -2771,20 +2768,19 @@ function removeGroundLoot3D(lootId) {
 function tryPickupGroundLoot(mouseEvent) {
   if (!state.groundLoot || Object.keys(state.groundLoot).length === 0) return;
   if (!state.camera || !state.renderer) return;
-  const PICKUP_PIXEL_RADIUS = 80; // click within 80px of loot icon
-  const clicked = new THREE.Vector3(mouseEvent.clientX, mouseEvent.clientY, 0.5);
-  clicked.project(state.camera);
+  const PICKUP_PIXEL_RADIUS = 80;
+  // Click position is already in screen pixels — no projection needed
+  const clickScreenX = mouseEvent.clientX;
+  const clickScreenY = mouseEvent.clientY;
   const halfW = window.innerWidth / 2;
   const halfH = window.innerHeight / 2;
-  const clickScreenX = (clicked.x * halfW) + halfW;
-  const clickScreenY = -(clicked.y * halfH) + halfH;
-  console.log('[LOOT] click at screen', Math.round(clickScreenX), Math.round(clickScreenY), 'loot count:', Object.keys(state.groundLoot).length);
 
   let closestId = null;
   let closestDist = Infinity;
 
   Object.entries(state.groundLoot).forEach(([lootId, entry]) => {
     if (!entry.mesh) return;
+    // Project 3D loot position to screen pixels
     const v = new THREE.Vector3().copy(entry.mesh.position);
     v.project(state.camera);
     const sx = (v.x * halfW) + halfW;
@@ -2792,7 +2788,6 @@ function tryPickupGroundLoot(mouseEvent) {
     const dx = clickScreenX - sx;
     const dy = clickScreenY - sy;
     const dist = Math.sqrt(dx * dx + dy * dy);
-    console.log('[LOOT] loot', lootId, 'mesh pos:', entry.mesh.position.x.toFixed(1), entry.mesh.position.y.toFixed(1), entry.mesh.position.z.toFixed(1), 'screen:', Math.round(sx), Math.round(sy), 'dist:', Math.round(dist));
     if (dist < PICKUP_PIXEL_RADIUS && dist < closestDist) {
       closestDist = dist;
       closestId = lootId;
@@ -2802,11 +2797,11 @@ function tryPickupGroundLoot(mouseEvent) {
   if (closestId) {
     const entry = state.groundLoot[closestId];
     const names = entry.items.map(i => `${i.name} x${i.quantity || 1}`).join(', ');
-    console.log('[LOOT] pickup click', closestId, names);
+
     addChatMessage('System', `📦 Picked up: ${names}`);
     window.ZenSFX?.pickup();
     wsSend(JSON.stringify({ type: 'pickup_loot', lootId: closestId }));
-    console.log('[LOOT] sent pickup_loot to server');
+
     removeGroundLoot3D(closestId);
   }
 }
