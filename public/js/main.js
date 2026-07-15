@@ -1141,6 +1141,7 @@ function handleServerMessage(msg) {
       break;
     }
     case 'respawned': {
+      state.isDead = false;
       state.player.x = msg.x;
       state.player.z = msg.z;
       state.player.hp = msg.hp;
@@ -1151,6 +1152,8 @@ function handleServerMessage(msg) {
       if (model) model.position.set(msg.x, 0, msg.z);
       updatePlayerHP(msg.hp, msg.maxHp);
       updatePlayerMP(msg.mp, msg.maxMp);
+      const deathEl = document.getElementById('death-screen');
+      if (deathEl) deathEl.style.display = 'none';
       addChatMessage('System', '🏠 Respawned at village!');
       break;
     }

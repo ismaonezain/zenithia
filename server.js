@@ -454,13 +454,10 @@ setInterval(() => {
           // XP penalty: lose 10% of current XP (min 0)
           const xpLoss = Math.max(1, Math.floor(closestPlayer.xp * 0.1));
           closestPlayer.xp = Math.max(0, closestPlayer.xp - xpLoss);
-          // Find correct ws for dying player
-          let dyingWs = null;
-          for (const [wsKey, p] of Object.entries(connectedPlayers)) {
-            if (p === closestPlayer) { dyingWs = wsKey; break; }
-          }
+          // Use _ws back-reference (set on join) — Object.entries stringifies ws keys
+          const dyingWs = closestPlayer._ws;
           broadcast({ type: 'player_died', targetId: closestPlayer.id, xpLoss });
-          if (dyingWs) {
+          if (dyingWs && dyingWs.readyState === 1) {
             dyingWs.send(JSON.stringify({ type: 'xp_penalty', xpLoss, xp: closestPlayer.xp }));
           }
           // Auto-respawn after 5 seconds
@@ -470,8 +467,8 @@ setInterval(() => {
             closestPlayer.x = 0;
             closestPlayer.z = 0;
             broadcast({ type: 'player_respawn', targetId: closestPlayer.id, hp: closestPlayer.hp, maxHp: closestPlayer.maxHp, mp: closestPlayer.mp, maxMp: closestPlayer.maxMp, x: 0, z: 0 });
-            if (dyingWs && dyingWs.readyState === 1) {
-              dyingWs.send(JSON.stringify({ type: 'respawned', x: 0, z: 0, hp: closestPlayer.hp, maxHp: closestPlayer.maxHp, mp: closestPlayer.mp, maxMp: closestPlayer.maxMp }));
+            if (closestPlayer._ws && closestPlayer._ws.readyState === 1) {
+              closestPlayer._ws.send(JSON.stringify({ type: 'respawned', x: 0, z: 0, hp: closestPlayer.hp, maxHp: closestPlayer.maxHp, mp: closestPlayer.mp, maxMp: closestPlayer.maxMp }));
             }
           }, 5000);
           m.state = 'idle';
