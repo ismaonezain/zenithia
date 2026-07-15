@@ -1041,9 +1041,10 @@ function handleServerMessage(msg) {
         console.log('[ZONE] Ignoring stale zone_enter:', msg.zone?.id, '(expected:', state._expectedZone + ')');
         break;
       }
-      // Portal click: just enter zone (terrain stays, only color/portals/camera change)
+      // Portal click: full scene rebuild (like login, no reload)
       if (state._expectedZone) {
         state._expectedZone = null;
+        rebuildScene(msg.zone?.playerX, msg.zone?.playerZ);
         enterZone(msg.zone);
         break;
       }
@@ -2182,6 +2183,19 @@ let _zonePortals = []; // 3D portal meshes
 let _zoneDecorations = []; // 3D decoration meshes
 
 function rebuildScene(playerX, playerZ) {
+  // 0. Snap camera to new position BEFORE removing objects (no sky flash)
+  if (state.camera && playerX !== undefined && playerZ !== undefined) {
+    const dist = state.cameraDistance || 20;
+    const ax = state.cameraAngleX || 0;
+    const ay = state.cameraAngleY || 0.5;
+    state.camera.position.set(
+      playerX + Math.sin(ax) * dist * Math.cos(ay),
+      dist * Math.sin(ay) + 3,
+      playerZ + Math.cos(ax) * dist * Math.cos(ay)
+    );
+    state.camera.lookAt(playerX, 1, playerZ);
+  }
+
   // 1. Remove ALL objects from scene (keep camera, renderer)
   const keep = new Set([state.camera, state.renderer, state.sunLight, state.ambientLight, state.moonLight, state.sunMesh, state.moonMesh, state.moonGlow]);
   const toRemove = [];
