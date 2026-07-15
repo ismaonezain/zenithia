@@ -2197,11 +2197,7 @@ function enterZone(zoneData) {
       state.camera.lookAt(zoneData.playerX, 1, zoneData.playerZ);
     }
   }
-  // Remove old terrain and rebuild fresh
-  const oldTerrain = state.scene?.getObjectByName('terrain');
-  if (oldTerrain) state.scene.remove(oldTerrain);
-  buildTerrain(state.scene);
-  // Apply zone ground color
+  // Apply zone ground color (terrain is shared — only color changes per zone)
   const ground = state.scene?.getObjectByName('ground');
   if (ground && ground.material) {
     ground.material.color.setHex(zoneData.groundColor || 0x7CBA3F);
