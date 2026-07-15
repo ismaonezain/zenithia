@@ -804,7 +804,7 @@ function handleServerMessage(msg) {
       updatePlayerHP(state.player.hp, state.player.maxHp);
       updatePlayerMP(state.player.mp, state.player.maxMp);
       // Sync XP bar
-      const xpNeeded = 100 + (state.player.level - 1) * 200;
+      const xpNeeded = 50 * Math.min(state.player.level || 1, 49) + 5 * Math.pow(Math.min(state.player.level || 1, 49), 2);
       updatePlayerXP(state.player.xp || 0, xpNeeded);
       // Sync skill points
       state.player.skillPoints = msg.player.skillPoints || 0;
@@ -1144,7 +1144,7 @@ function handleServerMessage(msg) {
       if (msg.currentXp !== undefined && msg.level !== undefined) {
         state.player.xp = msg.currentXp;
         state.player.level = msg.level;
-        updateXPBar(msg.currentXp, msg.expToNext || 100 + (msg.level - 1) * 200);
+        updateXPBar(msg.currentXp, msg.expToNext || 50 * Math.min(msg.level || 1, 49) + 5 * Math.pow(Math.min(msg.level || 1, 49), 2));
       }
       break;
     }
@@ -1280,7 +1280,7 @@ function handleServerMessage(msg) {
       let deathMsg = '💀 XP penalty: -' + msg.xpLoss + ' XP';
       if (msg.goldLoss) deathMsg += ' & -' + msg.goldLoss + ' Zen';
       addChatMessage('System', deathMsg);
-      const xpNeeded = 100 + ((state.player.level || 1) - 1) * 200;
+      const xpNeeded = 50 * Math.min(state.player.level || 1, 49) + 5 * Math.pow(Math.min(state.player.level || 1, 49), 2);
       updatePlayerXP(state.player.xp, xpNeeded);
       if (state.inventoryUI) state.inventoryUI.updatePlayer(state.player);
       break;
@@ -1337,7 +1337,7 @@ function handleServerMessage(msg) {
       updatePlayerLevel(msg.level);
       updatePlayerHP(state.player.maxHp, state.player.maxHp);
       updatePlayerMP(state.player.maxMp, state.player.maxMp);
-      const xpNeeded = 100 + ((state.player.level || 1) - 1) * 200;
+      const xpNeeded = 50 * Math.min(state.player.level || 1, 49) + 5 * Math.pow(Math.min(state.player.level || 1, 49), 2);
       updatePlayerXP(state.player.xp, xpNeeded);
       break;
     }

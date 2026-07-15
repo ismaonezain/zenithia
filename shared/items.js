@@ -161,6 +161,84 @@ const ITEMS = {
   travel_pack:        { name: 'Pack of the Wandering Guardian',        type: 'equipment', slot: 'accessory', stats: { hp: 10 },                  price: 60,  icon: { bg: 0x795548, fg: 0xBCAAA4, symbol: '◯' } },
   wind_cloak:         { name: 'Cloak of the Gale Runner',         type: 'equipment', slot: 'accessory', stats: { spd: 3, def: 1 },           price: 200, icon: { bg: 0x00BCD4, fg: 0x80DEEA, symbol: '◯' } },
   bramble_cape:       { name: 'Cape of the Thornwall Guardian',       type: 'equipment', slot: 'accessory', stats: { def: 4, hp: 20, atk: 1 },   price: 400, icon: { bg: 0x33691E, fg: 0x81C784, symbol: '◯' } },
+
+  // ═══════════════════════════════════════
+  // TIER 4 WEAPONS — Lv.20
+  // ═══════════════════════════════════════
+  titan_breaker:    { name: 'Titan Breaker',    type: 'equipment', slot: 'weapon', classReq: ['guardian'],     tier: 4, stats: { atk: 15, def: 6, hp: 40 },      price: 1500, icon: { bg: 0x37474F, fg: 0xECEFF1, symbol: '/', image: '/assets/icons/titan_breaker.png' } },
+  void_blade:       { name: 'Void Blade',       type: 'equipment', slot: 'weapon', classReq: ['blade_dancer'], tier: 4, stats: { atk: 16, spd: 7, crit: 0.12 },  price: 1600, icon: { bg: 0x1A237E, fg: 0x7C4DFF, symbol: '/', image: '/assets/icons/void_blade.png' } },
+  ancient_staff:    { name: 'Ancient Staff',    type: 'equipment', slot: 'weapon', classReq: ['sage'],         tier: 4, stats: { atk: 12, mp: 80, spd: 4 },      price: 1400, icon: { bg: 0x4A148C, fg: 0xEA80FC, symbol: '|', image: '/assets/icons/ancient_staff.png' } },
+  divine_rod:       { name: 'Divine Rod',       type: 'equipment', slot: 'weapon', classReq: ['cleric'],       tier: 4, stats: { atk: 10, mp: 70, hp: 50, def: 4 }, price: 1350, icon: { bg: 0xFFD600, fg: 0xFFFF8D, symbol: '|', image: '/assets/icons/divine_rod.png' } },
+  shadow_fang:      { name: 'Shadow Fang',      type: 'equipment', slot: 'weapon', classReq: ['shadow'],       tier: 4, stats: { atk: 18, crit: 0.18, spd: 6 },  price: 1700, icon: { bg: 0x0D0D0D, fg: 0xE040FB, symbol: '\\', image: '/assets/icons/shadow_fang.png' } },
+
+  // ═══════════════════════════════════════
+  // TIER 4 ARMOR — Lv.20
+  // ═══════════════════════════════════════
+  titan_plate:      { name: 'Titan Plate',      type: 'equipment', slot: 'armor', classReq: ['guardian'],     tier: 4, stats: { def: 14, hp: 80, spd: -1 },     price: 1200, icon: { bg: 0x37474F, fg: 0xB0BEC5, symbol: '□' } },
+  void_weave:       { name: 'Void Weave',       type: 'equipment', slot: 'armor', classReq: ['blade_dancer'], tier: 4, stats: { def: 8, spd: 5, atk: 3 },        price: 1300, icon: { bg: 0x1A237E, fg: 0x7C4DFF, symbol: '□' } },
+  ancient_robe:     { name: 'Ancient Robe',     type: 'equipment', slot: 'armor', classReq: ['sage'],         tier: 4, stats: { def: 6, mp: 40, hp: 30, atk: 2 }, price: 1100, icon: { bg: 0x4A148C, fg: 0xCE93D8, symbol: '□' } },
+  divine_vestment:  { name: 'Divine Vestment',  type: 'equipment', slot: 'armor', classReq: ['cleric'],       tier: 4, stats: { def: 10, hp: 60, mp: 30 },      price: 1150, icon: { bg: 0xFFF176, fg: 0xFFFFFF, symbol: '□' } },
+  shadow_cloak:     { name: 'Shadow Cloak',     type: 'equipment', slot: 'armor', classReq: ['shadow'],       tier: 4, stats: { def: 7, spd: 6, crit: 0.08 },   price: 1350, icon: { bg: 0x0D0D0D, fg: 0x7B1FA2, symbol: '□' } },
+
+  // ═══════════════════════════════════════
+  // TIER 5 WEAPONS — Lv.35
+  // ═══════════════════════════════════════
+  chaos_breaker:    { name: 'Chaos Breaker',    type: 'equipment', slot: 'weapon', classReq: ['guardian'],     tier: 5, stats: { atk: 22, def: 10, hp: 80 },     price: 4000, icon: { bg: 0xB71C1C, fg: 0xFF8A80, symbol: '/', image: '/assets/icons/chaos_breaker.png' } },
+  eternity_blade:   { name: 'Eternity Blade',   type: 'equipment', slot: 'weapon', classReq: ['blade_dancer'], tier: 5, stats: { atk: 24, spd: 10, crit: 0.18 }, price: 4200, icon: { bg: 0x00BCD4, fg: 0x84FFFF, symbol: '/', image: '/assets/icons/eternity_blade.png' } },
+  cosmos_staff:     { name: 'Cosmos Staff',     type: 'equipment', slot: 'weapon', classReq: ['sage'],         tier: 5, stats: { atk: 18, mp: 120, spd: 6 },     price: 3800, icon: { bg: 0x0D47A1, fg: 0x448AFF, symbol: '|', image: '/assets/icons/cosmos_staff.png' } },
+  celestial_rod:    { name: 'Celestial Rod',    type: 'equipment', slot: 'weapon', classReq: ['cleric'],       tier: 5, stats: { atk: 15, mp: 100, hp: 80, def: 6 }, price: 3600, icon: { bg: 0xFFD600, fg: 0xFFFF00, symbol: '|', image: '/assets/icons/celestial_rod.png' } },
+  abyssal_edge:     { name: 'Abyssal Edge',     type: 'equipment', slot: 'weapon', classReq: ['shadow'],       tier: 5, stats: { atk: 26, crit: 0.22, spd: 9 },  price: 4500, icon: { bg: 0x1A0033, fg: 0xD500F9, symbol: '\\', image: '/assets/icons/abyssal_edge.png' } },
+
+  // ═══════════════════════════════════════
+  // TIER 5 ARMOR — Lv.35
+  // ═══════════════════════════════════════
+  chaos_mail:       { name: 'Chaos Mail',       type: 'equipment', slot: 'armor', classReq: ['guardian'],     tier: 5, stats: { def: 20, hp: 120, spd: -2 },    price: 3500, icon: { bg: 0xB71C1C, fg: 0xEF9A9A, symbol: '□' } },
+  eternity_weave:   { name: 'Eternity Weave',   type: 'equipment', slot: 'armor', classReq: ['blade_dancer'], tier: 5, stats: { def: 12, spd: 8, atk: 5 },       price: 3800, icon: { bg: 0x00838F, fg: 0x80DEEA, symbol: '□' } },
+  cosmos_robe:      { name: 'Cosmos Robe',      type: 'equipment', slot: 'armor', classReq: ['sage'],         tier: 5, stats: { def: 10, mp: 70, hp: 50, atk: 4 }, price: 3200, icon: { bg: 0x0D47A1, fg: 0x82B1FF, symbol: '□' } },
+  celestial_mail:   { name: 'Celestial Mail',   type: 'equipment', slot: 'armor', classReq: ['cleric'],       tier: 5, stats: { def: 15, hp: 100, mp: 50 },     price: 3400, icon: { bg: 0xFFD600, fg: 0xFFFF8D, symbol: '□' } },
+  abyssal_shroud:   { name: 'Abyssal Shroud',   type: 'equipment', slot: 'armor', classReq: ['shadow'],       tier: 5, stats: { def: 11, spd: 10, crit: 0.12 }, price: 3900, icon: { bg: 0x1A0033, fg: 0xEA80FC, symbol: '□' } },
+
+  // ═══════════════════════════════════════
+  // TIER 6 WEAPONS — Lv.50 (ENDGAME)
+  // ═══════════════════════════════════════
+  worldsplitter:    { name: 'Worldsplitter',    type: 'equipment', slot: 'weapon', classReq: ['guardian'],     tier: 6, stats: { atk: 30, def: 14, hp: 120 },    price: 10000, icon: { bg: 0x880E4F, fg: 0xFF80AB, symbol: '/', image: '/assets/icons/worldsplitter.png' } },
+  infinity_edge:    { name: 'Infinity Edge',    type: 'equipment', slot: 'weapon', classReq: ['blade_dancer'], tier: 6, stats: { atk: 32, spd: 14, crit: 0.25 }, price: 11000, icon: { bg: 0x006064, fg: 0x84FFFF, symbol: '/', image: '/assets/icons/infinity_edge.png' } },
+  omniscient_staff: { name: 'Omniscient Staff', type: 'equipment', slot: 'weapon', classReq: ['sage'],         tier: 6, stats: { atk: 25, mp: 180, spd: 8 },     price: 9500, icon: { bg: 0x1A237E, fg: 0x8C9EFF, symbol: '|', image: '/assets/icons/omniscient_staff.png' } },
+  eternal_rod:      { name: 'Eternal Rod',      type: 'equipment', slot: 'weapon', classReq: ['cleric'],       tier: 6, stats: { atk: 20, mp: 150, hp: 120, def: 8 }, price: 9000, icon: { bg: 0xF9A825, fg: 0xFFFF00, symbol: '|', image: '/assets/icons/eternal_rod.png' } },
+  oblivion_fang:    { name: 'Oblivion Fang',    type: 'equipment', slot: 'weapon', classReq: ['shadow'],       tier: 6, stats: { atk: 35, crit: 0.30, spd: 12 }, price: 12000, icon: { bg: 0x000000, fg: 0xD500F9, symbol: '\\', image: '/assets/icons/oblivion_fang.png' } },
+
+  // ═══════════════════════════════════════
+  // TIER 6 ARMOR — Lv.50 (ENDGAME)
+  // ═══════════════════════════════════════
+  worldplate:       { name: 'Worldplate',       type: 'equipment', slot: 'armor', classReq: ['guardian'],     tier: 6, stats: { def: 28, hp: 180, spd: -2 },    price: 8000, icon: { bg: 0x880E4F, fg: 0xF48FB1, symbol: '□' } },
+  infinity_weave:   { name: 'Infinity Weave',   type: 'equipment', slot: 'armor', classReq: ['blade_dancer'], tier: 6, stats: { def: 16, spd: 12, atk: 8 },      price: 8500, icon: { bg: 0x004D40, fg: 0x64FFDA, symbol: '□' } },
+  omniscient_robe:  { name: 'Omniscient Robe',  type: 'equipment', slot: 'armor', classReq: ['sage'],         tier: 6, stats: { def: 14, mp: 100, hp: 80, atk: 6 }, price: 7500, icon: { bg: 0x1A237E, fg: 0xB388FF, symbol: '□' } },
+  eternal_mail:     { name: 'Eternal Mail',     type: 'equipment', slot: 'armor', classReq: ['cleric'],       tier: 6, stats: { def: 20, hp: 150, mp: 80 },     price: 7800, icon: { bg: 0xF9A825, fg: 0xFFFF8D, symbol: '□' } },
+  oblivion_shroud:  { name: 'Oblivion Shroud',  type: 'equipment', slot: 'armor', classReq: ['shadow'],       tier: 6, stats: { def: 15, spd: 14, crit: 0.18 }, price: 9000, icon: { bg: 0x000000, fg: 0xE040FB, symbol: '□' } },
+
+  // ═══════════════════════════════════════
+  // TIER 4-6 BOOTS
+  // ═══════════════════════════════════════
+  titan_treads:     { name: 'Titan Treads',     type: 'equipment', slot: 'boots', classReq: ['guardian'],     tier: 4, stats: { spd: 4, def: 3, hp: 20 },       price: 1000, icon: { bg: 0x37474F, fg: 0xB0BEC5, symbol: '=' } },
+  void_step:        { name: 'Void Step',        type: 'equipment', slot: 'boots', classReq: ['blade_dancer'], tier: 4, stats: { spd: 8, crit: 0.05, atk: 2 },    price: 1100, icon: { bg: 0x1A237E, fg: 0x7C4DFF, symbol: '=' } },
+  chaos_treads:     { name: 'Chaos Treads',     type: 'equipment', slot: 'boots', classReq: ['guardian'],     tier: 5, stats: { spd: 6, def: 5, hp: 40 },       price: 3000, icon: { bg: 0xB71C1C, fg: 0xEF9A9A, symbol: '=' } },
+  eternity_step:    { name: 'Eternity Step',    type: 'equipment', slot: 'boots', classReq: ['blade_dancer'], tier: 5, stats: { spd: 12, crit: 0.08, atk: 4 },  price: 3200, icon: { bg: 0x00838F, fg: 0x80DEEA, symbol: '=' } },
+  world_treads:     { name: 'World Treads',     type: 'equipment', slot: 'boots', classReq: ['guardian'],     tier: 6, stats: { spd: 8, def: 8, hp: 60 },       price: 7000, icon: { bg: 0x880E4F, fg: 0xF48FB1, symbol: '=' } },
+  infinity_step:    { name: 'Infinity Step',    type: 'equipment', slot: 'boots', classReq: ['blade_dancer'], tier: 6, stats: { spd: 16, crit: 0.12, atk: 6 },  price: 7500, icon: { bg: 0x006064, fg: 0x84FFFF, symbol: '=' } },
+
+  // ═══════════════════════════════════════
+  // TIER 4-6 SHIELDS
+  // ═══════════════════════════════════════
+  titan_aegis:      { name: 'Titan Aegis',      type: 'equipment', slot: 'shield', classReq: ['guardian', 'cleric'], tier: 4, stats: { def: 18, hp: 80, atk: 3 },   price: 1400, icon: { bg: 0x37474F, fg: 0xECEFF1, symbol: '◎' } },
+  chaos_aegis:      { name: 'Chaos Aegis',      type: 'equipment', slot: 'shield', classReq: ['guardian', 'cleric'], tier: 5, stats: { def: 25, hp: 120, atk: 5 },  price: 3500, icon: { bg: 0xB71C1C, fg: 0xFF8A80, symbol: '◎' } },
+  world_aegis:      { name: 'World Aegis',      type: 'equipment', slot: 'shield', classReq: ['guardian'],             tier: 6, stats: { def: 35, hp: 200, atk: 8 }, price: 8500, icon: { bg: 0x880E4F, fg: 0xFF80AB, symbol: '◎' } },
+
+  // ═══════════════════════════════════════
+  // TIER 4-6 RINGS
+  // ═══════════════════════════════════════
+  titan_signet:     { name: 'Titan Signet',     type: 'equipment', slot: 'ring', stats: { def: 4, hp: 40, atk: 3 },       price: 1200, icon: { bg: 0x37474F, fg: 0xB0BEC5, symbol: '○' } },
+  chaos_signet:     { name: 'Chaos Signet',     type: 'equipment', slot: 'ring', stats: { def: 6, hp: 60, atk: 5, spd: 2 }, price: 3000, icon: { bg: 0xB71C1C, fg: 0xEF9A9A, symbol: '○' } },
+  world_signet:     { name: 'World Signet',     type: 'equipment', slot: 'ring', stats: { def: 8, hp: 80, atk: 8, spd: 3 }, price: 7000, icon: { bg: 0x880E4F, fg: 0xF48FB1, symbol: '○' } },
 };
 
 // ═══════════════════════════════════════

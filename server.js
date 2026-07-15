@@ -261,6 +261,15 @@ function getOrCreatePlayer(playerId, name, wallet, customization, persistentId) 
       if (existing.level >= 5 && !existing.unlockedSkills.includes('tier2a')) {
         existing.unlockedSkills.push('tier2a');
       }
+      if (existing.level >= 15 && !existing.unlockedSkills.includes('tier3')) {
+        existing.unlockedSkills.push('tier3');
+      }
+      if (existing.level >= 25 && !existing.unlockedSkills.includes('tier4')) {
+        existing.unlockedSkills.push('tier4');
+      }
+      if (existing.level >= 40 && !existing.unlockedSkills.includes('tier5')) {
+        existing.unlockedSkills.push('tier5');
+      }
       existing.skillPoints = 0; // SP removed — skills auto-unlock by level
       console.log(`[SKILL] ${existing.name} Lv.${existing.level} → unlocked: [${existing.unlockedSkills}]`);
       world.players[playerId] = existing;
@@ -873,7 +882,7 @@ function handleAttack(ws, playerId, msg) {
         spawnGroundLoot(bossLoot, monster.x, monster.z, playerId);
         player.xp += bossData.xpReward;
         // Level up check
-        const xpNeeded = 100 + (player.level - 1) * 200;
+        const xpNeeded = 50 * Math.min(player.level, 49) + 5 * Math.pow(Math.min(player.level, 49), 2);
         let leveledUp = false;
         if (player.xp >= xpNeeded) {
           player.level++;
@@ -924,13 +933,13 @@ function handleAttack(ws, playerId, msg) {
           monster: monster.name,
           currentXp: member.xp,
           level: member.level,
-          expToNext: 100 + ((member.level || 1) - 1) * 200,
+          expToNext: 50 * Math.min(member.level || 1, 49) + 5 * Math.pow(Math.min(member.level || 1, 49), 2),
         }));
       });
     }
 
     // Level up check
-    const xpNeeded = 100 + (player.level - 1) * 200;
+    const xpNeeded = 50 * Math.min(player.level, 49) + 5 * Math.pow(Math.min(player.level, 49), 2);
     let leveledUp = false;
     if (player.xp >= xpNeeded) {
       player.level++;
@@ -954,7 +963,7 @@ function handleAttack(ws, playerId, msg) {
       zen: zenGain,
       loot,
       level: player.level,
-      expToNext: 100 + (player.level - 1) * 200,
+      expToNext: 50 * Math.min(player.level, 49) + 5 * Math.pow(Math.min(player.level, 49), 2),
       currentXp: player.xp,
       leveledUp,
       hp: player.hp,
@@ -1255,16 +1264,24 @@ function handleMessage(ws, playerId, msg) {
         qState.status = 'completed';
         if (quest.rewards.xp) {
           player.xp += quest.rewards.xp;
-          const xpNeeded = 100 + (player.level - 1) * 200;
+          const xpNeeded = 50 * Math.min(player.level, 49) + 5 * Math.pow(Math.min(player.level, 49), 2);
           if (player.xp >= xpNeeded) {
-            player.level++;
-            player.xp -= xpNeeded;
-            player.maxHp += 10; player.hp = player.maxHp;
-            player.maxMp += 5; player.mp = player.maxMp;
-            player.atk += 1; player.def += 1;
-            if (!player.unlockedSkills) player.unlockedSkills = ['tier1'];
+            if (player.level < 50) {
+              player.level++;
+              player.xp -= xpNeeded;
+              const hpGain = 15 + player.level * 2;
+              const mpGain = 8 + player.level;
+              const statGain = 1 + Math.floor(player.level / 5);
+              player.maxHp += hpGain; player.hp = player.maxHp;
+              player.maxMp += mpGain; player.mp = player.maxMp;
+              player.atk += statGain; player.def += statGain;
+              if (!player.unlockedSkills) player.unlockedSkills = ['tier1'];
+            }
             if (player.level >= 3 && !player.unlockedSkills.includes('tier2b')) player.unlockedSkills.push('tier2b');
             if (player.level >= 5 && !player.unlockedSkills.includes('tier2a')) player.unlockedSkills.push('tier2a');
+            if (player.level >= 15 && !player.unlockedSkills.includes('tier3')) player.unlockedSkills.push('tier3');
+            if (player.level >= 25 && !player.unlockedSkills.includes('tier4')) player.unlockedSkills.push('tier4');
+            if (player.level >= 40 && !player.unlockedSkills.includes('tier5')) player.unlockedSkills.push('tier5');
             ws.send(JSON.stringify({ type: 'level_up', level: player.level, xp: player.xp, maxHp: player.maxHp, maxMp: player.maxMp, unlockedSkills: player.unlockedSkills }));
           }
         }
@@ -1966,26 +1983,41 @@ function handleMessage(ws, playerId, msg) {
           tier1:  { mpCost: 15, damageMulti: 2.5, healMulti: 0, range: 3.5, name: 'Power Smash' },
           tier2a: { mpCost: 25, damageMulti: 3.5, healMulti: 0, range: 4, name: 'Earthquake' },
           tier2b: { mpCost: 20, damageMulti: 0, healMulti: 0, range: 0, name: 'Iron Wall', buff: { stat: 'def', value: 0.5, duration: 10 } },
+          tier3:  { mpCost: 35, damageMulti: 0, healMulti: 0, range: 0, name: 'War Cry', buff: { stat: 'def', value: 0.8, duration: 15 } },
+          tier4:  { mpCost: 45, damageMulti: 5.0, healMulti: 0, range: 3, name: 'Titan Strike' },
+          tier5:  { mpCost: 50, damageMulti: 0, healMulti: 0, range: 0, name: 'Berserker Rage', buff: { stat: 'atk', value: 1.0, duration: 20 } },
         },
         miner: {
           tier1:  { mpCost: 20, damageMulti: 3.0, healMulti: 0, range: 4, name: 'Avalanche' },
           tier2a: { mpCost: 30, damageMulti: 4.0, healMulti: 0, range: 4.5, name: 'Blade Storm' },
           tier2b: { mpCost: 15, damageMulti: 0, healMulti: 0, range: 0, name: 'Shadow Step', buff: { stat: 'spd', value: 0.5, duration: 8 } },
+          tier3:  { mpCost: 35, damageMulti: 4.5, healMulti: 0, range: 4, name: 'Shadow Strike' },
+          tier4:  { mpCost: 45, damageMulti: 5.5, healMulti: 0, range: 5, name: 'Blade Dance', multiHit: 3 },
+          tier5:  { mpCost: 55, damageMulti: 6.0, healMulti: 0, range: 4, name: 'Phantom Edge', ignoreDef: true },
         },
         gardener: {
           tier1:  { mpCost: 12, damageMulti: 2.0, healMulti: 0, range: 5, name: 'Thorn Whip' },
           tier2a: { mpCost: 20, damageMulti: 3.0, healMulti: 0, range: 5, name: "Nature's Wrath" },
           tier2b: { mpCost: 18, damageMulti: 0, healMulti: 0.4, range: 0, name: 'Healing Bloom' },
+          tier3:  { mpCost: 30, damageMulti: 3.5, healMulti: 0, range: 6, name: 'Vine Snare', root: true },
+          tier4:  { mpCost: 40, damageMulti: 4.5, healMulti: 0, range: 5, name: 'Entangle', root: true, multiTarget: 3 },
+          tier5:  { mpCost: 50, damageMulti: 6.0, healMulti: 0, range: 7, name: "Nature's Fury" },
         },
         herbalist: {
           tier1:  { mpCost: 25, damageMulti: 0, healMulti: 0.4, range: 4, name: 'Mystic Heal' },
           tier2a: { mpCost: 35, damageMulti: 0, healMulti: 0.7, range: 0, name: 'Rejuvenation' },
           tier2b: { mpCost: 20, damageMulti: 0, healMulti: 0, range: 0, name: 'Mana Surge', buff: { stat: 'atk', value: 0.3, duration: 12 } },
+          tier3:  { mpCost: 40, damageMulti: 0, healMulti: 0.5, range: 0, name: 'Group Heal', healAll: true },
+          tier4:  { mpCost: 50, damageMulti: 0, healMulti: 0, range: 0, name: 'Divine Shield', buff: { stat: 'invuln', value: 1, duration: 3 } },
+          tier5:  { mpCost: 60, damageMulti: 0, healMulti: 0.8, range: 0, name: 'Revive', revive: true },
         },
         watchman: {
           tier1:  { mpCost: 15, damageMulti: 2.5, healMulti: 0, range: 4.5, name: 'Eagle Eye' },
           tier2a: { mpCost: 25, damageMulti: 4.0, healMulti: 0, range: 5, name: 'Piercing Shot', ignoreDef: true },
           tier2b: { mpCost: 18, damageMulti: 0, healMulti: 0, range: 0, name: "Sentinel's Mark", buff: { stat: 'dmgTaken', value: 0.5, duration: 10 } },
+          tier3:  { mpCost: 35, damageMulti: 3.0, healMulti: 0, range: 6, name: 'Multi Shot', multiTarget: 3 },
+          tier4:  { mpCost: 45, damageMulti: 6.0, healMulti: 0, range: 7, name: 'Headshot', guaranteedCrit: true },
+          tier5:  { mpCost: 55, damageMulti: 4.0, healMulti: 0, range: 6, name: 'Rain of Arrows', multiTarget: 5 },
         },
       };
       const skillTier = msg.skillTier || 'tier1';
@@ -2061,22 +2093,26 @@ function handleMessage(ws, playerId, msg) {
         const zenGain = data.zen ? data.zen[0] + Math.floor(Math.random() * (data.zen[1] - data.zen[0])) : 0;
         player.xp += xpGain;
         player.zen = (player.zen || 0) + zenGain;
-        const xpNeeded = 100 + (player.level - 1) * 200;
+        const xpNeeded = 50 * Math.min(player.level, 49) + 5 * Math.pow(Math.min(player.level, 49), 2);
         let leveledUp = false;
         if (player.xp >= xpNeeded) {
-          player.level++;
-          player.xp -= xpNeeded;
-          player.maxHp += 10; player.hp = player.maxHp;
-          player.maxMp += 5; player.mp = player.maxMp;
-          player.atk += 1; player.def += 1;
-          leveledUp = true;
-          // Unlock skill tree tiers on level up
-          if (!player.unlockedSkills) player.unlockedSkills = ['tier1'];
-          if (player.level >= 3 && !player.unlockedSkills.includes('tier2b')) {
-            player.unlockedSkills.push('tier2b');
-          }
-          if (player.level >= 5 && !player.unlockedSkills.includes('tier2a')) {
-            player.unlockedSkills.push('tier2a');
+          if (player.level < 50) {
+            player.level++;
+            player.xp -= xpNeeded;
+            const hpGain = 15 + player.level * 2;
+            const mpGain = 8 + player.level;
+            const statGain = 1 + Math.floor(player.level / 5);
+            player.maxHp += hpGain; player.hp = player.maxHp;
+            player.maxMp += mpGain; player.mp = player.maxMp;
+            player.atk += statGain; player.def += statGain;
+            leveledUp = true;
+            // Unlock skill tree tiers on level up
+            if (!player.unlockedSkills) player.unlockedSkills = ['tier1'];
+            if (player.level >= 3 && !player.unlockedSkills.includes('tier2b')) player.unlockedSkills.push('tier2b');
+            if (player.level >= 5 && !player.unlockedSkills.includes('tier2a')) player.unlockedSkills.push('tier2a');
+            if (player.level >= 15 && !player.unlockedSkills.includes('tier3')) player.unlockedSkills.push('tier3');
+            if (player.level >= 25 && !player.unlockedSkills.includes('tier4')) player.unlockedSkills.push('tier4');
+            if (player.level >= 40 && !player.unlockedSkills.includes('tier5')) player.unlockedSkills.push('tier5');
           }
           ws.send(JSON.stringify({ type: 'level_up', level: player.level, xp: player.xp, maxHp: player.maxHp, maxMp: player.maxMp, unlockedSkills: player.unlockedSkills }));
         }
@@ -2086,7 +2122,7 @@ function handleMessage(ws, playerId, msg) {
         broadcast({
           type: 'monster_killed', monsterId: monster.id, killerId: playerId,
           xp: xpGain, zen: zenGain, loot, level: player.level,
-          expToNext: 100 + (player.level - 1) * 200, currentXp: player.xp, leveledUp,
+          expToNext: 50 * Math.min(player.level, 49) + 5 * Math.pow(Math.min(player.level, 49), 2), currentXp: player.xp, leveledUp,
           hp: player.hp, maxHp: player.maxHp, mp: player.mp, maxMp: player.maxMp,
         });
         broadcast({ type: 'monster_died', monsterId: monster.id });
