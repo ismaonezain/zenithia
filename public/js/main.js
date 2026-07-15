@@ -2083,19 +2083,23 @@ canvas.addEventListener('click', (e) => {
   if (state.isDead) return;
   if (state.dialogue.container.style.display === 'block') return;
 
-  // Check ground loot click first
+  // Check ground loot click first (screen-space, works from any range)
   tryPickupGroundLoot(e);
-  if (Object.keys(state.groundLoot || {}).length > 0) {
-    // Don't move if we clicked on loot
-    const rect = canvas.getBoundingClientRect();
-    const mouse = new THREE.Vector2(
-      ((e.clientX - rect.left) / rect.width) * 2 - 1,
-      -((e.clientY - rect.top) / rect.height) * 2 + 1
-    );
-    const raycaster = new THREE.Raycaster();
-    raycaster.setFromCamera(mouse, state.camera);
-    const meshes = Object.values(state.groundLoot).map(l => l.mesh).filter(Boolean);
-    if (raycaster.intersectObjects(meshes).length > 0) return;
+  // If loot was picked up, the entry is already removed — check if any remain near click
+  // Skip movement if click was near a loot icon
+  if (Object.keys(state.groundLoot || {}).length > 0 && state.camera) {
+    const v = new THREE.Vector3();
+    const halfW = window.innerWidth / 2;
+    const halfH = window.innerHeight / 2;
+    for (const entry of Object.values(state.groundLoot)) {
+      if (!entry.mesh) continue;
+      v.copy(entry.mesh.position).project(state.camera);
+      const sx = (v.x * halfW) + halfW;
+      const sy = -(v.y * halfH) + halfH;
+      const dx = e.clientX - sx;
+      const dy = e.clientY - sy;
+      if (Math.sqrt(dx*dx + dy*dy) < 40) return;
+    }
   }
 
   const mouse = new THREE.Vector2(
@@ -2763,31 +2767,43 @@ function removeGroundLoot3D(lootId) {
   delete state.groundLoot[lootId];
 }
 
-// Click-to-pickup ground loot via raycaster
+// Click-to-pickup ground loot — screen-space distance (works from any range)
 function tryPickupGroundLoot(mouseEvent) {
   if (!state.groundLoot || Object.keys(state.groundLoot).length === 0) return;
-  const rect = state.renderer?.domElement?.getBoundingClientRect();
-  if (!rect) return;
-  const mouse = new THREE.Vector2(
-    ((mouseEvent.clientX - rect.left) / rect.width) * 2 - 1,
-    -((mouseEvent.clientY - rect.top) / rect.height) * 2 + 1
-  );
-  const raycaster = new THREE.Raycaster();
-  raycaster.setFromCamera(mouse, state.camera);
-  // Check all loot meshes
-  const meshes = Object.values(state.groundLoot).map(e => e.mesh).filter(Boolean);
-  const hits = raycaster.intersectObjects(meshes);
-  if (hits.length > 0) {
-    const hitMesh = hits[0].object;
-    const lootId = Object.keys(state.groundLoot).find(id => state.groundLoot[id].mesh === hitMesh);
-    if (lootId) {
-      const entry = state.groundLoot[lootId];
-      const names = entry.items.map(i => `${i.name} x${i.quantity || 1}`).join(', ');
-      addChatMessage('System', `📦 Picked up: ${names}`);
-      window.ZenSFX?.pickup();
-      wsSend(JSON.stringify({ type: 'pickup_loot', lootId }));
-      removeGroundLoot3D(lootId);
+  if (!state.camera || !state.renderer) return;
+  const PICKUP_PIXEL_RADIUS = 40; // click within 40px of loot icon
+  constClicked = new THREE.Vector3(mouseEvent.clientX, mouseEvent.clientY, 0.5);
+  constClicked.project(state.camera);
+  const halfW = window.innerWidth / 2;
+  const halfH = window.innerHeight / 2;
+  const clickScreenX = (constClicked.x * halfW) + halfW;
+  const clickScreenY = -(constClicked.y * halfH) + halfH;
+
+  let closestId = null;
+  let closestDist = Infinity;
+
+  Object.entries(state.groundLoot).forEach(([lootId, entry]) => {
+    if (!entry.mesh) return;
+    const v = new THREE.Vector3().copy(entry.mesh.position);
+    v.project(state.camera);
+    const sx = (v.x * halfW) + halfW;
+    const sy = -(v.y * halfH) + halfH;
+    const dx = clickScreenX - sx;
+    const dy = clickScreenY - sy;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist < PICKUP_PIXEL_RADIUS && dist < closestDist) {
+      closestDist = dist;
+      closestId = lootId;
     }
+  });
+
+  if (closestId) {
+    const entry = state.groundLoot[closestId];
+    const names = entry.items.map(i => `${i.name} x${i.quantity || 1}`).join(', ');
+    addChatMessage('System', `📦 Picked up: ${names}`);
+    window.ZenSFX?.pickup();
+    wsSend(JSON.stringify({ type: 'pickup_loot', lootId: closestId }));
+    removeGroundLoot3D(closestId);
   }
 }
 
