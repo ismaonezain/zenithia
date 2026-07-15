@@ -3264,13 +3264,13 @@ canvas.addEventListener('click', (e) => {
     }
   }
 
-  const mouse = new THREE.Vector2(
+  const mouse2 = new THREE.Vector2(
     (e.clientX / window.innerWidth) * 2 - 1,
     -(e.clientY / window.innerHeight) * 2 + 1
   );
 
   const raycaster = new THREE.Raycaster();
-  raycaster.setFromCamera(mouse, state.camera);
+  raycaster.setFromCamera(mouse2, state.camera);
 
   // === 1. Raycast directly against NPC + Monster meshes ===
   const clickTargets = [];
