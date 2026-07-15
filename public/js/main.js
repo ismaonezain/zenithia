@@ -604,32 +604,42 @@ function wsSend(data) {
 // ============================
 // WEBSOCKET
 // ============================
+let _wsRetryCount = 0;
+const WS_MAX_RETRIES = 8;
+
 function connectWebSocket(playerName, wallet) {
+  // Show loading status
+  const loadStatus = document.getElementById('loading-status');
+  const loadErr = document.getElementById('loading-error');
+  if (loadStatus) loadStatus.textContent = 'Connecting to server...';
+  if (loadErr) { loadErr.style.display = 'none'; loadErr.textContent = ''; }
+  // Make sure loading screen is visible
+  if (loadingScreen) loadingScreen.style.display = 'flex';
+
   // Determine WS server URL
   let wsHost;
   const host = location.host;
   if (host.includes('vercel.app')) {
-    // On Vercel → connect to Railway WS server
     wsHost = 'zenithia-production.up.railway.app';
   } else {
-    // On localhost or Railway → same host
     wsHost = host;
   }
   const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
 
   console.log(`[WS] Connecting to ${protocol}//${wsHost}`);
-  // Try WebSocket — if fails, run in single-player mode
   try {
     state.ws = new WebSocket(`${protocol}//${wsHost}`);
   } catch (e) {
-    console.log('[WS] Connection failed, single-player mode');
-    enterSinglePlayer(playerName, wallet);
+    console.error('[WS] Failed to create WebSocket:', e);
+    _wsRetryWithStatus(playerName, wallet, 'Connection failed, retrying...');
     return;
   }
 
   state.ws.onopen = () => {
     console.log('[WS] Connected');
     state.connected = true;
+    _wsRetryCount = 0;
+    if (loadStatus) loadStatus.textContent = 'Connected! Loading world...';
   };
   state.ws.onmessage = (event) => {
     try {
@@ -639,24 +649,38 @@ function connectWebSocket(playerName, wallet) {
     }
   };
   state.ws.onclose = () => {
-    console.log('[WS] Disconnected — single-player mode');
     state.connected = false;
-    if (!state.player) enterSinglePlayer(playerName, wallet);
+    if (!state.player) {
+      _wsRetryWithStatus(playerName, wallet, 'Connection lost, reconnecting...');
+    }
   };
   state.ws.onerror = () => {
-    console.log('[WS] Error — single-player mode');
     state.connected = false;
-    if (!state.player) enterSinglePlayer(playerName, wallet);
+    // onclose fires after onerror, retry handled there
   };
+}
 
-  // Timeout — if WS doesn't connect in 3s, go single-player
-  setTimeout(() => {
-    if (!state.connected && !state.player) {
-      console.log('[WS] Timeout — single-player mode');
-      state.ws.close();
-      enterSinglePlayer(playerName, wallet);
+function _wsRetryWithStatus(playerName, wallet, msg) {
+  _wsRetryCount++;
+  const loadStatus = document.getElementById('loading-status');
+  const loadErr = document.getElementById('loading-error');
+
+  if (_wsRetryCount > WS_MAX_RETRIES) {
+    console.log('[WS] Max retries reached');
+    if (loadStatus) loadStatus.textContent = '';
+    if (loadErr) {
+      loadErr.style.display = 'block';
+      loadErr.innerHTML = '⚠️ Server tidak merespons.<br>Server mungkin sedang cold start (30-60 detik).<br><br>' +
+        '<button onclick="_wsRetryCount=0;connectWebSocket(\'' + playerName + '\',\'' + wallet + '\')" ' +
+        'style="padding:10px 24px;font-size:1rem;background:#4CAF50;color:#fff;border:none;border-radius:6px;cursor:pointer;">🔄 Coba Lagi</button>';
     }
-  }, 3000);
+    return;
+  }
+
+  const delay = Math.min(3000 * Math.pow(1.5, _wsRetryCount - 1), 15000);
+  console.log(`[WS] Retry ${_wsRetryCount}/${WS_MAX_RETRIES} in ${Math.round(delay/1000)}s`);
+  if (loadStatus) loadStatus.textContent = `${msg} (attempt ${_wsRetryCount}/${WS_MAX_RETRIES})`;
+  setTimeout(() => connectWebSocket(playerName, wallet), delay);
 }
 
 function enterSinglePlayer(playerName, wallet) {
@@ -5372,7 +5396,6 @@ async function boot() {
   // If previously verified in this session, auto-join (no captcha needed)
   if (savedWallet && isVerified) {
     state.walletAddress = savedWallet;
-    loadingScreen.style.display = 'none';
     connectWebSocket('Adventurer', savedWallet);
     return;
   }
