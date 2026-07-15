@@ -706,16 +706,131 @@ export function animateIdle(model, time) {
   const rightArm = model.getObjectByName('rightArm');
   if (leftArm) leftArm.rotation.x = Math.sin(time * 1.5) * 0.05;
   if (rightArm) rightArm.rotation.x = -Math.sin(time * 1.5) * 0.05;
-  // Wing flapping animation
+
   const eqGroup = model.getObjectByName('equipment');
-  if (eqGroup) {
-    const wGroup = eqGroup.getObjectByName('eq_wings');
-    if (wGroup) {
-      const lWing = wGroup.getObjectByName('wing_left');
-      const rWing = wGroup.getObjectByName('wing_right');
-      const flapAngle = Math.sin(time * 3) * 0.25 + 0.1;
-      if (lWing) lWing.rotation.z = flapAngle;
-      if (rWing) rWing.rotation.z = -flapAngle;
+  if (!eqGroup) return;
+
+  // === WING flapping ===
+  const wGroup = eqGroup.getObjectByName('eq_wings');
+  if (wGroup) {
+    const lWing = wGroup.getObjectByName('wing_left');
+    const rWing = wGroup.getObjectByName('wing_right');
+    const flapAngle = Math.sin(time * 3) * 0.25 + 0.1;
+    if (lWing) lWing.rotation.z = flapAngle;
+    if (rWing) rWing.rotation.z = -flapAngle;
+  }
+
+  // === ACCESSORY animations ===
+  // Wind Cloak — cape sway + wind streaks
+  const cape = eqGroup.getObjectByName('eq_cape');
+  if (cape && cape.parent === eqGroup) {
+    cape.rotation.x = Math.sin(time * 2) * 0.08;
+    cape.position.z = -0.22 + Math.sin(time * 1.5) * 0.01;
+  }
+  for (let i = 0; i < 3; i++) {
+    const streak = eqGroup.getObjectByName('eq_wind_streak_' + i);
+    if (streak) {
+      streak.position.x = -0.15 + i * 0.15 + Math.sin(time * 4 + i) * 0.03;
+      streak.position.z = -0.28 + Math.sin(time * 3 + i * 0.5) * 0.02;
+      streak.material.opacity = 0.15 + Math.sin(time * 5 + i * 1.2) * 0.15;
+    }
+  }
+  // Bramble Cape — thorns sway + leaf particles float
+  for (let i = 0; i < 4; i++) {
+    const thorn = eqGroup.getObjectByName('eq_thorn_' + i);
+    if (thorn) thorn.rotation.z = (i - 1.5) * 0.3 + Math.sin(time * 1.8 + i * 0.7) * 0.1;
+  }
+  for (let i = 0; i < 3; i++) {
+    const leaf = eqGroup.getObjectByName('eq_leaf_' + i);
+    if (leaf) {
+      leaf.position.y = 0.4 + i * 0.15 + Math.sin(time * 1.2 + i * 2) * 0.08;
+      leaf.position.x = -0.2 + i * 0.2 + Math.sin(time * 0.8 + i * 1.5) * 0.05;
+      leaf.material.opacity = 0.3 + Math.sin(time * 2 + i) * 0.3;
+    }
+  }
+  // Chaos Heart — pulsating orb + tendril sway
+  const chaosOrb = eqGroup.getObjectByName('eq_chaos_orb');
+  if (chaosOrb) {
+    chaosOrb.scale.setScalar(1.0 + Math.sin(time * 4) * 0.15);
+    chaosOrb.material.color.setHex(Math.sin(time * 3) > 0 ? 0xFF1744 : 0xD500F9);
+  }
+  const chaosGlow = eqGroup.getObjectByName('eq_chaos_glow');
+  if (chaosGlow) chaosGlow.material.opacity = 0.1 + Math.sin(time * 4) * 0.1;
+  for (let i = 0; i < 3; i++) {
+    const tendril = eqGroup.getObjectByName('eq_tendril_' + i);
+    if (tendril) {
+      tendril.rotation.z = Math.sin(time * 2.5 + i * 2.1) * 0.4;
+      tendril.rotation.x = Math.cos(time * 1.8 + i * 1.5) * 0.3;
+    }
+  }
+  // Lava Heart — molten core spin + fire sparks orbit
+  const lavaCore = eqGroup.getObjectByName('eq_lava_core');
+  if (lavaCore) {
+    lavaCore.rotation.y = time * 2;
+    lavaCore.rotation.x = Math.sin(time * 1.5) * 0.3;
+  }
+  const lavaGlow = eqGroup.getObjectByName('eq_lava_glow');
+  if (lavaGlow) lavaGlow.material.opacity = 0.12 + Math.sin(time * 5) * 0.1;
+  for (let i = 0; i < 4; i++) {
+    const spark = eqGroup.getObjectByName('eq_fire_spark_' + i);
+    if (spark) {
+      const angle = time * 3 + i * 1.57;
+      spark.position.x = Math.cos(angle) * 0.06;
+      spark.position.y = 1.1 + Math.sin(time * 4 + i) * 0.04;
+      spark.position.z = 0.25 + Math.sin(angle) * 0.06;
+      spark.material.opacity = 0.4 + Math.sin(time * 6 + i * 2) * 0.3;
+    }
+  }
+
+  // === RING animations (on leftHand) ===
+  if (leftArm) {
+    // Wind Charm — orbiting particles
+    for (let i = 0; i < 3; i++) {
+      const p = leftArm.getObjectByName('eq_wind_particle_' + i);
+      if (p) {
+        const a = time * 4 + i * 2.09;
+        p.position.x = Math.cos(a) * 0.05;
+        p.position.z = 0.04 + Math.sin(a) * 0.05;
+        p.material.opacity = 0.3 + Math.sin(time * 5 + i) * 0.3;
+      }
+    }
+    // Moonstone — moonlight pulse
+    const moonGlow = leftArm.getObjectByName('eq_ring_glow');
+    if (moonGlow && moonGlow.material.color?.getHex() === 0xB3E5FC) {
+      moonGlow.material.opacity = 0.1 + Math.sin(time * 2) * 0.15;
+      moonGlow.scale.setScalar(1.0 + Math.sin(time * 2) * 0.2);
+    }
+    // Aether — arcane orbs orbit
+    for (let i = 0; i < 2; i++) {
+      const orb = leftArm.getObjectByName('eq_arcane_orb_' + i);
+      if (orb) {
+        const a = time * 3 + i * Math.PI;
+        orb.position.x = Math.cos(a) * 0.04;
+        orb.position.z = 0.04 + Math.sin(a) * 0.04;
+      }
+    }
+    // Signet rings — barrier pulse
+    const barrier = leftArm.getObjectByName('eq_ring_barrier');
+    if (barrier) {
+      barrier.scale.setScalar(1.0 + Math.sin(time * 2.5) * 0.15);
+      barrier.material.opacity = 0.05 + Math.sin(time * 2.5) * 0.08;
+    }
+    // Chaos Signet — sparks swirl
+    for (let i = 0; i < 3; i++) {
+      const spark = leftArm.getObjectByName('eq_chaos_spark_' + i);
+      if (spark) {
+        const a = time * 5 + i * 2.09;
+        spark.position.x = Math.cos(a) * 0.04;
+        spark.position.z = 0.04 + Math.sin(a) * 0.04;
+        spark.material.opacity = 0.3 + Math.sin(time * 7 + i * 2) * 0.3;
+      }
+    }
+    // Abyssal — void aura rotate
+    const voidAura = leftArm.getObjectByName('eq_void_aura');
+    if (voidAura) {
+      voidAura.rotation.x = time * 2;
+      voidAura.rotation.y = time * 1.5;
+      voidAura.material.opacity = 0.25 + Math.sin(time * 3) * 0.15;
     }
   }
 }
@@ -1125,11 +1240,14 @@ export function applyEquipment(model, equipment) {
     }
   }
 
-  // === RING — on leftHand finger ===
+  // === RING — unique per-item animated visuals ===
   if (equipment.ring) {
     const leftHand = model.getObjectByName('leftHand');
     if (leftHand) {
       const t = getEQTheme(equipment.ring.id);
+      const rid = equipment.ring.id || '';
+
+      // Base ring band
       const ringGeo = new THREE.TorusGeometry(0.035, 0.01, 8, 16);
       const ringMat = new THREE.MeshBasicMaterial({ color: t.primary });
       const ring = new THREE.Mesh(ringGeo, ringMat);
@@ -1137,12 +1255,116 @@ export function applyEquipment(model, equipment) {
       ring.rotation.x = Math.PI / 2;
       ring.name = 'eq_ring';
       leftHand.add(ring);
-      const gemGeo = new THREE.SphereGeometry(0.015, 6, 6);
-      const gemMat = new THREE.MeshBasicMaterial({ color: t.accent });
-      const gem = new THREE.Mesh(gemGeo, gemMat);
-      gem.position.set(0, 0.06, 0.04);
-      gem.name = 'eq_ring_gem';
-      leftHand.add(gem);
+
+      if (rid.includes('copper_band')) {
+        // Copper Band — warm subtle glow
+        const gemGeo = new THREE.SphereGeometry(0.012, 6, 6);
+        const gemMat = new THREE.MeshBasicMaterial({ color: t.accent });
+        const gem = new THREE.Mesh(gemGeo, gemMat);
+        gem.position.set(0, 0.06, 0.04);
+        gem.name = 'eq_ring_gem';
+        leftHand.add(gem);
+        const glowGeo = new THREE.SphereGeometry(0.03, 6, 6);
+        const glowMat = new THREE.MeshBasicMaterial({ color: t.accent, transparent: true, opacity: 0.15 });
+        const glow = new THREE.Mesh(glowGeo, glowMat);
+        glow.position.set(0, 0.06, 0.04);
+        glow.name = 'eq_ring_glow';
+        leftHand.add(glow);
+      } else if (rid.includes('wind_charm')) {
+        // Wind Charm — swirling wind particles
+        for (let i = 0; i < 3; i++) {
+          const particleGeo = new THREE.SphereGeometry(0.006, 4, 4);
+          const particleMat = new THREE.MeshBasicMaterial({ color: t.accent, transparent: true, opacity: 0.6 });
+          const particle = new THREE.Mesh(particleGeo, particleMat);
+          particle.position.set(Math.cos(i * 2.09) * 0.05, 0.06, 0.04 + Math.sin(i * 2.09) * 0.05);
+          particle.name = 'eq_wind_particle_' + i;
+          leftHand.add(particle);
+        }
+      } else if (rid.includes('moonstone')) {
+        // Moonstone Ring — moonlight pulse
+        const gemGeo = new THREE.SphereGeometry(0.015, 6, 6);
+        const gemMat = new THREE.MeshBasicMaterial({ color: 0xE1F5FE });
+        const gem = new THREE.Mesh(gemGeo, gemMat);
+        gem.position.set(0, 0.06, 0.04);
+        gem.name = 'eq_ring_gem';
+        leftHand.add(gem);
+        const glowGeo = new THREE.SphereGeometry(0.04, 6, 6);
+        const glowMat = new THREE.MeshBasicMaterial({ color: 0xB3E5FC, transparent: true, opacity: 0.2 });
+        const glow = new THREE.Mesh(glowGeo, glowMat);
+        glow.position.set(0, 0.06, 0.04);
+        glow.name = 'eq_ring_glow';
+        leftHand.add(glow);
+      } else if (rid.includes('aether_pendant')) {
+        // Aether Pendant — arcane orbit
+        for (let i = 0; i < 2; i++) {
+          const orbGeo = new THREE.SphereGeometry(0.008, 4, 4);
+          const orbMat = new THREE.MeshBasicMaterial({ color: t.accent, transparent: true, opacity: 0.7 });
+          const orb = new THREE.Mesh(orbGeo, orbMat);
+          orb.position.set(Math.cos(i * Math.PI) * 0.04, 0.06, 0.04 + Math.sin(i * Math.PI) * 0.04);
+          orb.name = 'eq_arcane_orb_' + i;
+          leftHand.add(orb);
+        }
+        const glowGeo = new THREE.SphereGeometry(0.035, 6, 6);
+        const glowMat = new THREE.MeshBasicMaterial({ color: t.accent, transparent: true, opacity: 0.15 });
+        const glow = new THREE.Mesh(glowGeo, glowMat);
+        glow.position.set(0, 0.06, 0.04);
+        glow.name = 'eq_ring_glow';
+        leftHand.add(glow);
+      } else if (rid.includes('guardian_signet') || rid.includes('titan_signet') || rid.includes('world_signet')) {
+        // Signet rings — shield barrier pulse
+        const gemGeo = new THREE.SphereGeometry(0.018, 6, 6);
+        const gemMat = new THREE.MeshBasicMaterial({ color: t.accent });
+        const gem = new THREE.Mesh(gemGeo, gemMat);
+        gem.position.set(0, 0.06, 0.04);
+        gem.name = 'eq_ring_gem';
+        leftHand.add(gem);
+        // Shield barrier
+        const barrierGeo = new THREE.SphereGeometry(0.045, 6, 6);
+        const barrierMat = new THREE.MeshBasicMaterial({ color: t.accent, transparent: true, opacity: 0.1, wireframe: true });
+        const barrier = new THREE.Mesh(barrierGeo, barrierMat);
+        barrier.position.set(0, 0.06, 0.04);
+        barrier.name = 'eq_ring_barrier';
+        leftHand.add(barrier);
+      } else if (rid.includes('chaos_signet')) {
+        // Chaos Signet — chaotic energy swirl
+        const gemGeo = new THREE.OctahedronGeometry(0.018, 0);
+        const gemMat = new THREE.MeshBasicMaterial({ color: 0xEF9A9A });
+        const gem = new THREE.Mesh(gemGeo, gemMat);
+        gem.position.set(0, 0.06, 0.04);
+        gem.name = 'eq_ring_gem';
+        leftHand.add(gem);
+        for (let i = 0; i < 3; i++) {
+          const sparkGeo = new THREE.SphereGeometry(0.005, 4, 4);
+          const sparkMat = new THREE.MeshBasicMaterial({ color: i % 2 === 0 ? 0xFF1744 : 0xB71C1C, transparent: true, opacity: 0.6 });
+          const spark = new THREE.Mesh(sparkGeo, sparkMat);
+          spark.position.set(Math.cos(i * 2.09) * 0.04, 0.06, 0.04 + Math.sin(i * 2.09) * 0.04);
+          spark.name = 'eq_chaos_spark_' + i;
+          leftHand.add(spark);
+        }
+      } else if (rid.includes('abyssal')) {
+        // Abyssal Ring — void energy drain
+        const gemGeo = new THREE.SphereGeometry(0.015, 6, 6);
+        const gemMat = new THREE.MeshBasicMaterial({ color: 0xD500F9 });
+        const gem = new THREE.Mesh(gemGeo, gemMat);
+        gem.position.set(0, 0.06, 0.04);
+        gem.name = 'eq_ring_gem';
+        leftHand.add(gem);
+        // Void aura
+        const voidGeo = new THREE.TorusGeometry(0.04, 0.004, 6, 16);
+        const voidMat = new THREE.MeshBasicMaterial({ color: 0x7B1FA2, transparent: true, opacity: 0.4 });
+        const voidRing = new THREE.Mesh(voidGeo, voidMat);
+        voidRing.position.set(0, 0.06, 0.04);
+        voidRing.name = 'eq_void_aura';
+        leftHand.add(voidRing);
+      } else {
+        // Default ring — gem + glow
+        const gemGeo = new THREE.SphereGeometry(0.015, 6, 6);
+        const gemMat = new THREE.MeshBasicMaterial({ color: t.accent });
+        const gem = new THREE.Mesh(gemGeo, gemMat);
+        gem.position.set(0, 0.06, 0.04);
+        gem.name = 'eq_ring_gem';
+        leftHand.add(gem);
+      }
     }
   }
 
@@ -1220,34 +1442,117 @@ export function applyEquipment(model, equipment) {
     eqGroup.add(wGroup);
   }
 
-  // === ACCESSORY — pendant glow / cape ===
+  // === ACCESSORY — unique per-item animated visuals ===
   if (equipment.accessory) {
     const t = getEQTheme(equipment.accessory.id);
     const wid = equipment.accessory.id || '';
 
-    if (wid.includes('cloak') || wid.includes('cape')) {
-      // Cape — flowing cloth on back
-      const capeGeo = new THREE.BoxGeometry(0.35, 0.5, 0.04);
+    if (wid.includes('wind_cloak')) {
+      // Wind Cloak — flowing cape with wind streaks
+      const capeGeo = new THREE.BoxGeometry(0.35, 0.55, 0.03);
+      const capeMat = new THREE.MeshLambertMaterial({ color: t.primary, transparent: true, opacity: 0.8 });
+      const cape = new THREE.Mesh(capeGeo, capeMat);
+      cape.position.set(0, 0.65, -0.22);
+      cape.name = 'eq_cape';
+      eqGroup.add(cape);
+      // Wind streak particles
+      for (let i = 0; i < 3; i++) {
+        const streakGeo = new THREE.BoxGeometry(0.02, 0.005, 0.15 + i * 0.05);
+        const streakMat = new THREE.MeshBasicMaterial({ color: t.accent, transparent: true, opacity: 0.3 - i * 0.08 });
+        const streak = new THREE.Mesh(streakGeo, streakMat);
+        streak.position.set(-0.15 + i * 0.15, 0.5 + i * 0.1, -0.28);
+        streak.name = 'eq_wind_streak_' + i;
+        eqGroup.add(streak);
+      }
+    } else if (wid.includes('bramble_cape')) {
+      // Bramble Cape — thorny cape with leaf particles
+      const capeGeo = new THREE.BoxGeometry(0.38, 0.5, 0.035);
       const capeMat = new THREE.MeshLambertMaterial({ color: t.primary, transparent: true, opacity: 0.85 });
       const cape = new THREE.Mesh(capeGeo, capeMat);
       cape.position.set(0, 0.65, -0.22);
       cape.name = 'eq_cape';
       eqGroup.add(cape);
+      // Thorn spikes on cape
+      for (let i = 0; i < 4; i++) {
+        const thornGeo = new THREE.ConeGeometry(0.015, 0.06, 4);
+        const thornMat = new THREE.MeshLambertMaterial({ color: 0x5D4037 });
+        const thorn = new THREE.Mesh(thornGeo, thornMat);
+        thorn.position.set(-0.12 + i * 0.08, 0.85 - i * 0.08, -0.22);
+        thorn.rotation.z = (i - 1.5) * 0.3;
+        thorn.name = 'eq_thorn_' + i;
+        eqGroup.add(thorn);
+      }
+      // Leaf particles
+      for (let i = 0; i < 3; i++) {
+        const leafGeo = new THREE.SphereGeometry(0.015, 4, 4);
+        const leafMat = new THREE.MeshBasicMaterial({ color: t.accent, transparent: true, opacity: 0.6 });
+        const leaf = new THREE.Mesh(leafGeo, leafMat);
+        leaf.position.set(-0.2 + i * 0.2, 0.4 + Math.random() * 0.4, -0.25);
+        leaf.name = 'eq_leaf_' + i;
+        eqGroup.add(leaf);
+      }
+    } else if (wid.includes('chaos_heart')) {
+      // Chaos Heart — pulsating dark orb with shadow tendrils
+      const orbGeo = new THREE.SphereGeometry(0.04, 8, 8);
+      const orbMat = new THREE.MeshBasicMaterial({ color: 0xFF1744 });
+      const orb = new THREE.Mesh(orbGeo, orbMat);
+      orb.position.set(0, 1.05, 0.25);
+      orb.name = 'eq_chaos_orb';
+      eqGroup.add(orb);
+      // Dark glow
+      const glowGeo = new THREE.SphereGeometry(0.08, 8, 8);
+      const glowMat = new THREE.MeshBasicMaterial({ color: 0xFF1744, transparent: true, opacity: 0.15 });
+      const glow = new THREE.Mesh(glowGeo, glowMat);
+      glow.position.set(0, 1.05, 0.25);
+      glow.name = 'eq_chaos_glow';
+      eqGroup.add(glow);
+      // Shadow tendrils
+      for (let i = 0; i < 3; i++) {
+        const tendrilGeo = new THREE.BoxGeometry(0.008, 0.12, 0.008);
+        const tendrilMat = new THREE.MeshBasicMaterial({ color: 0x4A0000, transparent: true, opacity: 0.5 });
+        const tendril = new THREE.Mesh(tendrilGeo, tendrilMat);
+        tendril.position.set(Math.cos(i * 2.1) * 0.06, 1.05, 0.25 + Math.sin(i * 2.1) * 0.06);
+        tendril.name = 'eq_tendril_' + i;
+        eqGroup.add(tendril);
+      }
+    } else if (wid.includes('lava_heart')) {
+      // Lava Heart — molten amulet with fire particles
+      const coreGeo = new THREE.DodecahedronGeometry(0.035, 0);
+      const coreMat = new THREE.MeshBasicMaterial({ color: 0xFF6E40 });
+      const core = new THREE.Mesh(coreGeo, coreMat);
+      core.position.set(0, 1.05, 0.25);
+      core.name = 'eq_lava_core';
+      eqGroup.add(core);
+      // Lava glow
+      const glowGeo = new THREE.SphereGeometry(0.07, 8, 8);
+      const glowMat = new THREE.MeshBasicMaterial({ color: 0xFF6E40, transparent: true, opacity: 0.2 });
+      const glow = new THREE.Mesh(glowGeo, glowMat);
+      glow.position.set(0, 1.05, 0.25);
+      glow.name = 'eq_lava_glow';
+      eqGroup.add(glow);
+      // Fire particles
+      for (let i = 0; i < 4; i++) {
+        const sparkGeo = new THREE.SphereGeometry(0.008, 4, 4);
+        const sparkMat = new THREE.MeshBasicMaterial({ color: i % 2 === 0 ? 0xFF3D00 : 0xFFAB00, transparent: true, opacity: 0.7 });
+        const spark = new THREE.Mesh(sparkGeo, sparkMat);
+        spark.position.set(Math.cos(i * 1.57) * 0.05, 1.1 + i * 0.03, 0.25 + Math.sin(i * 1.57) * 0.05);
+        spark.name = 'eq_fire_spark_' + i;
+        eqGroup.add(spark);
+      }
     } else {
-      // Pendant on chest
+      // Generic pendant — fallback
       const pendantGeo = new THREE.SphereGeometry(0.03, 6, 6);
       const pendantMat = new THREE.MeshBasicMaterial({ color: t.accent });
       const pendant = new THREE.Mesh(pendantGeo, pendantMat);
       pendant.position.set(0, 1.1, 0.25);
       pendant.name = 'eq_pendant';
       eqGroup.add(pendant);
-      // Glow
-      const glowGeo = new THREE.SphereGeometry(0.06, 6, 6);
-      const glowMat = new THREE.MeshBasicMaterial({ color: t.accent, transparent: true, opacity: 0.15 });
-      const glow = new THREE.Mesh(glowGeo, glowMat);
-      glow.position.set(0, 1.1, 0.25);
-      glow.name = 'eq_pendant_glow';
-      eqGroup.add(glow);
+      const glowGeo2 = new THREE.SphereGeometry(0.06, 6, 6);
+      const glowMat2 = new THREE.MeshBasicMaterial({ color: t.accent, transparent: true, opacity: 0.15 });
+      const glow2 = new THREE.Mesh(glowGeo2, glowMat2);
+      glow2.position.set(0, 1.1, 0.25);
+      glow2.name = 'eq_pendant_glow';
+      eqGroup.add(glow2);
     }
   }
 
