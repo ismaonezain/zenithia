@@ -8,6 +8,7 @@ import { QuestUI } from './quest_ui.js';
 import { PartyUI } from './party_ui.js';
 import { ShopUI } from './shop_ui.js';
 import { createMonsterModel, updateMonsterHPBar, animateMonster, monsterAttackAnim } from './monsters.js';
+import { drawItemIcon } from './item-icons.js';
 
 // --- State ---
 const state = {
@@ -2660,7 +2661,9 @@ function showLootPopup(loot) {
 
     const div = document.createElement('div');
     div.className = 'loot-item';
-    const iconBg = '#555';
+    const iconBg = item.icon ? '#' + item.icon.bg.toString(16).padStart(6, '0') : '#555';
+    const iconFg = item.icon ? '#' + item.icon.fg.toString(16).padStart(6, '0') : '#fff';
+    const iconSymbol = item.icon?.symbol || '📦';
 
     // Stats text for equipment
     let statsText = '';
@@ -2680,7 +2683,7 @@ function showLootPopup(loot) {
     }
 
     div.innerHTML = `
-      <div class="loot-item-icon" style="background:${iconBg}">${item.icon?.symbol || '📦'}</div>
+      <div class="loot-item-icon" style="background:${iconBg};color:${iconFg}">${iconSymbol}</div>
       <div class="loot-item-info">
         <div class="loot-item-name">${item.name}</div>
         <div class="loot-item-type">${item.type || 'item'}${item.slot ? ' • ' + item.slot : ''} ×${item.quantity || 1} <span class="loot-drop-${difficulty}">• ${diffLabel}</span></div>
@@ -2773,7 +2776,19 @@ function renderHotbar() {
 
     const icon = document.createElement('div');
     icon.className = 'skill-icon';
-    icon.textContent = getSlotLabel(slot);
+    if (slot && slot.type === 'potion' && slot.id) {
+      // Render canvas item icon for potions
+      const canvas = document.createElement('canvas');
+      canvas.width = 28; canvas.height = 28;
+      canvas.style.cssText = 'width:28px;height:28px;border-radius:4px;';
+      icon.appendChild(canvas);
+      requestAnimationFrame(() => {
+        const ctx = canvas.getContext('2d');
+        drawItemIcon(ctx, slot.id, 28);
+      });
+    } else {
+      icon.textContent = getSlotLabel(slot);
+    }
     div.appendChild(icon);
 
     // Cooldown overlay (for skill slots)
