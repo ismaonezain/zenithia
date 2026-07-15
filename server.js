@@ -597,8 +597,7 @@ for (const zoneId of Object.keys(ZONES)) {
   spawnZoneMobs(zoneId);
 }
 
-// Spawn initial monsters (legacy willowmere)
-spawnMonsters();
+// Legacy spawnMonsters() removed — zone system handles all spawning
 
 // Respawn timer
 setInterval(() => { try {

@@ -201,6 +201,96 @@ const MONSTERS = {
     respawnTime: 120,
     chargeDamage: 25,
   },
+
+  // ═══════════════════════════════════════
+  // STORMCREST MOUNTAINS (Lv.5-8) — unique
+  // ═══════════════════════════════════════
+  storm_hawk: {
+    name: 'Storm Hawk',
+    level: 6,
+    hp: 80,
+    atk: 16,
+    def: 4,
+    spd: 10,
+    xp: 90,
+    zen: [0, 0],
+    color: 0x78909C,
+    accentColor: 0xB0BEC5,
+    size: 0.65,
+    aggroRange: 14,
+    attackRange: 2.5,
+    attackSpeed: 0.8,
+    behavior: 'diver', // swoops down from above
+    retreatHp: 0.3,
+    maxSpawn: 3,
+    respawnTime: 50,
+  },
+
+  stone_golem: {
+    name: 'Stone Golem',
+    level: 7,
+    hp: 200,
+    atk: 14,
+    def: 25,
+    spd: 1,
+    xp: 110,
+    zen: [0, 0],
+    color: 0x616161,
+    accentColor: 0x9E9E9E,
+    size: 1.4,
+    aggroRange: 6,
+    attackRange: 2,
+    attackSpeed: 2.5,
+    behavior: 'guardian', // slow but hits hard, high def
+    retreatHp: 0.05,
+    maxSpawn: 2,
+    respawnTime: 90,
+  },
+
+  // ═══════════════════════════════════════
+  // MISTMARSH SWAMP (Lv.8-10) — unique
+  // ═══════════════════════════════════════
+  swamp_lurker: {
+    name: 'Swamp Lurker',
+    level: 9,
+    hp: 150,
+    atk: 22,
+    def: 10,
+    spd: 6,
+    xp: 140,
+    zen: [0, 0],
+    color: 0x1B5E20,
+    accentColor: 0x4CAF50,
+    size: 0.9,
+    aggroRange: 10,
+    attackRange: 2,
+    attackSpeed: 1.2,
+    behavior: 'ambush', // hides in swamp, attacks from behind
+    retreatHp: 0.15,
+    maxSpawn: 3,
+    respawnTime: 60,
+  },
+
+  toxic_toad: {
+    name: 'Toxic Toad',
+    level: 8,
+    hp: 100,
+    atk: 12,
+    def: 6,
+    spd: 4,
+    xp: 100,
+    zen: [0, 0],
+    color: 0x7B1FA2,
+    accentColor: 0xCE93D8,
+    size: 0.7,
+    aggroRange: 8,
+    attackRange: 3,
+    attackSpeed: 1.0,
+    behavior: 'poisoner', // shoots poison projectiles, DoT
+    retreatHp: 0.2,
+    maxSpawn: 4,
+    respawnTime: 45,
+  },
 };
 
 module.exports = MONSTERS;

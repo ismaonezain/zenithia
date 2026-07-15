@@ -67,7 +67,7 @@ const ZONES = {
     level: '5-8',
     groundColor: 0x757575,     // grey stone
     ambientColor: 0x90A4AE,    // blue grey
-    mobTypes: ['rock_crawler', 'bramble_boar', 'wind_sprite'],
+    mobTypes: ['rock_crawler', 'storm_hawk', 'stone_golem'],
     maxMobs: 8,
     spawnAreas: [
       { x: -20, z: -15, radius: 12 },
@@ -95,7 +95,7 @@ const ZONES = {
     level: '8-10',
     groundColor: 0x4E342E,     // dark brown mud
     ambientColor: 0x6D4C41,    // murky
-    mobTypes: ['marsh_snapper', 'wind_sprite', 'rock_crawler'],
+    mobTypes: ['marsh_snapper', 'swamp_lurker', 'toxic_toad'],
     maxMobs: 8,
     spawnAreas: [
       { x: -15, z: -15, radius: 12 },
