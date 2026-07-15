@@ -19,6 +19,7 @@ const { CRAFTING_RECIPES } = require('./shared/crafting');
 const { FISHING_SPOTS, FISHING_LOOT, GATHERING_NODES, GATHERING_LOOT } = require('./shared/gathering');
 const { WORLD_BOSSES } = require('./shared/bosses');
 const { ZONES } = require('./shared/zones');
+const { DUNGEONS } = require('./shared/dungeons');
 
 // Module-level CLASS_STATS (used by getOrCreatePlayer + recalcClassStats)
 const CLASS_STATS = {
@@ -557,6 +558,262 @@ setInterval(() => { try {
   }
 } catch(e) { console.error('[BOSS-TIMER ERROR]', e.message); } }, 10000);
 
+
+
+// ═══════════════════════════════════════
+// DUNGEON SYSTEM
+// ═══════════════════════════════════════
+const dungeonInstances = {}; // instanceId → { dungeon, players, wave, startTime, mobs, bossActive }
+const dungeonLeaderboard = {}; // dungeonId → [{ playerId, name, time, level }]
+const dungeonCooldowns = {}; // playerId:dungeonId → lastCompletionTime
+
+function createDungeonInstance(dungeonId, leaderId) {
+  const dungeon = DUNGEONS[dungeonId];
+  if (!dungeon) return null;
+  const instanceId = `dungeon_${dungeonId}_${Date.now()}`;
+  dungeonInstances[instanceId] = {
+    dungeon,
+    dungeonId,
+    players: [leaderId],
+    wave: 0,
+    startTime: Date.now(),
+    mobs: {},
+    bossActive: false,
+    completed: false,
+    failed: false,
+  };
+  return instanceId;
+}
+
+function spawnDungeonWave(instanceId) {
+  const inst = dungeonInstances[instanceId];
+  if (!inst || inst.completed || inst.failed) return;
+  const dungeon = inst.dungeon;
+  if (inst.wave >= dungeon.waves.length) {
+    // All waves cleared — dungeon complete!
+    completeDungeon(instanceId);
+    return;
+  }
+  const wave = dungeon.waves[inst.wave];
+  inst.wave++;
+  console.log(`[DUNGEON] ${inst.dungeonId} wave ${inst.wave}/${dungeon.waves.length}`);
+
+  if (wave.boss) {
+    // Spawn boss
+    const bossData = WORLD_BOSSES[wave.boss];
+    if (bossData) {
+      const boss = {
+        id: `dmob_${instanceId}_boss`,
+        type: wave.boss,
+        name: bossData.name,
+        x: 0, y: 0, z: -15,
+        spawnX: 0, spawnZ: -15,
+        hp: bossData.hp,
+        maxHp: bossData.hp,
+        atk: bossData.atk,
+        def: bossData.def,
+        spd: bossData.spd,
+        level: bossData.level,
+        alive: true,
+        targetId: null,
+        state: 'idle',
+        lastAttack: 0,
+        lastAbility: {},
+        isBoss: true,
+        adds: [],
+      };
+      inst.mobs[boss.id] = boss;
+      inst.bossActive = true;
+      // Notify players
+      inst.players.forEach(pId => {
+        const pWs = playerWs.get(pId);
+        if (pWs && pWs.readyState === 1) {
+          pWs.send(JSON.stringify({ type: 'dungeon_boss', bossId: boss.id, name: boss.name, hp: boss.hp, maxHp: boss.hp }));
+        }
+      });
+    }
+  } else if (wave.mobs) {
+    // Spawn regular mobs
+    wave.mobs.forEach(({ type, count }) => {
+      const mdata = MONSTERS[type] || WORLD_BOSSES[type];
+      if (!mdata) return;
+      for (let i = 0; i < count; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const dist = 5 + Math.random() * 10;
+        const mob = {
+          id: `dmob_${instanceId}_${++monsterIdCounter}`,
+          type,
+          name: mdata.name,
+          x: Math.cos(angle) * dist,
+          y: 0,
+          z: Math.sin(angle) * dist - 10,
+          spawnX: Math.cos(angle) * dist,
+          spawnZ: Math.sin(angle) * dist - 10,
+          hp: mdata.hp,
+          maxHp: mdata.hp,
+          atk: mdata.atk,
+          def: mdata.def,
+          spd: mdata.spd,
+          level: mdata.level,
+          alive: true,
+          targetId: null,
+          state: 'idle',
+          lastAttack: 0,
+        };
+        inst.mobs[mob.id] = mob;
+      }
+    });
+  }
+
+  // Send wave start to players
+  inst.players.forEach(pId => {
+    const pWs = playerWs.get(pId);
+    if (pWs && pWs.readyState === 1) {
+      const mobList = Object.values(inst.mobs).filter(m => m.alive).map(m => ({ id: m.id, name: m.name, hp: m.hp, maxHp: m.maxHp, x: m.x, z: m.z, level: m.level }));
+      pWs.send(JSON.stringify({ type: 'dungeon_wave', wave: inst.wave, totalWaves: dungeon.waves.length, mobs: mobList }));
+    }
+  });
+}
+
+function completeDungeon(instanceId) {
+  const inst = dungeonInstances[instanceId];
+  if (!inst || inst.completed) return;
+  inst.completed = true;
+  const elapsed = Date.now() - inst.startTime;
+  const dungeon = inst.dungeon;
+
+  inst.players.forEach(pId => {
+    const p = connectedPlayers[pId];
+    const pWs = playerWs.get(pId);
+    if (!p || !pWs || pWs.readyState !== 1) return;
+
+    // Give rewards
+    p.xp = (p.xp || 0) + dungeon.rewards.xp;
+    p.zen = (p.zen || 0) + dungeon.rewards.gold;
+    const loot = [];
+    dungeon.rewards.items.forEach(entry => {
+      if (Math.random() < entry.chance) {
+        const qty = entry.qty || 1;
+        const itemDef = ITEMS[entry.itemId];
+        if (itemDef) {
+          const existing = p.inventory ? p.inventory.find(i => i.id === entry.itemId) : null;
+          if (existing) existing.quantity = (existing.quantity || 1) + qty;
+          else { if (!p.inventory) p.inventory = []; p.inventory.push({ id: entry.itemId, name: itemDef.name, type: itemDef.type, quantity: qty, icon: itemDef.icon }); }
+          loot.push({ id: entry.itemId, name: itemDef.name, quantity: qty });
+        }
+      }
+    });
+
+    // Update leaderboard
+    if (!dungeonLeaderboard[dungeon.id]) dungeonLeaderboard[dungeon.id] = [];
+    dungeonLeaderboard[dungeon.id].push({ playerId: pId, name: p.name, time: elapsed, level: p.level, date: Date.now() });
+    dungeonLeaderboard[dungeon.id].sort((a, b) => a.time - b.time);
+    dungeonLeaderboard[dungeon.id] = dungeonLeaderboard[dungeon.id].slice(0, 10); // top 10
+
+    // Set cooldown
+    if (dungeon.cooldown > 0) {
+      dungeonCooldowns[`${pId}:${dungeon.id}`] = Date.now();
+    }
+
+    pWs.send(JSON.stringify({ type: 'dungeon_complete', dungeonId: dungeon.id, xp: dungeon.rewards.xp, gold: dungeon.rewards.gold, loot, time: elapsed }));
+    saveWorld();
+  });
+
+  // Cleanup instance after 30 seconds
+  setTimeout(() => { delete dungeonInstances[instanceId]; }, 30000);
+}
+
+function failDungeon(instanceId) {
+  const inst = dungeonInstances[instanceId];
+  if (!inst || inst.completed || inst.failed) return;
+  inst.failed = true;
+  inst.players.forEach(pId => {
+    const pWs = playerWs.get(pId);
+    if (pWs && pWs.readyState === 1) {
+      pWs.send(JSON.stringify({ type: 'dungeon_failed', dungeonId: inst.dungeonId }));
+    }
+  });
+  setTimeout(() => { delete dungeonInstances[instanceId]; }, 10000);
+}
+
+// Dungeon tick — check timers, spawn waves, AI
+setInterval(() => { try {
+  Object.entries(dungeonInstances).forEach(([instId, inst]) => {
+    if (inst.completed || inst.failed) return;
+    const dungeon = inst.dungeon;
+    const elapsed = (Date.now() - inst.startTime) / 1000;
+
+    // Check time limit
+    if (elapsed > dungeon.timeLimit) {
+      failDungeon(instId);
+      return;
+    }
+
+    // Check if all mobs dead → next wave
+    const aliveMobs = Object.values(inst.mobs).filter(m => m.alive);
+    if (aliveMobs.length === 0 && inst.wave < dungeon.waves.length) {
+      const lastWave = dungeon.waves[inst.wave - 1];
+      const delay = lastWave ? (lastWave.delay || 3000) : 3000;
+      // Wait delay then spawn next wave
+      setTimeout(() => spawnDungeonWave(instId), delay);
+      return;
+    }
+
+    // Simple AI for dungeon mobs
+    aliveMobs.forEach(mob => {
+      if (mob.isBoss) return; // boss AI handled separately
+      const data = MONSTERS[mob.type] || WORLD_BOSSES[mob.type];
+      if (!data) return;
+
+      // Find closest player in instance
+      let closest = null, closestDist = Infinity;
+      inst.players.forEach(pId => {
+        const p = connectedPlayers[pId];
+        if (!p) return;
+        const dx = (p.x || 0) - mob.x;
+        const dz = (p.z || 0) - mob.z;
+        const dist = Math.sqrt(dx * dx + dz * dz);
+        if (dist < closestDist) { closestDist = dist; closest = p; }
+      });
+
+      if (closest && closestDist < (data.aggroRange || 8)) {
+        // Chase
+        const dx = (closest.x || 0) - mob.x;
+        const dz = (closest.z || 0) - mob.z;
+        const dist = Math.sqrt(dx * dx + dz * dz);
+        if (dist > (data.attackRange || 1.5)) {
+          const speed = data.spd * 0.15;
+          mob.x += (dx / dist) * speed;
+          mob.z += (dz / dist) * speed;
+        } else if (Date.now() - mob.lastAttack > (data.attackSpeed || 1.5) * 1000) {
+          // Attack
+          const dmg = Math.max(1, mob.atk - (closest.def || 0));
+          closest.hp = Math.max(0, (closest.hp || 0) - dmg);
+          mob.lastAttack = Date.now();
+          inst.players.forEach(pId => {
+            const pWs = playerWs.get(pId);
+            if (pWs && pWs.readyState === 1) {
+              pWs.send(JSON.stringify({ type: 'dungeon_damage', targetId: closest.id, damage: dmg, hp: closest.hp, maxHp: closest.maxHp, attackerId: mob.id }));
+            }
+          });
+          if (closest.hp <= 0) {
+            // Player died in dungeon — fail
+            failDungeon(instId);
+          }
+        }
+      }
+    });
+
+    // Send mob positions to players
+    const mobPositions = Object.values(inst.mobs).filter(m => m.alive).map(m => ({ id: m.id, x: m.x, z: m.z, hp: m.hp, maxHp: m.maxHp }));
+    inst.players.forEach(pId => {
+      const pWs = playerWs.get(pId);
+      if (pWs && pWs.readyState === 1) {
+        pWs.send(JSON.stringify({ type: 'dungeon_mobs', mobs: mobPositions, timeLeft: Math.max(0, dungeon.timeLimit - elapsed) }));
+      }
+    });
+  });
+} catch(e) { console.error('[DUNGEON-TICK ERROR]', e.message); } }, 1000);
 
 
 // ═══════════════════════════════════════
@@ -1241,10 +1498,23 @@ function handleMessage(ws, playerId, msg) {
     case 'quest_start': {
       const player = connectedPlayers[playerId];
       if (player && QUESTS[msg.questId]) {
+        const quest = QUESTS[msg.questId];
         if (!player.quests) player.quests = {};
+        // Check cooldown for repeatable quests
+        if (quest.repeatable && quest.cooldown) {
+          const lastComplete = player.quests[msg.questId]?.lastCompleted || 0;
+          if (Date.now() - lastComplete < quest.cooldown) {
+            const remaining = Math.ceil((quest.cooldown - (Date.now() - lastComplete)) / 60000);
+            ws.send(JSON.stringify({ type: 'quest_error', error: `Cooldown: ${remaining} menit lagi` }));
+            break;
+          }
+        }
+        // Check if already active
+        if (player.quests[msg.questId]?.status === 'active') break;
+        // Reset progress for repeatable
         player.quests[msg.questId] = { status: 'active', progress: {} };
         saveWorld();
-        ws.send(JSON.stringify({ type: 'quest_started', quest: QUESTS[msg.questId] }));
+        ws.send(JSON.stringify({ type: 'quest_started', quest }));
       }
       break;
     }
@@ -1301,6 +1571,11 @@ function handleMessage(ws, playerId, msg) {
           Object.entries(quest.rewards.reputation).forEach(([npcId, rep]) => {
             player.reputation[npcId] = (player.reputation[npcId] || 0) + rep;
           });
+        }
+        // Track last completion for repeatable quests
+        if (quest.repeatable) {
+          qState.lastCompleted = Date.now();
+          qState.status = 'completed';
         }
         saveWorld();
         ws.send(JSON.stringify({
@@ -1947,6 +2222,84 @@ function handleMessage(ws, playerId, msg) {
       if (z) {
         ws.send(JSON.stringify({ type: 'zone_enter', zone: { id: z.id, name: z.name, subtitle: z.subtitle, level: z.level, groundColor: z.groundColor, portals: z.portals || [], decorations: z.decorations || [] } }));
       }
+      break;
+    }
+    case 'dungeon_list': {
+      // List available dungeons
+      const player = connectedPlayers[playerId];
+      if (!player) break;
+      const list = Object.values(DUNGEONS).map(d => {
+        const onCooldown = dungeonCooldowns[`${playerId}:${d.id}`] && (Date.now() - dungeonCooldowns[`${playerId}:${d.id}`]) < d.cooldown;
+        return { id: d.id, name: d.name, description: d.description, minLevel: d.minLevel, maxPlayers: d.maxPlayers, timeLimit: d.timeLimit, entryCost: d.entryCost, cooldown: d.cooldown, onCooldown };
+      });
+      ws.send(JSON.stringify({ type: 'dungeon_list', dungeons: list }));
+      break;
+    }
+    case 'dungeon_start': {
+      const player = connectedPlayers[playerId];
+      if (!player) break;
+      const dungeon = DUNGEONS[msg.dungeonId];
+      if (!dungeon) { ws.send(JSON.stringify({ type: 'dungeon_error', error: 'Dungeon tidak ditemukan' })); break; }
+      if (player.level < dungeon.minLevel) { ws.send(JSON.stringify({ type: 'dungeon_error', error: `Minimal Level ${dungeon.minLevel}` })); break; }
+      if (dungeon.entryCost > 0 && (player.zen || 0) < dungeon.entryCost) { ws.send(JSON.stringify({ type: 'dungeon_error', error: `Butuh ${dungeon.entryCost} gold` })); break; }
+      const onCooldown = dungeonCooldowns[`${playerId}:${dungeon.id}`] && (Date.now() - dungeonCooldowns[`${playerId}:${dungeon.id}`]) < dungeon.cooldown;
+      if (onCooldown) { ws.send(JSON.stringify({ type: 'dungeon_error', error: 'Masih cooldown' })); break; }
+      // Deduct entry cost
+      if (dungeon.entryCost > 0) player.zen -= dungeon.entryCost;
+      // Create instance
+      const instId = createDungeonInstance(dungeon.id, playerId);
+      if (!instId) { ws.send(JSON.stringify({ type: 'dungeon_error', error: 'Gagal membuat instance' })); break; }
+      const inst = dungeonInstances[instId];
+      inst.instanceId = instId;
+      ws.send(JSON.stringify({ type: 'dungeon_started', instanceId: instId, dungeonId: dungeon.id, name: dungeon.name, timeLimit: dungeon.timeLimit }));
+      // Start first wave after short delay
+      setTimeout(() => spawnDungeonWave(instId), 2000);
+      saveWorld();
+      break;
+    }
+    case 'dungeon_attack': {
+      const player = connectedPlayers[playerId];
+      if (!player) break;
+      // Find which dungeon instance this player is in
+      const inst = Object.values(dungeonInstances).find(i => i.players.includes(playerId) && !i.completed && !i.failed);
+      if (!inst) break;
+      const mob = inst.mobs[msg.mobId];
+      if (!mob || !mob.alive) break;
+      // Calculate damage
+      const playerAtk = (player.atk || 0) + (player.equipmentBonusAtk || 0);
+      const mobDef = mob.def || 0;
+      const isCrit = Math.random() < (player.crit || 0.05);
+      let dmg = Math.max(1, playerAtk - mobDef);
+      if (isCrit) dmg = Math.floor(dmg * 1.5);
+      mob.hp -= dmg;
+      const xpGain = isCrit ? 0 : 0; // no XP from dungeon mobs directly
+      if (mob.hp <= 0) {
+        mob.alive = false;
+        // Check if wave complete
+        const aliveMobs = Object.values(inst.mobs).filter(m => m.alive);
+        if (aliveMobs.length === 0 && inst.wave >= inst.dungeon.waves.length) {
+          completeDungeon(inst.instanceId);
+        }
+      }
+      inst.players.forEach(pId => {
+        const pWs = playerWs.get(pId);
+        if (pWs && pWs.readyState === 1) {
+          pWs.send(JSON.stringify({ type: 'dungeon_mob_hit', mobId: mob.id, hp: mob.hp, maxHp: mob.maxHp, damage: dmg, isCrit }));
+        }
+      });
+      break;
+    }
+    case 'dungeon_leave': {
+      const inst = Object.values(dungeonInstances).find(i => i.players.includes(playerId));
+      if (!inst) break;
+      inst.players = inst.players.filter(id => id !== playerId);
+      ws.send(JSON.stringify({ type: 'dungeon_left' }));
+      if (inst.players.length === 0) failDungeon(inst.instanceId);
+      break;
+    }
+    case 'dungeon_leaderboard': {
+      const board = dungeonLeaderboard[msg.dungeonId] || [];
+      ws.send(JSON.stringify({ type: 'dungeon_leaderboard', dungeonId: msg.dungeonId, entries: board }));
       break;
     }
     case 'respawn': {

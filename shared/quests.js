@@ -196,18 +196,149 @@ const QUESTS = {
     ],
     rewards: { xp: 500, items: [{ id: 'boar_tusk', quantity: 3 }], reputation: { guard_ren: 3 } },
   },
+  // ═══════════════════════════════════════
+  // DAILY QUESTS (repeatable every 24h)
+  // ═══════════════════════════════════════
+  daily_beetle_hunt: {
+    id: 'daily_beetle_hunt',
+    name: 'Beetle Bounty',
+    type: 'daily',
+    description: 'Defeat 10 Moss Beetles for Mr. Tani. Resets daily.',
+    objectives: [
+      { id: 'kill_beetles', type: 'kill', target: 'moss_beetle', current: 0, required: 10, text: 'Defeat 10 Moss Beetles' },
+    ],
+    rewards: { xp: 150, gold: 50 },
+    repeatable: true,
+    cooldown: 24 * 60 * 60 * 1000,
+  },
+  daily_mouse_clear: {
+    id: 'daily_mouse_clear',
+    name: 'Mouse Menace',
+    type: 'daily',
+    description: 'Clear 15 Dust Mice from the village perimeter.',
+    objectives: [
+      { id: 'kill_mice', type: 'kill', target: 'dust_mouse', current: 0, required: 15, text: 'Defeat 15 Dust Mice' },
+    ],
+    rewards: { xp: 120, gold: 40 },
+    repeatable: true,
+    cooldown: 24 * 60 * 60 * 1000,
+  },
+  daily_herb_gather: {
+    id: 'daily_herb_gather',
+    name: 'Herb Collection',
+    type: 'daily',
+    description: 'Gather herbs for Herbalist Sari.',
+    objectives: [
+      { id: 'gather_herbs', type: 'gather', target: 'moss_shell', current: 0, required: 8, text: 'Collect 8 Moss Shells' },
+    ],
+    rewards: { xp: 100, gold: 30, items: [{ id: 'potion_small', quantity: 3 }] },
+    repeatable: true,
+    cooldown: 24 * 60 * 60 * 1000,
+  },
+  daily_fishing: {
+    id: 'daily_fishing',
+    name: 'Daily Catch',
+    type: 'daily',
+    description: 'Catch 5 fish for Mrs. Ningsih.',
+    objectives: [
+      { id: 'catch_fish', type: 'fish', current: 0, required: 5, text: 'Catch 5 Fish' },
+    ],
+    rewards: { xp: 80, gold: 25, items: [{ id: 'frog_leg', quantity: 2 }] },
+    repeatable: true,
+    cooldown: 24 * 60 * 60 * 1000,
+  },
+  // ═══════════════════════════════════════
+  // REPEATABLE QUESTS (cooldown-based)
+  // ═══════════════════════════════════════
+  rep_lizard_hunt: {
+    id: 'rep_lizard_hunt',
+    name: 'Lizard Extermination',
+    type: 'repeatable',
+    description: 'Defeat Thorn Lizards in the forest.',
+    objectives: [
+      { id: 'kill_lizards', type: 'kill', target: 'thorn_lizard', current: 0, required: 8, text: 'Defeat 8 Thorn Lizards' },
+    ],
+    rewards: { xp: 200, gold: 60, items: [{ id: 'thorn', quantity: 3 }] },
+    repeatable: true,
+    cooldown: 30 * 60 * 1000,
+  },
+  rep_sprite_hunt: {
+    id: 'rep_sprite_hunt',
+    name: 'Sprite Slayers',
+    type: 'repeatable',
+    description: 'Defeat Wind Sprites in the mountains.',
+    objectives: [
+      { id: 'kill_sprites', type: 'kill', target: 'wind_sprite', current: 0, required: 5, text: 'Defeat 5 Wind Sprites' },
+    ],
+    rewards: { xp: 250, gold: 80, items: [{ id: 'wind_essence', quantity: 2 }] },
+    repeatable: true,
+    cooldown: 45 * 60 * 1000,
+  },
+  rep_boar_hunt: {
+    id: 'rep_boar_hunt',
+    name: 'Boar Buster',
+    type: 'repeatable',
+    description: 'Hunt Bramble Boars in the deep forest.',
+    objectives: [
+      { id: 'kill_boars', type: 'kill', target: 'bramble_boar', current: 0, required: 3, text: 'Defeat 3 Bramble Boars' },
+    ],
+    rewards: { xp: 350, gold: 100, items: [{ id: 'boar_tusk', quantity: 2 }] },
+    repeatable: true,
+    cooldown: 60 * 60 * 1000,
+  },
+  rep_stone_gather: {
+    id: 'rep_stone_gather',
+    name: 'Stone Collector',
+    type: 'repeatable',
+    description: 'Gather stone fragments from Rock Crawlers.',
+    objectives: [
+      { id: 'kill_crawlers', type: 'kill', target: 'rock_crawler', current: 0, required: 6, text: 'Defeat 6 Rock Crawlers' },
+    ],
+    rewards: { xp: 200, gold: 50, items: [{ id: 'stone_fragment', quantity: 4 }] },
+    repeatable: true,
+    cooldown: 30 * 60 * 1000,
+  },
+  rep_volcanic_scout: {
+    id: 'rep_volcanic_scout',
+    name: 'Volcanic Recon',
+    type: 'repeatable',
+    description: 'Scout the Volcanic Wastes. Defeat fire creatures.',
+    objectives: [
+      { id: 'kill_volcanic', type: 'kill', target: 'lava_slime', current: 0, required: 10, text: 'Defeat 10 Lava Slimes' },
+      { id: 'kill_salamanders', type: 'kill', target: 'fire_salamander', current: 0, required: 5, text: 'Defeat 5 Fire Salamanders' },
+    ],
+    rewards: { xp: 500, gold: 150, items: [{ id: 'lava_essence', quantity: 3 }] },
+    repeatable: true,
+    cooldown: 2 * 60 * 60 * 1000,
+  },
+  rep_crystal_clear: {
+    id: 'rep_crystal_clear',
+    name: 'Crystal Purge',
+    type: 'repeatable',
+    description: 'Clear crystal creatures from the caverns.',
+    objectives: [
+      { id: 'kill_spiders', type: 'kill', target: 'crystal_spider', current: 0, required: 8, text: 'Defeat 8 Crystal Spiders' },
+      { id: 'kill_scorpions', type: 'kill', target: 'gem_scorpion', current: 0, required: 5, text: 'Defeat 5 Gem Scorpions' },
+    ],
+    rewards: { xp: 800, gold: 250, items: [{ id: 'crystal_shard', quantity: 5 }] },
+    repeatable: true,
+    cooldown: 3 * 60 * 60 * 1000,
+  },
 };
 
 // Quest availability by NPC
 const NPC_QUESTS = {
   elder_maren: ['meet_elder', 'harvest_help', 'forest_mystery'],
-  mr_tani: ['harvest_help'],
-  guard_ren: ['first_steps', 'guard_patrol', 'bramble_hunt'],
+  mr_tani: ['harvest_help', 'daily_beetle_hunt'],
+  guard_ren: ['first_steps', 'guard_patrol', 'bramble_hunt', 'daily_mouse_clear'],
   miss_lira: ['train_lira'],
   sir_gendut: ['sir_gendut_delivery'],
-  mrs_ningsih: ['frog_legs_for_ningsih'],
+  mrs_ningsih: ['frog_legs_for_ningsih', 'daily_fishing'],
   kris: ['kris_prank'],
-  herbalist_sari: ['sari_aether_secret'],
+  herbalist_sari: ['sari_aether_secret', 'daily_herb_gather', 'rep_stone_gather'],
+  // Repeatable quest givers (can be assigned to various NPCs)
+  forest_hunter: ['rep_lizard_hunt', 'rep_sprite_hunt', 'rep_boar_hunt'],
+  zone_scout: ['rep_volcanic_scout', 'rep_crystal_clear'],
 };
 
 module.exports = { QUESTS, NPC_QUESTS };

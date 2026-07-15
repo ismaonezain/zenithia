@@ -107,12 +107,116 @@ const ZONES = {
       { id: 'portal_willowmere_back3', x: 0, z: -40, targetZone: 'willowmere', targetX: 0, targetZ: 40, name: '→ Willowmere Village' },
       { id: 'portal_thornwood_back', x: 30, z: -30, targetZone: 'thornwood', targetX: -35, targetZ: 35, name: '→ Thornwood Forest' },
       { id: 'portal_stormcrest_back', x: -30, z: -30, targetZone: 'stormcrest', targetX: 25, targetZ: 25, name: '→ Stormcrest Mountains' },
+      { id: 'portal_volcanic', x: 0, z: 45, targetZone: 'volcanic', targetX: 0, targetZ: -40, name: '→ Volcanic Wastes' },
     ],
     decorations: [
       // Dead trees, swamp pools
       { type: 'cylinder', x: -10, z: -8, r: 0.2, h: 3, color: 0x3E2723, name: 'Dead Tree' },
       { type: 'cylinder', x: 15, z: 12, r: 0.15, h: 2, color: 0x4E342E, name: 'Stump' },
       { type: 'cylinder', x: -20, z: 18, r: 3, h: 0.2, color: 0x5D4037, name: 'Swamp Pool' },
+    ],
+  },
+  volcanic: {
+    id: 'volcanic',
+    name: 'Volcanic Wastes',
+    subtitle: 'Tanah magma — panas dan berbahaya',
+    level: '10-20',
+    groundColor: 0x4A0000,     // dark red volcanic rock
+    ambientColor: 0xFF4500,    // fiery orange
+    mobTypes: ['lava_slime', 'fire_salamander', 'magma_golem', 'ember_hawk'],
+    maxMobs: 12,
+    spawnAreas: [
+      { x: -20, z: -15, radius: 15 },
+      { x: 15, z: -20, radius: 12 },
+      { x: -15, z: 15, radius: 10 },
+      { x: 20, z: 15, radius: 10 },
+    ],
+    portals: [
+      { id: 'portal_mistmarsh_back', x: 0, z: -45, targetZone: 'mistmarsh', targetX: 0, targetZ: 40, name: '→ Mistmarsh Swamp' },
+      { id: 'portal_crystal', x: 45, z: 0, targetZone: 'crystal', targetX: -40, targetZ: 0, name: '→ Crystal Caverns' },
+    ],
+    decorations: [
+      { type: 'cylinder', x: -20, z: -10, r: 3, h: 0.3, color: 0xFF4500, name: 'Lava Pool' },
+      { type: 'cone', x: 25, z: 20, r: 4, h: 6, color: 0x8B0000, name: 'Volcano' },
+      { type: 'box', x: -10, z: 15, w: 4, h: 3, d: 2, color: 0x3E2723, name: 'Obsidian Pillar' },
+      { type: 'sphere', x: 10, z: -25, y: 1, r: 1.5, color: 0xFF6600, name: 'Fire Orb' },
+    ],
+  },
+  crystal: {
+    id: 'crystal',
+    name: 'Crystal Caverns',
+    subtitle: 'Gua kristal — berkilauan dan berbahaya',
+    level: '20-30',
+    groundColor: 0x1A237E,     // deep blue crystal
+    ambientColor: 0x7C4DFF,    // purple ambient
+    mobTypes: ['crystal_spider', 'gem_scorpion', 'prism_wraith', 'diamond_golem'],
+    maxMobs: 10,
+    spawnAreas: [
+      { x: -15, z: -18, radius: 12 },
+      { x: 18, z: -12, radius: 10 },
+      { x: -12, z: 15, radius: 10 },
+      { x: 20, z: 20, radius: 8 },
+    ],
+    portals: [
+      { id: 'portal_volcanic_back', x: -45, z: 0, targetZone: 'volcanic', targetX: 40, targetZ: 0, name: '→ Volcanic Wastes' },
+      { id: 'portal_sky_ruins', x: 0, z: -45, targetZone: 'sky_ruins', targetX: 0, targetZ: 40, name: '→ Sky Ruins' },
+    ],
+    decorations: [
+      { type: 'cone', x: -15, z: -12, r: 1, h: 4, color: 0x00BCD4, name: 'Crystal Spike' },
+      { type: 'cone', x: 18, z: 15, r: 0.8, h: 3.5, color: 0x7C4DFF, name: 'Amethyst Spire' },
+      { type: 'sphere', x: 5, z: 5, y: 2, r: 2, color: 0xE1BEE7, name: 'Crystal Ball' },
+      { type: 'box', x: -20, z: 20, w: 2, h: 2, d: 2, color: 0x4A148C, name: 'Gem Block' },
+    ],
+  },
+  sky_ruins: {
+    id: 'sky_ruins',
+    name: 'Sky Ruins',
+    subtitle: 'Puingan langit — melayang di awan',
+    level: '30-40',
+    groundColor: 0xB0BEC5,     // light grey stone
+    ambientColor: 0xE3F2FD,    // sky blue clouds
+    mobTypes: ['storm_elemental', 'cloud_serpent', 'sky_knight', 'thunder_bird'],
+    maxMobs: 8,
+    spawnAreas: [
+      { x: -18, z: -15, radius: 12 },
+      { x: 15, z: -18, radius: 10 },
+      { x: -15, z: 18, radius: 10 },
+      { x: 18, z: 12, radius: 8 },
+    ],
+    portals: [
+      { id: 'portal_crystal_back', x: 0, z: 45, targetZone: 'crystal', targetX: 0, targetZ: -40, name: '→ Crystal Caverns' },
+      { id: 'portal_abyss', x: 45, z: 0, targetZone: 'abyss', targetX: -40, targetZ: 0, name: '→ The Abyss' },
+    ],
+    decorations: [
+      { type: 'box', x: -20, z: -10, w: 5, h: 4, d: 3, color: 0x9E9E9E, name: 'Ancient Column' },
+      { type: 'box', x: 20, z: 15, w: 4, h: 3, d: 4, color: 0xBDBDBD, name: 'Fallen Temple' },
+      { type: 'cylinder', x: -10, z: 20, r: 2, h: 0.2, color: 0x78909C, name: 'Floating Platform' },
+      { type: 'cone', x: 10, z: -20, r: 2, h: 5, color: 0xCFD8DC, name: 'Spire' },
+    ],
+  },
+  abyss: {
+    id: 'abyss',
+    name: 'The Abyss',
+    subtitle: 'Jurang kegelapan — dunia bawah',
+    level: '40-50',
+    groundColor: 0x0D0D0D,     // near black
+    ambientColor: 0x1A0033,    // dark purple void
+    mobTypes: ['void_stalker', 'shadow_beast', 'abyssal_worm', 'chaos_lord'],
+    maxMobs: 10,
+    spawnAreas: [
+      { x: -15, z: -15, radius: 15 },
+      { x: 18, z: -12, radius: 12 },
+      { x: -12, z: 18, radius: 10 },
+      { x: 20, z: 15, radius: 10 },
+    ],
+    portals: [
+      { id: 'portal_sky_ruins_back', x: -45, z: 0, targetZone: 'sky_ruins', targetX: 40, targetZ: 0, name: '→ Sky Ruins' },
+    ],
+    decorations: [
+      { type: 'cone', x: 0, z: -20, r: 6, h: 10, color: 0x4A0080, name: 'Void Spire' },
+      { type: 'sphere', x: -20, z: 10, y: 3, r: 2.5, color: 0x1A0033, name: 'Shadow Orb' },
+      { type: 'cylinder', x: 15, z: -15, r: 0.3, h: 6, color: 0x6A0DAD, name: 'Dark Pillar' },
+      { type: 'box', x: -15, z: -20, w: 3, h: 1, d: 3, color: 0x0D0D0D, name: 'Abyss Gate' },
     ],
   },
 };

@@ -9,6 +9,7 @@ import { PartyUI } from './party_ui.js';
 import { ShopUI } from './shop_ui.js';
 import { createMonsterModel, updateMonsterHPBar, animateMonster, monsterAttackAnim } from './monsters.js';
 import { drawItemIcon } from './item-icons.js';
+import { DungeonUI } from './dungeon_ui.js';
 
 // --- State ---
 const state = {
@@ -179,6 +180,7 @@ function initScene() {
   state.questUI = new QuestUI(null, { name: 'Adventurer' });
   state.partyUI = new PartyUI(null, { name: 'Adventurer' });
   state.shopUI = new ShopUI(null, { name: 'Adventurer', zen: 50, inventory: [] });
+  state.dungeonUI = new DungeonUI(null, state);
 
   window.addEventListener('resize', () => {
     state.camera.aspect = window.innerWidth / window.innerHeight;
@@ -1514,6 +1516,66 @@ function handleServerMessage(msg) {
     }
     case 'craft_error': {
       addChatMessage('System', `❌ ${msg.error}`);
+      break;
+    }
+    // DUNGEON HANDLERS
+    case 'dungeon_list': {
+      if (state.dungeonUI) state.dungeonUI.handleList(msg.dungeons);
+      break;
+    }
+    case 'dungeon_started': {
+      if (state.dungeonUI) state.dungeonUI.handleStarted(msg);
+      addChatMessage('System', `⚔️ Dungeon started: ${msg.name}`);
+      break;
+    }
+    case 'dungeon_wave': {
+      if (state.dungeonUI) state.dungeonUI.handleWave(msg);
+      addChatMessage('System', `🌊 Wave ${msg.wave}/${msg.totalWaves}`);
+      break;
+    }
+    case 'dungeon_mobs': {
+      if (state.dungeonUI) state.dungeonUI.handleMobs(msg);
+      break;
+    }
+    case 'dungeon_boss': {
+      if (state.dungeonUI) state.dungeonUI.handleBoss(msg);
+      addChatMessage('System', `💀 BOSS: ${msg.name}!`);
+      break;
+    }
+    case 'dungeon_mob_hit': {
+      if (state.dungeonUI) state.dungeonUI.handleMobHit(msg);
+      break;
+    }
+    case 'dungeon_damage': {
+      if (state.player) {
+        state.player.hp = msg.hp;
+        updatePlayerHP(msg.hp, msg.maxHp);
+      }
+      break;
+    }
+    case 'dungeon_complete': {
+      if (state.dungeonUI) state.dungeonUI.handleComplete(msg);
+      addChatMessage('System', `🎉 Dungeon Complete! +${msg.xp} XP +${msg.gold} Gold`);
+      break;
+    }
+    case 'dungeon_failed': {
+      if (state.dungeonUI) state.dungeonUI.handleFailed(msg);
+      addChatMessage('System', `💀 Dungeon Failed!`);
+      break;
+    }
+    case 'dungeon_error': {
+      addChatMessage('System', `❌ ${msg.error}`);
+      break;
+    }
+    case 'dungeon_left': {
+      if (state.dungeonUI) state.dungeonUI.activeDungeon = null;
+      const dungeonUIEl = document.getElementById('dungeon-combat-ui');
+      if (dungeonUIEl) dungeonUIEl.remove();
+      addChatMessage('System', `🚪 Left dungeon`);
+      break;
+    }
+    case 'dungeon_leaderboard': {
+      console.log('[DUNGEON] Leaderboard:', msg.entries);
       break;
     }
   }
@@ -4363,6 +4425,18 @@ function initSkillUI() {
         wsSend(JSON.stringify({ type: 'kiosk_browse', kioskId: myKioskId }));
       } else {
         openKioskPlaceUI();
+      }
+    };
+  }
+
+  // Show dungeon button
+  const dungeonBtn = document.getElementById('dungeon-btn');
+  if (dungeonBtn) {
+    dungeonBtn.style.display = 'block';
+    dungeonBtn.onclick = () => {
+      if (state.dungeonUI) {
+        state.dungeonUI.wsSend = wsSend;
+        state.dungeonUI.requestList();
       }
     };
   }

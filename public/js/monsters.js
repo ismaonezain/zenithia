@@ -602,6 +602,727 @@ const MONSTER_MODELS = {
   },
 
   // ═══════════════════════════════════════
+  // VOLCANIC WORLD MONSTERS
+  // ═══════════════════════════════════════
+  lava_slime: (group, m) => {
+    // Blobby body
+    const body = new THREE.Mesh(
+      new THREE.BoxGeometry(0.45, 0.35, 0.45),
+      new THREE.MeshLambertMaterial({ color: m.color })
+    );
+    body.position.y = 0.22;
+    body.castShadow = true;
+    group.add(body);
+
+    // Inner glow core
+    const core = new THREE.Mesh(
+      new THREE.BoxGeometry(0.2, 0.2, 0.2),
+      new THREE.MeshBasicMaterial({ color: 0xFF5722 })
+    );
+    core.position.y = 0.25;
+    group.add(core);
+
+    // Eyes
+    const eyeMat = new THREE.MeshBasicMaterial({ color: m.accentColor });
+    [-0.1, 0.1].forEach(x => {
+      const eye = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.06, 0.04), eyeMat);
+      eye.position.set(x, 0.3, 0.22);
+      group.add(eye);
+    });
+
+    // Lava drips
+    for (let i = 0; i < 3; i++) {
+      const drip = new THREE.Mesh(
+        new THREE.BoxGeometry(0.05, 0.1 + i * 0.05, 0.05),
+        new THREE.MeshBasicMaterial({ color: 0xFF9800 })
+      );
+      drip.position.set(-0.15 + i * 0.15, 0.08 - i * 0.02, 0.15);
+      group.add(drip);
+    }
+  },
+
+  fire_salamander: (group, m) => {
+    // Body
+    const body = new THREE.Mesh(
+      new THREE.BoxGeometry(0.35, 0.2, 0.6),
+      new THREE.MeshLambertMaterial({ color: m.color })
+    );
+    body.position.y = 0.15;
+    body.castShadow = true;
+    group.add(body);
+
+    // Head
+    const head = new THREE.Mesh(
+      new THREE.BoxGeometry(0.2, 0.15, 0.2),
+      new THREE.MeshLambertMaterial({ color: m.color })
+    );
+    head.position.set(0, 0.18, 0.35);
+    group.add(head);
+
+    // Tail flame
+    const flameMat = new THREE.MeshBasicMaterial({ color: m.accentColor });
+    const flame = new THREE.Mesh(
+      new THREE.BoxGeometry(0.08, 0.15, 0.12),
+      flameMat
+    );
+    flame.position.set(0, 0.2, -0.38);
+    group.add(flame);
+
+    // Legs
+    const legMat = new THREE.MeshLambertMaterial({ color: m.color });
+    [[-0.15, 0.15], [0.15, 0.15], [-0.15, -0.15], [0.15, -0.15]].forEach(([x, z]) => {
+      const leg = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.1, 0.06), legMat);
+      leg.position.set(x, 0.05, z);
+      group.add(leg);
+    });
+
+    // Eyes
+    const eyeMat = new THREE.MeshBasicMaterial({ color: 0xFFEB3B });
+    [-0.06, 0.06].forEach(x => {
+      const eye = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.04, 0.03), eyeMat);
+      eye.position.set(x, 0.22, 0.45);
+      group.add(eye);
+    });
+  },
+
+  magma_golem: (group, m) => {
+    // Body
+    const body = new THREE.Mesh(
+      new THREE.BoxGeometry(0.45, 0.55, 0.4),
+      new THREE.MeshLambertMaterial({ color: m.color })
+    );
+    body.position.y = 0.45;
+    body.castShadow = true;
+    group.add(body);
+
+    // Head
+    const head = new THREE.Mesh(
+      new THREE.BoxGeometry(0.3, 0.3, 0.3),
+      new THREE.MeshLambertMaterial({ color: m.color })
+    );
+    head.position.y = 0.88;
+    group.add(head);
+
+    // Arms
+    const armMat = new THREE.MeshLambertMaterial({ color: m.accentColor });
+    [-0.35, 0.35].forEach(x => {
+      const arm = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.4, 0.15), armMat);
+      arm.position.set(x, 0.4, 0);
+      group.add(arm);
+    });
+
+    // Legs
+    const legMat = new THREE.MeshLambertMaterial({ color: 0x4E342E });
+    [-0.12, 0.12].forEach(x => {
+      const leg = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.2, 0.15), legMat);
+      leg.position.set(x, 0.1, 0);
+      group.add(leg);
+    });
+
+    // Eyes
+    const eyeMat = new THREE.MeshBasicMaterial({ color: 0xFF5722 });
+    [-0.08, 0.08].forEach(x => {
+      const eye = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.05, 0.04), eyeMat);
+      eye.position.set(x, 0.92, 0.16);
+      group.add(eye);
+    });
+  },
+
+  ember_hawk: (group, m) => {
+    // Body
+    const body = new THREE.Mesh(
+      new THREE.BoxGeometry(0.25, 0.2, 0.4),
+      new THREE.MeshLambertMaterial({ color: m.color })
+    );
+    body.position.y = 0.45;
+    body.castShadow = true;
+    group.add(body);
+
+    // Head
+    const head = new THREE.Mesh(
+      new THREE.BoxGeometry(0.15, 0.15, 0.15),
+      new THREE.MeshLambertMaterial({ color: m.color })
+    );
+    head.position.set(0, 0.55, 0.2);
+    group.add(head);
+
+    // Beak
+    const beak = new THREE.Mesh(
+      new THREE.BoxGeometry(0.06, 0.04, 0.1),
+      new THREE.MeshLambertMaterial({ color: m.accentColor })
+    );
+    beak.position.set(0, 0.52, 0.32);
+    group.add(beak);
+
+    // Wings
+    const wingMat = new THREE.MeshLambertMaterial({ color: m.accentColor });
+    [-0.25, 0.25].forEach(x => {
+      const wing = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.05, 0.25), wingMat);
+      wing.position.set(x, 0.5, 0);
+      wing.rotation.z = x > 0 ? -0.3 : 0.3;
+      group.add(wing);
+    });
+
+    // Tail feathers
+    const tail = new THREE.Mesh(
+      new THREE.BoxGeometry(0.08, 0.05, 0.2),
+      new THREE.MeshLambertMaterial({ color: 0xFF5722 })
+    );
+    tail.position.set(0, 0.45, -0.28);
+    group.add(tail);
+
+    // Eyes
+    const eyeMat = new THREE.MeshBasicMaterial({ color: 0xFFEB3B });
+    [-0.05, 0.05].forEach(x => {
+      const eye = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.03, 0.02), eyeMat);
+      eye.position.set(x, 0.57, 0.27);
+      group.add(eye);
+    });
+  },
+
+  // ═══════════════════════════════════════
+  // CRYSTAL WORLD MONSTERS
+  // ═══════════════════════════════════════
+  crystal_spider: (group, m) => {
+    // Body
+    const body = new THREE.Mesh(
+      new THREE.BoxGeometry(0.35, 0.25, 0.35),
+      new THREE.MeshLambertMaterial({ color: m.color })
+    );
+    body.position.y = 0.2;
+    body.castShadow = true;
+    group.add(body);
+
+    // Head
+    const head = new THREE.Mesh(
+      new THREE.BoxGeometry(0.18, 0.15, 0.15),
+      new THREE.MeshLambertMaterial({ color: m.accentColor })
+    );
+    head.position.set(0, 0.22, 0.22);
+    group.add(head);
+
+    // Legs (8 legs)
+    const legMat = new THREE.MeshLambertMaterial({ color: m.color });
+    [[-0.25, 0.2], [-0.25, -0.2], [0.25, 0.2], [0.25, -0.2]].forEach(([x, z]) => {
+      const leg = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.25, 0.04), legMat);
+      leg.position.set(x, 0.1, z);
+      leg.rotation.z = x > 0 ? -0.4 : 0.4;
+      group.add(leg);
+    });
+
+    // Crystal eyes
+    const eyeMat = new THREE.MeshBasicMaterial({ color: m.accentColor });
+    [-0.05, 0.05].forEach(x => {
+      const eye = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.04, 0.03), eyeMat);
+      eye.position.set(x, 0.25, 0.3);
+      group.add(eye);
+    });
+
+    // Fangs
+    const fangMat = new THREE.MeshBasicMaterial({ color: 0xFFFFFF });
+    [-0.03, 0.03].forEach(x => {
+      const fang = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.06, 0.02), fangMat);
+      fang.position.set(x, 0.16, 0.3);
+      group.add(fang);
+    });
+  },
+
+  gem_scorpion: (group, m) => {
+    // Body
+    const body = new THREE.Mesh(
+      new THREE.BoxGeometry(0.3, 0.15, 0.4),
+      new THREE.MeshLambertMaterial({ color: m.color })
+    );
+    body.position.y = 0.12;
+    body.castShadow = true;
+    group.add(body);
+
+    // Tail (curved up)
+    const tailMat = new THREE.MeshLambertMaterial({ color: m.accentColor });
+    const tail1 = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.06, 0.12), tailMat);
+    tail1.position.set(0, 0.18, -0.25);
+    tail1.rotation.x = -0.5;
+    group.add(tail1);
+    const tail2 = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.05, 0.08), tailMat);
+    tail2.position.set(0, 0.3, -0.3);
+    tail2.rotation.x = -0.8;
+    group.add(tail2);
+
+    // Claws
+    const clawMat = new THREE.MeshLambertMaterial({ color: m.color });
+    [-0.22, 0.22].forEach(x => {
+      const claw = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.06, 0.06), clawMat);
+      claw.position.set(x, 0.12, 0.25);
+      group.add(claw);
+    });
+
+    // Legs
+    const legMat = new THREE.MeshLambertMaterial({ color: 0x880E4F });
+    [[-0.2, 0.1], [-0.2, -0.1], [0.2, 0.1], [0.2, -0.1]].forEach(([x, z]) => {
+      const leg = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.1, 0.04), legMat);
+      leg.position.set(x, 0.05, z);
+      group.add(leg);
+    });
+
+    // Stinger
+    const stinger = new THREE.Mesh(
+      new THREE.BoxGeometry(0.03, 0.03, 0.03),
+      new THREE.MeshBasicMaterial({ color: m.accentColor })
+    );
+    stinger.position.set(0, 0.38, -0.32);
+    group.add(stinger);
+  },
+
+  prism_wraith: (group, m) => {
+    // Ethereal body
+    const bodyMat = new THREE.MeshLambertMaterial({ color: m.color, transparent: true, opacity: 0.7 });
+    const body = new THREE.Mesh(
+      new THREE.BoxGeometry(0.3, 0.6, 0.25),
+      bodyMat
+    );
+    body.position.y = 0.4;
+    body.castShadow = true;
+    group.add(body);
+
+    // Head
+    const head = new THREE.Mesh(
+      new THREE.BoxGeometry(0.2, 0.2, 0.2),
+      new THREE.MeshLambertMaterial({ color: m.accentColor, transparent: true, opacity: 0.8 })
+    );
+    head.position.y = 0.78;
+    group.add(head);
+
+    // Prismatic shards
+    const shardMat = new THREE.MeshBasicMaterial({ color: m.accentColor, transparent: true, opacity: 0.6 });
+    for (let i = 0; i < 4; i++) {
+      const shard = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.12, 0.06), shardMat);
+      shard.position.set(-0.2 + i * 0.13, 0.3 + i * 0.05, -0.2);
+      group.add(shard);
+    }
+
+    // Eyes
+    const eyeMat = new THREE.MeshBasicMaterial({ color: 0xFFFFFF });
+    [-0.05, 0.05].forEach(x => {
+      const eye = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.04, 0.03), eyeMat);
+      eye.position.set(x, 0.82, 0.11);
+      group.add(eye);
+    });
+  },
+
+  diamond_golem: (group, m) => {
+    // Body (crystalline)
+    const body = new THREE.Mesh(
+      new THREE.BoxGeometry(0.5, 0.6, 0.45),
+      new THREE.MeshLambertMaterial({ color: m.color })
+    );
+    body.position.y = 0.5;
+    body.castShadow = true;
+    group.add(body);
+
+    // Head
+    const head = new THREE.Mesh(
+      new THREE.BoxGeometry(0.3, 0.25, 0.3),
+      new THREE.MeshLambertMaterial({ color: m.accentColor })
+    );
+    head.position.y = 0.93;
+    group.add(head);
+
+    // Arms
+    const armMat = new THREE.MeshLambertMaterial({ color: m.color });
+    [-0.38, 0.38].forEach(x => {
+      const arm = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.35, 0.12), armMat);
+      arm.position.set(x, 0.45, 0);
+      group.add(arm);
+    });
+
+    // Legs
+    const legMat = new THREE.MeshLambertMaterial({ color: 0x1A237E });
+    [-0.12, 0.12].forEach(x => {
+      const leg = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.22, 0.14), legMat);
+      leg.position.set(x, 0.11, 0);
+      group.add(leg);
+    });
+
+    // Eyes
+    const eyeMat = new THREE.MeshBasicMaterial({ color: m.accentColor });
+    [-0.08, 0.08].forEach(x => {
+      const eye = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.05, 0.04), eyeMat);
+      eye.position.set(x, 0.97, 0.16);
+      group.add(eye);
+    });
+  },
+
+  // ═══════════════════════════════════════
+  // SKY RUINS MONSTERS
+  // ═══════════════════════════════════════
+  storm_elemental: (group, m) => {
+    // Body (swirling energy)
+    const body = new THREE.Mesh(
+      new THREE.BoxGeometry(0.4, 0.6, 0.4),
+      new THREE.MeshLambertMaterial({ color: m.color })
+    );
+    body.position.y = 0.5;
+    body.castShadow = true;
+    group.add(body);
+
+    // Head
+    const head = new THREE.Mesh(
+      new THREE.BoxGeometry(0.25, 0.2, 0.25),
+      new THREE.MeshLambertMaterial({ color: m.accentColor })
+    );
+    head.position.y = 0.9;
+    group.add(head);
+
+    // Lightning bolts
+    const boltMat = new THREE.MeshBasicMaterial({ color: 0xFFFF00 });
+    for (let i = 0; i < 3; i++) {
+      const bolt = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.2, 0.03), boltMat);
+      bolt.position.set(-0.25 + i * 0.25, 0.5, -0.25);
+      bolt.rotation.z = 0.3;
+      group.add(bolt);
+    }
+
+    // Eyes
+    const eyeMat = new THREE.MeshBasicMaterial({ color: 0xFFFF00 });
+    [-0.06, 0.06].forEach(x => {
+      const eye = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.05, 0.04), eyeMat);
+      eye.position.set(x, 0.93, 0.13);
+      group.add(eye);
+    });
+
+    // Base cloud
+    const cloudMat = new THREE.MeshLambertMaterial({ color: 0xB0BEC5 });
+    const cloud = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.15, 0.5), cloudMat);
+    cloud.position.y = 0.08;
+    group.add(cloud);
+  },
+
+  cloud_serpent: (group, m) => {
+    // Body segments
+    const bodyMat = new THREE.MeshLambertMaterial({ color: m.color });
+    for (let i = 0; i < 4; i++) {
+      const seg = new THREE.Mesh(
+        new THREE.BoxGeometry(0.2, 0.18, 0.2),
+        bodyMat
+      );
+      seg.position.set(0, 0.2, 0.3 - i * 0.2);
+      seg.castShadow = true;
+      group.add(seg);
+    }
+
+    // Head
+    const head = new THREE.Mesh(
+      new THREE.BoxGeometry(0.22, 0.2, 0.2),
+      new THREE.MeshLambertMaterial({ color: m.accentColor })
+    );
+    head.position.set(0, 0.22, 0.45);
+    group.add(head);
+
+    // Eyes
+    const eyeMat = new THREE.MeshBasicMaterial({ color: 0x00BCD4 });
+    [-0.06, 0.06].forEach(x => {
+      const eye = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.04, 0.03), eyeMat);
+      eye.position.set(x, 0.25, 0.55);
+      group.add(eye);
+    });
+
+    // Cloud wisps
+    const wispMat = new THREE.MeshBasicMaterial({ color: 0xFFFFFF, transparent: true, opacity: 0.5 });
+    for (let i = 0; i < 3; i++) {
+      const wisp = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.05, 0.15), wispMat);
+      wisp.position.set(-0.2 + i * 0.2, 0.35, 0.1);
+      group.add(wisp);
+    }
+  },
+
+  sky_knight: (group, m) => {
+    // Body (armored)
+    const body = new THREE.Mesh(
+      new THREE.BoxGeometry(0.4, 0.5, 0.35),
+      new THREE.MeshLambertMaterial({ color: m.color })
+    );
+    body.position.y = 0.45;
+    body.castShadow = true;
+    group.add(body);
+
+    // Head
+    const head = new THREE.Mesh(
+      new THREE.BoxGeometry(0.25, 0.25, 0.25),
+      new THREE.MeshLambertMaterial({ color: m.accentColor })
+    );
+    head.position.y = 0.83;
+    group.add(head);
+
+    // Visor
+    const visor = new THREE.Mesh(
+      new THREE.BoxGeometry(0.2, 0.05, 0.05),
+      new THREE.MeshBasicMaterial({ color: 0x00BCD4 })
+    );
+    visor.position.set(0, 0.85, 0.14);
+    group.add(visor);
+
+    // Wings
+    const wingMat = new THREE.MeshLambertMaterial({ color: m.accentColor });
+    [-0.35, 0.35].forEach(x => {
+      const wing = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.35, 0.06), wingMat);
+      wing.position.set(x, 0.55, -0.1);
+      wing.rotation.z = x > 0 ? -0.2 : 0.2;
+      group.add(wing);
+    });
+
+    // Legs
+    const legMat = new THREE.MeshLambertMaterial({ color: m.color });
+    [-0.1, 0.1].forEach(x => {
+      const leg = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.2, 0.1), legMat);
+      leg.position.set(x, 0.1, 0);
+      group.add(leg);
+    });
+  },
+
+  thunder_bird: (group, m) => {
+    // Body
+    const body = new THREE.Mesh(
+      new THREE.BoxGeometry(0.3, 0.25, 0.45),
+      new THREE.MeshLambertMaterial({ color: m.color })
+    );
+    body.position.y = 0.55;
+    body.castShadow = true;
+    group.add(body);
+
+    // Head
+    const head = new THREE.Mesh(
+      new THREE.BoxGeometry(0.18, 0.18, 0.18),
+      new THREE.MeshLambertMaterial({ color: m.color })
+    );
+    head.position.set(0, 0.68, 0.25);
+    group.add(head);
+
+    // Beak
+    const beak = new THREE.Mesh(
+      new THREE.BoxGeometry(0.08, 0.05, 0.12),
+      new THREE.MeshLambertMaterial({ color: m.accentColor })
+    );
+    beak.position.set(0, 0.65, 0.38);
+    group.add(beak);
+
+    // Wings
+    const wingMat = new THREE.MeshLambertMaterial({ color: m.accentColor });
+    [-0.3, 0.3].forEach(x => {
+      const wing = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.06, 0.3), wingMat);
+      wing.position.set(x, 0.58, 0);
+      wing.rotation.z = x > 0 ? -0.3 : 0.3;
+      group.add(wing);
+    });
+
+    // Tail
+    const tail = new THREE.Mesh(
+      new THREE.BoxGeometry(0.1, 0.06, 0.2),
+      new THREE.MeshLambertMaterial({ color: 0x7B1FA2 })
+    );
+    tail.position.set(0, 0.52, -0.35);
+    group.add(tail);
+
+    // Eyes
+    const eyeMat = new THREE.MeshBasicMaterial({ color: 0xFFEB3B });
+    [-0.05, 0.05].forEach(x => {
+      const eye = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.04, 0.03), eyeMat);
+      eye.position.set(x, 0.7, 0.34);
+      group.add(eye);
+    });
+  },
+
+  // ═══════════════════════════════════════
+  // ABYSS MONSTERS
+  // ═══════════════════════════════════════
+  void_stalker: (group, m) => {
+    // Shadowy body
+    const bodyMat = new THREE.MeshLambertMaterial({ color: m.color, transparent: true, opacity: 0.85 });
+    const body = new THREE.Mesh(
+      new THREE.BoxGeometry(0.4, 0.7, 0.35),
+      bodyMat
+    );
+    body.position.y = 0.5;
+    body.castShadow = true;
+    group.add(body);
+
+    // Head
+    const head = new THREE.Mesh(
+      new THREE.BoxGeometry(0.3, 0.25, 0.3),
+      new THREE.MeshLambertMaterial({ color: m.accentColor, transparent: true, opacity: 0.9 })
+    );
+    head.position.y = 0.95;
+    group.add(head);
+
+    // Eyes (glowing)
+    const eyeMat = new THREE.MeshBasicMaterial({ color: m.accentColor });
+    [-0.07, 0.07].forEach(x => {
+      const eye = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.06, 0.04), eyeMat);
+      eye.position.set(x, 0.98, 0.16);
+      group.add(eye);
+    });
+
+    // Shadow tendrils
+    for (let i = 0; i < 3; i++) {
+      const tendril = new THREE.Mesh(
+        new THREE.BoxGeometry(0.05, 0.2, 0.05),
+        new THREE.MeshBasicMaterial({ color: 0x1A1A2E, transparent: true, opacity: 0.6 })
+      );
+      tendril.position.set(-0.3 + i * 0.3, 0.3, -0.2);
+      tendril.rotation.z = 0.2;
+      group.add(tendril);
+    }
+
+    // Base mist
+    const mistMat = new THREE.MeshBasicMaterial({ color: 0x1A1A2E, transparent: true, opacity: 0.4 });
+    const mist = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.1, 0.5), mistMat);
+    mist.position.y = 0.05;
+    group.add(mist);
+  },
+
+  shadow_beast: (group, m) => {
+    // Body
+    const body = new THREE.Mesh(
+      new THREE.BoxGeometry(0.5, 0.35, 0.55),
+      new THREE.MeshLambertMaterial({ color: m.color })
+    );
+    body.position.y = 0.3;
+    body.castShadow = true;
+    group.add(body);
+
+    // Head
+    const head = new THREE.Mesh(
+      new THREE.BoxGeometry(0.25, 0.2, 0.2),
+      new THREE.MeshLambertMaterial({ color: m.color })
+    );
+    head.position.set(0, 0.35, 0.32);
+    group.add(head);
+
+    // Eyes (red glow)
+    const eyeMat = new THREE.MeshBasicMaterial({ color: m.accentColor });
+    [-0.06, 0.06].forEach(x => {
+      const eye = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.05, 0.03), eyeMat);
+      eye.position.set(x, 0.38, 0.42);
+      group.add(eye);
+    });
+
+    // Legs
+    const legMat = new THREE.MeshLambertMaterial({ color: 0x1A1A2E });
+    [[-0.2, 0.18], [0.2, 0.18], [-0.2, -0.18], [0.2, -0.18]].forEach(([x, z]) => {
+      const leg = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.2, 0.1), legMat);
+      leg.position.set(x, 0.1, z);
+      group.add(leg);
+    });
+
+    // Spikes
+    for (let i = 0; i < 3; i++) {
+      const spike = new THREE.Mesh(
+        new THREE.BoxGeometry(0.06, 0.15, 0.06),
+        new THREE.MeshLambertMaterial({ color: m.accentColor })
+      );
+      spike.position.set(-0.15 + i * 0.15, 0.52, 0);
+      group.add(spike);
+    }
+  },
+
+  abyssal_worm: (group, m) => {
+    // Body segments
+    const bodyMat = new THREE.MeshLambertMaterial({ color: m.color });
+    for (let i = 0; i < 5; i++) {
+      const seg = new THREE.Mesh(
+        new THREE.BoxGeometry(0.2, 0.18, 0.2),
+        bodyMat
+      );
+      seg.position.set(0, 0.18, 0.35 - i * 0.18);
+      seg.castShadow = true;
+      group.add(seg);
+    }
+
+    // Head (with jaws)
+    const head = new THREE.Mesh(
+      new THREE.BoxGeometry(0.22, 0.2, 0.18),
+      new THREE.MeshLambertMaterial({ color: m.accentColor })
+    );
+    head.position.set(0, 0.2, 0.5);
+    group.add(head);
+
+    // Eyes
+    const eyeMat = new THREE.MeshBasicMaterial({ color: 0xFF0000 });
+    [-0.06, 0.06].forEach(x => {
+      const eye = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.04, 0.03), eyeMat);
+      eye.position.set(x, 0.23, 0.59);
+      group.add(eye);
+    });
+
+    // Mandibles
+    const mandMat = new THREE.MeshLambertMaterial({ color: 0x1A1A2E });
+    [-0.08, 0.08].forEach(x => {
+      const mand = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.08, 0.04), mandMat);
+      mand.position.set(x, 0.12, 0.56);
+      group.add(mand);
+    });
+
+    // Segments glow
+    const glowMat = new THREE.MeshBasicMaterial({ color: m.accentColor, transparent: true, opacity: 0.5 });
+    for (let i = 0; i < 3; i++) {
+      const glow = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.06, 0.08), glowMat);
+      glow.position.set(0, 0.3, 0.1 - i * 0.18);
+      group.add(glow);
+    }
+  },
+
+  chaos_lord: (group, m) => {
+    // Body
+    const body = new THREE.Mesh(
+      new THREE.BoxGeometry(0.5, 0.65, 0.45),
+      new THREE.MeshLambertMaterial({ color: m.color })
+    );
+    body.position.y = 0.55;
+    body.castShadow = true;
+    group.add(body);
+
+    // Head
+    const head = new THREE.Mesh(
+      new THREE.BoxGeometry(0.3, 0.25, 0.3),
+      new THREE.MeshLambertMaterial({ color: m.accentColor })
+    );
+    head.position.y = 1.0;
+    group.add(head);
+
+    // Crown/horns
+    const hornMat = new THREE.MeshBasicMaterial({ color: m.accentColor });
+    [-0.15, 0.15].forEach(x => {
+      const horn = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.2, 0.06), hornMat);
+      horn.position.set(x, 1.2, 0);
+      horn.rotation.z = x > 0 ? -0.3 : 0.3;
+      group.add(horn);
+    });
+
+    // Eyes
+    const eyeMat = new THREE.MeshBasicMaterial({ color: 0xFF0000 });
+    [-0.08, 0.08].forEach(x => {
+      const eye = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.06, 0.04), eyeMat);
+      eye.position.set(x, 1.03, 0.16);
+      group.add(eye);
+    });
+
+    // Arms
+    const armMat = new THREE.MeshLambertMaterial({ color: m.color });
+    [-0.38, 0.38].forEach(x => {
+      const arm = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.4, 0.12), armMat);
+      arm.position.set(x, 0.45, 0);
+      group.add(arm);
+    });
+
+    // Legs
+    const legMat = new THREE.MeshLambertMaterial({ color: 0x1A1A2E });
+    [-0.12, 0.12].forEach(x => {
+      const leg = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.2, 0.14), legMat);
+      leg.position.set(x, 0.1, 0);
+      group.add(leg);
+    });
+  },
+
+  // ═══════════════════════════════════════
   // WORLD BOSSES
   // ═══════════════════════════════════════
   thornback_ancient: (group, m) => {
@@ -836,6 +1557,238 @@ const MONSTER_MODELS = {
       bubble.position.set(-0.3 + i * 0.2, 0.15 + Math.random() * 0.3, 0.5 + Math.random() * 0.3);
       group.add(bubble);
     }
+  },
+
+  // ═══════════════════════════════════════
+  // NEW WORLD BOSSES
+  // ═══════════════════════════════════════
+  inferno_titan: (group, m) => {
+    // Massive fire body
+    const body = new THREE.Mesh(
+      new THREE.BoxGeometry(1.0, 1.2, 0.9),
+      new THREE.MeshLambertMaterial({ color: m.color })
+    );
+    body.position.y = 1.0;
+    body.castShadow = true;
+    group.add(body);
+
+    // Head
+    const head = new THREE.Mesh(
+      new THREE.BoxGeometry(0.5, 0.4, 0.45),
+      new THREE.MeshLambertMaterial({ color: m.accentColor })
+    );
+    head.position.y = 1.85;
+    group.add(head);
+
+    // Crown of flames
+    const flameMat = new THREE.MeshBasicMaterial({ color: 0xFF5722 });
+    for (let i = 0; i < 4; i++) {
+      const flame = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.25, 0.1), flameMat);
+      flame.position.set(-0.2 + i * 0.13, 2.15, 0);
+      group.add(flame);
+    }
+
+    // Eyes
+    const eyeMat = new THREE.MeshBasicMaterial({ color: 0xFFFF00 });
+    [-0.12, 0.12].forEach(x => {
+      const eye = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 0.05), eyeMat);
+      eye.position.set(x, 1.9, 0.24);
+      group.add(eye);
+    });
+
+    // Arms
+    const armMat = new THREE.MeshLambertMaterial({ color: m.color });
+    [-0.65, 0.65].forEach(x => {
+      const arm = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.7, 0.22), armMat);
+      arm.position.set(x, 0.8, 0);
+      group.add(arm);
+    });
+
+    // Lava core
+    const coreMat = new THREE.MeshBasicMaterial({ color: 0xFF9800, transparent: true, opacity: 0.6 });
+    const core = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.3, 0.3), coreMat);
+    core.position.y = 1.0;
+    group.add(core);
+
+    // Legs
+    const legMat = new THREE.MeshLambertMaterial({ color: 0x3E2723 });
+    [[-0.3, 0.25], [0.3, 0.25], [-0.3, -0.25], [0.3, -0.25]].forEach(([x, z]) => {
+      const leg = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.35, 0.2), legMat);
+      leg.position.set(x, 0.18, z);
+      group.add(leg);
+    });
+  },
+
+  crystal_queen: (group, m) => {
+    // Regal body
+    const body = new THREE.Mesh(
+      new THREE.BoxGeometry(0.7, 0.8, 0.6),
+      new THREE.MeshLambertMaterial({ color: m.color })
+    );
+    body.position.y = 0.7;
+    body.castShadow = true;
+    group.add(body);
+
+    // Head
+    const head = new THREE.Mesh(
+      new THREE.BoxGeometry(0.35, 0.3, 0.35),
+      new THREE.MeshLambertMaterial({ color: m.accentColor })
+    );
+    head.position.y = 1.3;
+    group.add(head);
+
+    // Crown
+    const crownMat = new THREE.MeshBasicMaterial({ color: m.accentColor });
+    for (let i = 0; i < 5; i++) {
+      const spike = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.18 + i * 0.02, 0.06), crownMat);
+      spike.position.set(-0.18 + i * 0.09, 1.55, 0);
+      group.add(spike);
+    }
+
+    // Eyes
+    const eyeMat = new THREE.MeshBasicMaterial({ color: 0xFFFFFF });
+    [-0.08, 0.08].forEach(x => {
+      const eye = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.06, 0.04), eyeMat);
+      eye.position.set(x, 1.33, 0.18);
+      group.add(eye);
+    });
+
+    // Crystal staff
+    const staffMat = new THREE.MeshLambertMaterial({ color: 0x9C27B0 });
+    const staff = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.8, 0.05), staffMat);
+    staff.position.set(0.5, 0.8, 0);
+    group.add(staff);
+    const gem = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.12, 0.12), crownMat);
+    gem.position.set(0.5, 1.25, 0);
+    group.add(gem);
+
+    // Legs
+    const legMat = new THREE.MeshLambertMaterial({ color: m.color });
+    [-0.15, 0.15].forEach(x => {
+      const leg = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.25, 0.15), legMat);
+      leg.position.set(x, 0.12, 0);
+      group.add(leg);
+    });
+  },
+
+  sky_dragon: (group, m) => {
+    // Dragon body
+    const body = new THREE.Mesh(
+      new THREE.BoxGeometry(0.6, 0.5, 1.0),
+      new THREE.MeshLambertMaterial({ color: m.color })
+    );
+    body.position.y = 0.7;
+    body.castShadow = true;
+    group.add(body);
+
+    // Head
+    const head = new THREE.Mesh(
+      new THREE.BoxGeometry(0.35, 0.3, 0.35),
+      new THREE.MeshLambertMaterial({ color: m.accentColor })
+    );
+    head.position.set(0, 0.9, 0.6);
+    group.add(head);
+
+    // Horns
+    const hornMat = new THREE.MeshLambertMaterial({ color: m.accentColor });
+    [-0.18, 0.18].forEach(x => {
+      const horn = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.25, 0.06), hornMat);
+      horn.position.set(x, 1.2, 0.55);
+      horn.rotation.z = x > 0 ? -0.3 : 0.3;
+      group.add(horn);
+    });
+
+    // Wings
+    const wingMat = new THREE.MeshLambertMaterial({ color: m.accentColor });
+    [-0.55, 0.55].forEach(x => {
+      const wing = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.08, 0.5), wingMat);
+      wing.position.set(x, 1.0, -0.1);
+      wing.rotation.z = x > 0 ? -0.4 : 0.4;
+      group.add(wing);
+    });
+
+    // Eyes
+    const eyeMat = new THREE.MeshBasicMaterial({ color: 0x00FF00 });
+    [-0.08, 0.08].forEach(x => {
+      const eye = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.06, 0.04), eyeMat);
+      eye.position.set(x, 0.95, 0.78);
+      group.add(eye);
+    });
+
+    // Tail
+    const tailMat = new THREE.MeshLambertMaterial({ color: m.color });
+    const tail1 = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.18, 0.3), tailMat);
+    tail1.position.set(0, 0.65, -0.65);
+    group.add(tail1);
+    const tail2 = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.12, 0.2), tailMat);
+    tail2.position.set(0, 0.6, -0.9);
+    group.add(tail2);
+
+    // Legs
+    const legMat = new THREE.MeshLambertMaterial({ color: m.color });
+    [[-0.2, 0.25], [0.2, 0.25], [-0.2, -0.25], [0.2, -0.25]].forEach(([x, z]) => {
+      const leg = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.25, 0.12), legMat);
+      leg.position.set(x, 0.35, z);
+      group.add(leg);
+    });
+  },
+
+  chaos_emperor: (group, m) => {
+    // Dark lord body
+    const body = new THREE.Mesh(
+      new THREE.BoxGeometry(0.65, 0.85, 0.55),
+      new THREE.MeshLambertMaterial({ color: m.color })
+    );
+    body.position.y = 0.8;
+    body.castShadow = true;
+    group.add(body);
+
+    // Head
+    const head = new THREE.Mesh(
+      new THREE.BoxGeometry(0.35, 0.3, 0.35),
+      new THREE.MeshLambertMaterial({ color: m.accentColor })
+    );
+    head.position.y = 1.45;
+    group.add(head);
+
+    // Horns (multiple)
+    const hornMat = new THREE.MeshBasicMaterial({ color: m.accentColor });
+    [-0.2, 0, 0.2].forEach(x => {
+      const horn = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.3, 0.05), hornMat);
+      horn.position.set(x, 1.7, 0);
+      horn.rotation.z = x > 0 ? -0.2 : x < 0 ? 0.2 : 0;
+      group.add(horn);
+    });
+
+    // Eyes (glowing)
+    const eyeMat = new THREE.MeshBasicMaterial({ color: 0xFF0000 });
+    [-0.08, 0.08].forEach(x => {
+      const eye = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.07, 0.05), eyeMat);
+      eye.position.set(x, 1.48, 0.18);
+      group.add(eye);
+    });
+
+    // Dark cape
+    const capeMat = new THREE.MeshLambertMaterial({ color: 0x1A1A2E, transparent: true, opacity: 0.8 });
+    const cape = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.7, 0.08), capeMat);
+    cape.position.set(0, 0.7, -0.35);
+    group.add(cape);
+
+    // Arms
+    const armMat = new THREE.MeshLambertMaterial({ color: m.color });
+    [-0.48, 0.48].forEach(x => {
+      const arm = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.55, 0.15), armMat);
+      arm.position.set(x, 0.65, 0);
+      group.add(arm);
+    });
+
+    // Legs
+    const legMat = new THREE.MeshLambertMaterial({ color: 0x1A1A2E });
+    [-0.14, 0.14].forEach(x => {
+      const leg = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.25, 0.16), legMat);
+      leg.position.set(x, 0.12, 0);
+      group.add(leg);
+    });
   },
 };
 
