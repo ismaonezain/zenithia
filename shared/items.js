@@ -289,6 +289,14 @@ const ITEMS = {
   lava_heart:        { name: 'Lava Heart Amulet',     type: 'equipment', slot: 'accessory',                              tier: 4, stats: { hp: 60, atk: 4, def: 3 },                       price: 2800,  icon: { bg: 0xBF360C, fg: 0xFF6E40, symbol: '◯', image: '/assets/icons/lava_heart.png' } },
   shadow_cloak_rare: { name: 'Shadow Cloak (Rare)',   type: 'equipment', slot: 'armor',  classReq: ['shadow'],       tier: 4, stats: { def: 12, spd: 8, crit: 0.10, atk: 4 },           price: 4500,  icon: { bg: 0x212121, fg: 0x7C4DFF, symbol: '□', image: '/assets/icons/shadow_cloak_rare.png' } },
   storm_shield:      { name: 'Storm Shield',          type: 'equipment', slot: 'shield', classReq: ['guardian'],     tier: 4, stats: { def: 22, hp: 100, atk: 4 },                      price: 4200,  icon: { bg: 0x1565C0, fg: 0x42A5F5, symbol: '◎', image: '/assets/icons/storm_shield.png' } },
+  // ═══════════════════════════════════════
+  // WINGS — Boss exclusive drops (animated 3D)
+  // ═══════════════════════════════════════
+  flame_wings:     { name: 'Flame Wings',     type: 'equipment', slot: 'wing', stats: { atk: 5, spd: 4, crit: 0.05 },                 price: 0, level_required: 10, icon: { bg: 0xBF360C, fg: 0xFF6E40, symbol: '🪽' } },
+  crystal_wings:   { name: 'Crystal Wings',   type: 'equipment', slot: 'wing', stats: { def: 4, hp: 40, mp: 30, atk: 2 },              price: 0, level_required: 20, icon: { bg: 0x6A1B9A, fg: 0xEA80FC, symbol: '🪽' } },
+  storm_wings:     { name: 'Storm Wings',     type: 'equipment', slot: 'wing', stats: { spd: 8, atk: 4, crit: 0.08 },                  price: 0, level_required: 30, icon: { bg: 0x01579B, fg: 0x80D8FF, symbol: '🪽' } },
+  shadow_wings:    { name: 'Shadow Wings',    type: 'equipment', slot: 'wing', stats: { spd: 6, crit: 0.12, atk: 6 },                  price: 0, level_required: 40, icon: { bg: 0x0D0D0D, fg: 0xD500F9, symbol: '🪽' } },
+  ancient_wings:   { name: 'Ancient Wings',   type: 'equipment', slot: 'wing', stats: { hp: 80, def: 6, atk: 8, spd: 3 },              price: 0, level_required: 5,  icon: { bg: 0x1B5E20, fg: 0x69F0AE, symbol: '🪽' } },
 };
 
 // ═══════════════════════════════════════

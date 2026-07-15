@@ -186,6 +186,7 @@ export class InventoryUI {
       { key: 'boots', icon: '👢', label: 'Boots' },
       { key: 'shield', icon: '🔰', label: 'Shield' },
       { key: 'ring', icon: '💍', label: 'Ring' },
+      { key: 'wing', icon: '🪽', label: 'Wings' },
       { key: 'accessory', icon: '🎒', label: 'Back' },
     ];
 

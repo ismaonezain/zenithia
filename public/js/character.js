@@ -706,6 +706,18 @@ export function animateIdle(model, time) {
   const rightArm = model.getObjectByName('rightArm');
   if (leftArm) leftArm.rotation.x = Math.sin(time * 1.5) * 0.05;
   if (rightArm) rightArm.rotation.x = -Math.sin(time * 1.5) * 0.05;
+  // Wing flapping animation
+  const eqGroup = model.getObjectByName('equipment');
+  if (eqGroup) {
+    const wGroup = eqGroup.getObjectByName('eq_wings');
+    if (wGroup) {
+      const lWing = wGroup.getObjectByName('wing_left');
+      const rWing = wGroup.getObjectByName('wing_right');
+      const flapAngle = Math.sin(time * 3) * 0.25 + 0.1;
+      if (lWing) lWing.rotation.z = flapAngle;
+      if (rWing) rWing.rotation.z = -flapAngle;
+    }
+  }
 }
 
 // --- Create NPC with specific look ---
@@ -893,6 +905,9 @@ const EQ_THEMES = {
   village:    { primary: 0xBDBDBD, secondary: 0x9E9E9E, accent: 0xE0E0E0 },
   ironclad:   { primary: 0x607D8B, secondary: 0x455A64, accent: 0x90A4AE },
   nightfang:  { primary: 0x37474F, secondary: 0x263238, accent: 0x546E7A },
+  flame:      { primary: 0xBF360C, secondary: 0xE65100, accent: 0xFF6E40 },
+  crystal:    { primary: 0x6A1B9A, secondary: 0x9C27B0, accent: 0xEA80FC },
+  ancient:    { primary: 0x1B5E20, secondary: 0x2E7D32, accent: 0x69F0AE },
   _default:   { primary: 0x607D8B, secondary: 0x455A64, accent: 0x90A4AE },
 };
 
@@ -1129,6 +1144,80 @@ export function applyEquipment(model, equipment) {
       gem.name = 'eq_ring_gem';
       leftHand.add(gem);
     }
+  }
+
+  // === WINGS — animated wing pair on back ===
+  if (equipment.wing) {
+    const t = getEQTheme(equipment.wing.id);
+    const wid = equipment.wing.id || '';
+    const wGroup = new THREE.Group();
+    wGroup.name = 'eq_wings';
+
+    const isFlame = wid.includes('flame');
+    const isCrystal = wid.includes('crystal');
+    const isStorm = wid.includes('storm');
+    const isShadow = wid.includes('shadow');
+    const isAncient = wid.includes('ancient');
+
+    // Wing shape params
+    const wingSpan = isShadow ? 0.7 : isStorm ? 0.65 : 0.55;
+    const wingHeight = isCrystal ? 0.55 : 0.45;
+    const wingColor = t.primary;
+    const accentColor = t.accent || t.fg;
+
+    // Left wing
+    const lWingGroup = new THREE.Group();
+    lWingGroup.name = 'wing_left';
+    // Main wing body — angled feather shape
+    const lShape = new THREE.Shape();
+    lShape.moveTo(0, 0);
+    lShape.quadraticCurveTo(-wingSpan * 0.6, wingHeight * 0.8, -wingSpan, wingHeight * 0.3);
+    lShape.quadraticCurveTo(-wingSpan * 0.8, -wingHeight * 0.2, 0, -wingHeight * 0.1);
+    lShape.closePath();
+    const wingGeo = new THREE.ExtrudeGeometry(lShape, { depth: 0.02, bevelEnabled: false });
+    const wingMat = new THREE.MeshLambertMaterial({ color: wingColor, transparent: true, opacity: 0.85, side: THREE.DoubleSide });
+    const lWing = new THREE.Mesh(wingGeo, wingMat);
+    lWingGroup.add(lWing);
+    // Accent edge
+    const edgeGeo = new THREE.BoxGeometry(wingSpan * 0.4, 0.015, 0.025);
+    const edgeMat = new THREE.MeshBasicMaterial({ color: accentColor, transparent: true, opacity: 0.7 });
+    const lEdge = new THREE.Mesh(edgeGeo, edgeMat);
+    lEdge.position.set(-wingSpan * 0.45, wingHeight * 0.15, 0.01);
+    lEdge.rotation.z = 0.3;
+    lWingGroup.add(lEdge);
+    // Glow
+    const glowGeo = new THREE.SphereGeometry(wingSpan * 0.3, 6, 6);
+    const glowMat = new THREE.MeshBasicMaterial({ color: accentColor, transparent: true, opacity: 0.1 });
+    const lGlow = new THREE.Mesh(glowGeo, glowMat);
+    lGlow.position.set(-wingSpan * 0.3, wingHeight * 0.2, 0);
+    lWingGroup.add(lGlow);
+
+    lWingGroup.position.set(-0.08, 0.9, -0.2);
+    wGroup.add(lWingGroup);
+
+    // Right wing (mirror)
+    const rWingGroup = new THREE.Group();
+    rWingGroup.name = 'wing_right';
+    const rShape = new THREE.Shape();
+    rShape.moveTo(0, 0);
+    rShape.quadraticCurveTo(wingSpan * 0.6, wingHeight * 0.8, wingSpan, wingHeight * 0.3);
+    rShape.quadraticCurveTo(wingSpan * 0.8, -wingHeight * 0.2, 0, -wingHeight * 0.1);
+    rShape.closePath();
+    const rWingGeo = new THREE.ExtrudeGeometry(rShape, { depth: 0.02, bevelEnabled: false });
+    const rWing = new THREE.Mesh(rWingGeo, wingMat);
+    rWingGroup.add(rWing);
+    const rEdge = new THREE.Mesh(edgeGeo, edgeMat);
+    rEdge.position.set(wingSpan * 0.45, wingHeight * 0.15, 0.01);
+    rEdge.rotation.z = -0.3;
+    rWingGroup.add(rEdge);
+    const rGlow = new THREE.Mesh(glowGeo, glowMat);
+    rGlow.position.set(wingSpan * 0.3, wingHeight * 0.2, 0);
+    rWingGroup.add(rGlow);
+
+    rWingGroup.position.set(0.08, 0.9, -0.2);
+    wGroup.add(rWingGroup);
+
+    eqGroup.add(wGroup);
   }
 
   // === ACCESSORY — pendant glow / cape ===
