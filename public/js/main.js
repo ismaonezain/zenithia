@@ -1041,10 +1041,9 @@ function handleServerMessage(msg) {
         console.log('[ZONE] Ignoring stale zone_enter:', msg.zone?.id, '(expected:', state._expectedZone + ')');
         break;
       }
-      // Portal click: full scene rebuild (like login, no reload)
+      // Portal click: just enter zone (terrain stays, only color/portals/camera change)
       if (state._expectedZone) {
         state._expectedZone = null;
-        rebuildScene(msg.zone?.playerX, msg.zone?.playerZ);
         enterZone(msg.zone);
         break;
       }
