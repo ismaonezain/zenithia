@@ -183,18 +183,12 @@ const GATHERING_CAST_MS = 2000; // 2 seconds gathering
 const bossState = {}; // bossId → { alive, hp, maxHp, target, lastAbility, nextSpawn, adds }
 
 // Player Trading state
-const tradeSessions = {}; // tradeId → { playerA, playerB, itemsA, itemsB, confirmedA, confirmedB, createdAt }
+const tradeSessions = {}; // tradeId -> { playerA, playerB, itemsA, itemsB, confirmedA, confirmedB, createdAt }
 
-// Player Kiosk state
-const KIOSK_SPOTS = [
-  { id: 'kiosk_1', x: 8, z: -4, name: 'Kios Utara 1' },
-  { id: 'kiosk_2', x: 10, z: -2, name: 'Kios Utara 2' },
-  { id: 'kiosk_3', x: 8, z: 0, name: 'Kios Tengah 1' },
-  { id: 'kiosk_4', x: 10, z: 2, name: 'Kios Tengah 2' },
-  { id: 'kiosk_5', x: 6, z: 4, name: 'Kios Selatan 1' },
-  { id: 'kiosk_6', x: 4, z: 6, name: 'Kios Selatan 2' },
-];
-const activeKiosks = {}; // spotId → { ownerId, ownerName, items: [{itemId, name, type, price, quantity, icon}], createdAt }
+// Player Kiosk state (free placement anywhere in city)
+const KIOSK_CITY_BOUNDS = { minX: -25, maxX: 25, minZ: -25, maxZ: 25 };
+const KIOSK_MIN_DISTANCE = 3; // min distance between kiosks
+const activeKiosks = {}; // kioskId -> { ownerId, ownerName, x, z, items: [{itemId, name, type, price, quantity, icon}], createdAt }
 
 function spawnGroundLoot(lootItems, x, z, killerId) {
   if (!lootItems || lootItems.length === 0) return;
@@ -1651,14 +1645,11 @@ function handleMessage(ws, playerId, msg) {
     }
 
     // ═══════════════════════════════════════
-    // PLAYER KIOSKS
+    // PLAYER KIOSKS (free placement in city)
     // ═══════════════════════════════════════
     case 'kiosk_list': {
-      // Send all kiosk spots + active kiosks to client
-      const kioskData = KIOSK_SPOTS.map(spot => ({
-        ...spot,
-        owner: activeKiosks[spot.id] ? { id: activeKiosks[spot.id].ownerId, name: activeKiosks[spot.id].ownerName } : null,
-        itemCount: activeKiosks[spot.id] ? activeKiosks[spot.id].items.length : 0,
+      const kioskData = Object.entries(activeKiosks).map(([kid, k]) => ({
+        id: kid, x: k.x, z: k.z, owner: { id: k.ownerId, name: k.ownerName }, itemCount: k.items.length,
       }));
       ws.send(JSON.stringify({ type: 'kiosk_list', kiosks: kioskData }));
       break;
@@ -1666,26 +1657,37 @@ function handleMessage(ws, playerId, msg) {
     case 'kiosk_place': {
       const player = connectedPlayers[playerId];
       if (!player) break;
-      const spot = KIOSK_SPOTS.find(s => s.id === msg.spotId);
-      if (!spot) { ws.send(JSON.stringify({ type: 'kiosk_error', error: 'Spot tidak valid' })); break; }
-      if (activeKiosks[spot.id]) { ws.send(JSON.stringify({ type: 'kiosk_error', error: 'Spot sudah terisi!' })); break; }
-      // Check distance
-      const kdx = (player.x || 0) - spot.x;
-      const kdz = (player.z || 0) - spot.z;
-      if (Math.sqrt(kdx*kdx + kdz*kdz) > 5) { ws.send(JSON.stringify({ type: 'kiosk_error', error: 'Terlalu jauh! Dekati spot kios.' })); break; }
       // Check if player already has a kiosk
-      for (const [sid, k] of Object.entries(activeKiosks)) {
-        if (k.ownerId === playerId) { ws.send(JSON.stringify({ type: 'kiosk_error', error: 'Kamu sudah punya kios! Cabut dulu.' })); break; }
+      if (activeKiosks['kiosk_' + playerId]) { ws.send(JSON.stringify({ type: 'kiosk_error', error: 'Kamu sudah punya kios! Cabut dulu.' })); break; }
+      // Use player's current position
+      const kx = Math.round(player.x || 0);
+      const kz = Math.round(player.z || 0);
+      // Check city bounds
+      if (kx < KIOSK_CITY_BOUNDS.minX || kx > KIOSK_CITY_BOUNDS.maxX || kz < KIOSK_CITY_BOUNDS.minZ || kz > KIOSK_CITY_BOUNDS.maxZ) {
+        ws.send(JSON.stringify({ type: 'kiosk_error', error: 'Di luar kota! Pasang di dalam kota.' })); break;
       }
-      // Place kiosk with initial items
-      const items = msg.items || []; // [{itemId, price, quantity}]
+      // Check distance from other kiosks
+      for (const k of Object.values(activeKiosks)) {
+        const dx = kx - k.x; const dz = kz - k.z;
+        if (Math.sqrt(dx*dx + dz*dz) < KIOSK_MIN_DISTANCE) {
+          ws.send(JSON.stringify({ type: 'kiosk_error', error: 'Terlalu dekat kios lain! Min ' + KIOSK_MIN_DISTANCE + ' unit.' })); break;
+        }
+      }
+      // Check distance from NPCs
+      for (const npc of Object.values(world.npcs || {})) {
+        const dx = kx - (npc.x || 0); const dz = kz - (npc.z || 0);
+        if (Math.sqrt(dx*dx + dz*dz) < 2) {
+          ws.send(JSON.stringify({ type: 'kiosk_error', error: 'Terlalu dekat NPC!' })); break;
+        }
+      }
+      // Place kiosk with items
+      const items = msg.items || [];
       const kioskItems = [];
       for (const item of items) {
         const invItem = player.inventory?.find(i => i.id === item.itemId);
         if (!invItem) continue;
-        const qty = Math.min(item.quantity || 1, invItem.quantity || 1);
+        const qty = Math.min(item.quantity || 999, invItem.quantity || 1);
         if (qty <= 0) continue;
-        // Remove from inventory
         invItem.quantity = (invItem.quantity || 1) - qty;
         if (invItem.quantity <= 0) {
           const idx = player.inventory.indexOf(invItem);
@@ -1694,89 +1696,75 @@ function handleMessage(ws, playerId, msg) {
         const def = ITEMS[item.itemId];
         kioskItems.push({ itemId: item.itemId, name: def?.name || invItem.name, type: def?.type || 'material', price: item.price || def?.price || 1, quantity: qty, icon: def?.icon });
       }
-      activeKiosks[spot.id] = { ownerId: playerId, ownerName: player.name, items: kioskItems, createdAt: Date.now() };
+      if (kioskItems.length === 0) { ws.send(JSON.stringify({ type: 'kiosk_error', error: 'Tidak ada item untuk dijual!' })); break; }
+      const kioskId = 'kiosk_' + playerId;
+      activeKiosks[kioskId] = { ownerId: playerId, ownerName: player.name, x: kx, z: kz, items: kioskItems, createdAt: Date.now() };
       saveWorld();
-      broadcast({ type: 'kiosk_update', spotId: spot.id, owner: { id: playerId, name: player.name }, itemCount: kioskItems.length });
-      ws.send(JSON.stringify({ type: 'kiosk_placed', spotId: spot.id, inventory: player.inventory }));
-      console.log('[KIOSK] ' + player.name + ' placed kiosk at ' + spot.name);
+      broadcast({ type: 'kiosk_placed', id: kioskId, x: kx, z: kz, owner: { id: playerId, name: player.name }, itemCount: kioskItems.length });
+      ws.send(JSON.stringify({ type: 'kiosk_placed_ok', kioskId, inventory: player.inventory }));
+      console.log('[KIOSK] ' + player.name + ' placed kiosk at (' + kx + ',' + kz + ')');
       break;
     }
     case 'kiosk_update_item': {
       const player = connectedPlayers[playerId];
       if (!player) break;
-      const kiosk = Object.values(activeKiosks).find(k => k.ownerId === playerId);
+      const kioskId = 'kiosk_' + playerId;
+      const kiosk = activeKiosks[kioskId];
       if (!kiosk) { ws.send(JSON.stringify({ type: 'kiosk_error', error: 'Kamu tidak punya kios' })); break; }
-      // Find and update item price/quantity
       const item = kiosk.items.find(i => i.itemId === msg.itemId);
       if (!item) { ws.send(JSON.stringify({ type: 'kiosk_error', error: 'Item tidak ada di kios' })); break; }
       if (msg.price !== undefined) item.price = Math.max(1, msg.price);
       if (msg.quantity !== undefined) {
         const diff = msg.quantity - item.quantity;
         if (diff > 0) {
-          // Add more from inventory
           const invItem = player.inventory?.find(i => i.id === msg.itemId);
           if (!invItem || (invItem.quantity || 0) < diff) { ws.send(JSON.stringify({ type: 'kiosk_error', error: 'Inventory tidak cukup' })); break; }
           invItem.quantity = (invItem.quantity || 1) - diff;
-          if (invItem.quantity <= 0) {
-            const idx = player.inventory.indexOf(invItem);
-            if (idx >= 0) player.inventory.splice(idx, 1);
-          }
+          if (invItem.quantity <= 0) { const idx = player.inventory.indexOf(invItem); if (idx >= 0) player.inventory.splice(idx, 1); }
           item.quantity = msg.quantity;
         } else if (diff < 0) {
-          // Return to inventory
           const returnQty = -diff;
-          const def = ITEMS[item.itemId];
           const existing = player.inventory?.find(i => i.id === item.itemId);
           if (existing) existing.quantity = (existing.quantity || 1) + returnQty;
           else player.inventory.push({ id: item.itemId, name: item.name, type: item.type, quantity: returnQty, icon: item.icon });
           item.quantity = msg.quantity;
         }
       }
-      if (item.quantity <= 0) {
-        kiosk.items = kiosk.items.filter(i => i.itemId !== msg.itemId);
-      }
+      if (item.quantity <= 0) kiosk.items = kiosk.items.filter(i => i.itemId !== msg.itemId);
       saveWorld();
+      broadcast({ type: 'kiosk_item_updated', id: kioskId, items: kiosk.items });
       ws.send(JSON.stringify({ type: 'kiosk_updated', inventory: player.inventory }));
       break;
     }
     case 'kiosk_remove': {
       const player = connectedPlayers[playerId];
       if (!player) break;
-      let removed = false;
-      for (const [spotId, kiosk] of Object.entries(activeKiosks)) {
-        if (kiosk.ownerId === playerId) {
-          // Return all items to inventory
-          for (const item of kiosk.items) {
-            const existing = player.inventory?.find(i => i.id === item.itemId);
-            if (existing) existing.quantity = (existing.quantity || 1) + item.quantity;
-            else player.inventory.push({ id: item.itemId, name: item.name, type: item.type, quantity: item.quantity, icon: item.icon });
-          }
-          delete activeKiosks[spotId];
-          broadcast({ type: 'kiosk_removed', spotId });
-          removed = true;
-          break;
-        }
+      const kioskId = 'kiosk_' + playerId;
+      const kiosk = activeKiosks[kioskId];
+      if (!kiosk) { ws.send(JSON.stringify({ type: 'kiosk_error', error: 'Kamu tidak punya kios' })); break; }
+      // Return all items to inventory
+      for (const item of kiosk.items) {
+        const existing = player.inventory?.find(i => i.id === item.itemId);
+        if (existing) existing.quantity = (existing.quantity || 1) + item.quantity;
+        else player.inventory.push({ id: item.itemId, name: item.name, type: item.type, quantity: item.quantity, icon: item.icon });
       }
-      if (removed) {
-        saveWorld();
-        ws.send(JSON.stringify({ type: 'kiosk_removed_ok', inventory: player.inventory }));
-      } else {
-        ws.send(JSON.stringify({ type: 'kiosk_error', error: 'Kamu tidak punya kios' }));
-      }
+      delete activeKiosks[kioskId];
+      saveWorld();
+      broadcast({ type: 'kiosk_removed', id: kioskId });
+      ws.send(JSON.stringify({ type: 'kiosk_removed_ok', inventory: player.inventory }));
+      console.log('[KIOSK] ' + player.name + ' removed kiosk');
       break;
     }
     case 'kiosk_browse': {
-      const spot = KIOSK_SPOTS.find(s => s.id === msg.spotId);
-      if (!spot) break;
-      const kiosk = activeKiosks[spot.id];
-      if (!kiosk) { ws.send(JSON.stringify({ type: 'kiosk_error', error: 'Kios kosong' })); break; }
-      ws.send(JSON.stringify({ type: 'kiosk_browse', spotId: spot.id, owner: { id: kiosk.ownerId, name: kiosk.ownerName }, items: kiosk.items }));
+      const kiosk = activeKiosks[msg.kioskId];
+      if (!kiosk) { ws.send(JSON.stringify({ type: 'kiosk_error', error: 'Kios tidak ditemukan' })); break; }
+      ws.send(JSON.stringify({ type: 'kiosk_browse', kioskId: msg.kioskId, owner: { id: kiosk.ownerId, name: kiosk.ownerName }, items: kiosk.items, x: kiosk.x, z: kiosk.z }));
       break;
     }
     case 'kiosk_buy': {
       const player = connectedPlayers[playerId];
       if (!player) break;
-      const kiosk = activeKiosks[msg.spotId];
+      const kiosk = activeKiosks[msg.kioskId];
       if (!kiosk) { ws.send(JSON.stringify({ type: 'kiosk_error', error: 'Kios tidak ditemukan' })); break; }
       if (kiosk.ownerId === playerId) { ws.send(JSON.stringify({ type: 'kiosk_error', error: 'Gak bisa beli dari kios sendiri' })); break; }
       const item = kiosk.items.find(i => i.itemId === msg.itemId);
@@ -1784,16 +1772,12 @@ function handleMessage(ws, playerId, msg) {
       const qty = Math.min(msg.quantity || 1, item.quantity);
       const totalCost = item.price * qty;
       if ((player.zen || 0) < totalCost) { ws.send(JSON.stringify({ type: 'kiosk_error', error: 'Zen tidak cukup! Butuh ' + totalCost + 'z' })); break; }
-      // Deduct gold
       player.zen = (player.zen || 0) - totalCost;
-      // Give item to buyer
       const existing = player.inventory?.find(i => i.id === item.itemId);
       if (existing) existing.quantity = (existing.quantity || 1) + qty;
       else player.inventory.push({ id: item.itemId, name: item.name, type: item.type, quantity: qty, icon: item.icon });
-      // Remove from kiosk
       item.quantity -= qty;
       if (item.quantity <= 0) kiosk.items = kiosk.items.filter(i => i.itemId !== item.itemId);
-      // Give gold to owner
       const owner = connectedPlayers[kiosk.ownerId];
       if (owner) {
         owner.zen = (owner.zen || 0) + totalCost;
@@ -1804,9 +1788,8 @@ function handleMessage(ws, playerId, msg) {
       }
       saveWorld();
       ws.send(JSON.stringify({ type: 'kiosk_bought', itemId: item.itemId, qty, cost: totalCost, zen: player.zen, inventory: player.inventory }));
-      // Update kiosk display for all
-      broadcast({ type: 'kiosk_update', spotId: msg.spotId, owner: { id: kiosk.ownerId, name: kiosk.ownerName }, itemCount: kiosk.items.length });
-      console.log('[KIOSK] ' + player.name + ' bought ' + qty + 'x ' + item.name + ' from ' + kiosk.ownerName + ' for ' + totalCost + 'z');
+      broadcast({ type: 'kiosk_item_updated', id: msg.kioskId, items: kiosk.items });
+      console.log('[KIOSK] ' + player.name + ' bought ' + qty + 'x ' + item.name + ' from ' + kiosk.ownerName);
       break;
     }
     case 'respawn': {
