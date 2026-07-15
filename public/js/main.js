@@ -2800,9 +2800,11 @@ function tryPickupGroundLoot(mouseEvent) {
   if (closestId) {
     const entry = state.groundLoot[closestId];
     const names = entry.items.map(i => `${i.name} x${i.quantity || 1}`).join(', ');
+    console.log('[LOOT] pickup click', closestId, names);
     addChatMessage('System', `📦 Picked up: ${names}`);
     window.ZenSFX?.pickup();
     wsSend(JSON.stringify({ type: 'pickup_loot', lootId: closestId }));
+    console.log('[LOOT] sent pickup_loot to server');
     removeGroundLoot3D(closestId);
   }
 }

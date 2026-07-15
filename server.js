@@ -1185,6 +1185,7 @@ function handleMessage(ws, playerId, msg) {
         break;
     }
     case 'pickup_loot': {
+      console.log('[SERVER] pickup_loot received', msg.lootId, 'player', player?.id);
       const player = connectedPlayers[ws];
       if (player && msg.lootId && groundLoot[msg.lootId]) {
         const lootEntry = groundLoot[msg.lootId];
