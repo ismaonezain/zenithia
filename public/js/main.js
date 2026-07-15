@@ -1013,6 +1013,15 @@ function handleServerMessage(msg) {
       addChatMessage('System', '🏪 ' + msg.error);
       break;
     }
+    // Zone handlers
+    case 'zone_enter': {
+      enterZone(msg.zone);
+      break;
+    }
+    case 'zone_error': {
+      addChatMessage('System', '🌀 ' + msg.error);
+      break;
+    }
     case 'system_message': {
       addChatMessage('System', msg.message);
       break;
@@ -2060,6 +2069,135 @@ function closeKioskUI() {
   if (old) old.remove();
 }
 
+
+// ============================
+// ZONE SYSTEM
+// ============================
+let _currentZone = null;
+let _zonePortals = []; // 3D portal meshes
+let _zoneDecorations = []; // 3D decoration meshes
+
+function enterZone(zoneData) {
+  _currentZone = zoneData;
+  // Change ground color
+  const ground = state.scene?.getObjectByName('ground');
+  if (ground && ground.material) {
+    ground.material.color.setHex(zoneData.groundColor || 0x7CBA3F);
+  }
+  // Show zone name overlay
+  showZoneOverlay(zoneData.name, zoneData.subtitle, zoneData.level);
+  // Clear old portals + decorations
+  clearZoneObjects();
+  // Spawn portals
+  (zoneData.portals || []).forEach(p => spawnPortal(p));
+  // Spawn decorations
+  (zoneData.decorations || []).forEach(d => spawnDecoration(d));
+}
+
+function showZoneOverlay(name, subtitle, level) {
+  const existing = document.getElementById('zone-overlay');
+  if (existing) existing.remove();
+  const overlay = document.createElement('div');
+  overlay.id = 'zone-overlay';
+  overlay.style.cssText = 'position:fixed;top:20%;left:50%;transform:translateX(-50%);z-index:160;text-align:center;pointer-events:none;opacity:0;transition:opacity 0.5s;';
+  overlay.innerHTML = `
+    <div style="color:#FFD700;font-size:1.8rem;font-weight:bold;text-shadow:2px 2px 4px rgba(0,0,0,0.8);font-family:'Courier New',monospace;">${name}</div>
+    <div style="color:#ccc;font-size:0.9rem;margin-top:4px;text-shadow:1px 1px 2px rgba(0,0,0,0.8);">${subtitle || ''}</div>
+    <div style="color:#FF9800;font-size:0.8rem;margin-top:4px;">Level ${level}</div>
+  `;
+  document.body.appendChild(overlay);
+  requestAnimationFrame(() => { overlay.style.opacity = '1'; });
+  setTimeout(() => { overlay.style.opacity = '0'; setTimeout(() => overlay.remove(), 600); }, 3000);
+}
+
+function spawnPortal(portalData) {
+  if (!state.scene) return;
+  const group = new THREE.Group();
+  // Glowing ring
+  const ringGeo = new THREE.TorusGeometry(1.2, 0.15, 8, 24);
+  const ringMat = new THREE.MeshBasicMaterial({ color: 0x9C27B0, transparent: true, opacity: 0.8 });
+  const ring = new THREE.Mesh(ringGeo, ringMat);
+  ring.rotation.x = -Math.PI / 2;
+  ring.position.y = 0.3;
+  group.add(ring);
+  // Inner glow
+  const glowGeo = new THREE.CircleGeometry(1.0, 16);
+  const glowMat = new THREE.MeshBasicMaterial({ color: 0xCE93D8, transparent: true, opacity: 0.3, side: THREE.DoubleSide });
+  const glow = new THREE.Mesh(glowGeo, glowMat);
+  glow.rotation.x = -Math.PI / 2;
+  glow.position.y = 0.25;
+  group.add(glow);
+  // Label
+  const canvas = document.createElement('canvas');
+  canvas.width = 256; canvas.height = 64;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#CE93D8';
+  ctx.font = 'bold 18px Arial';
+  ctx.textAlign = 'center';
+  ctx.fillText(portalData.name, 128, 36);
+  const tex = new THREE.CanvasTexture(canvas);
+  const labelMat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false });
+  const label = new THREE.Sprite(labelMat);
+  label.scale.set(3, 0.7, 1);
+  label.position.y = 2.0;
+  group.add(label);
+
+  group.position.set(portalData.x, 0, portalData.z);
+  group.userData = { type: 'portal', ...portalData };
+  state.scene.add(group);
+  _zonePortals.push(group);
+  if (!state._gatherNodes) state._gatherNodes = [];
+  state._gatherNodes.push(group);
+}
+
+function spawnDecoration(d) {
+  if (!state.scene) return;
+  let mesh;
+  if (d.type === 'box') {
+    const geo = new THREE.BoxGeometry(d.w || 1, d.h || 1, d.d || 1);
+    const mat = new THREE.MeshBasicMaterial({ color: d.color || 0x8D6E63 });
+    mesh = new THREE.Mesh(geo, mat);
+    mesh.position.set(d.x, (d.h || 1) / 2, d.z);
+  } else if (d.type === 'cylinder') {
+    const geo = new THREE.CylinderGeometry(d.r || 0.3, d.r || 0.3, d.h || 2, 8);
+    const mat = new THREE.MeshBasicMaterial({ color: d.color || 0x5D4037 });
+    mesh = new THREE.Mesh(geo, mat);
+    mesh.position.set(d.x, (d.h || 2) / 2, d.z);
+  } else if (d.type === 'sphere') {
+    const geo = new THREE.SphereGeometry(d.r || 1, 8, 8);
+    const mat = new THREE.MeshBasicMaterial({ color: d.color || 0x2E7D32 });
+    mesh = new THREE.Mesh(geo, mat);
+    mesh.position.set(d.x, d.y || d.r || 1, d.z);
+  } else if (d.type === 'cone') {
+    const geo = new THREE.ConeGeometry(d.r || 1, d.h || 2, 8);
+    const mat = new THREE.MeshBasicMaterial({ color: d.color || 0x9E9E9E });
+    mesh = new THREE.Mesh(geo, mat);
+    mesh.position.set(d.x, (d.h || 2) / 2, d.z);
+  }
+  if (mesh) {
+    mesh.userData = { type: 'decoration', name: d.name || '' };
+    state.scene.add(mesh);
+    _zoneDecorations.push(mesh);
+  }
+}
+
+function clearZoneObjects() {
+  _zonePortals.forEach(p => { state.scene?.remove(p); });
+  _zonePortals = [];
+  _zoneDecorations.forEach(d => { state.scene?.remove(d); });
+  _zoneDecorations = [];
+  // Remove from _gatherNodes
+  if (state._gatherNodes) {
+    state._gatherNodes = state._gatherNodes.filter(n => !_zonePortals.includes(n) && !_zoneDecorations.includes(n));
+  }
+}
+
+function handlePortalClick(portalData) {
+  // Check level requirement (simple string comparison)
+  addChatMessage('System', '🌀 Memasuki ' + portalData.name + '...');
+  wsSend(JSON.stringify({ type: 'zone_change', targetZone: portalData.targetZone, targetX: portalData.targetX, targetZ: portalData.targetZ }));
+}
+
 // ============================
 // GATHERING NODES (3D markers)
 // ============================
@@ -3021,6 +3159,8 @@ canvas.addEventListener('click', (e) => {
         if (kd && kd.owner) {
           wsSend(JSON.stringify({ type: 'kiosk_browse', kioskId: hit.userData.id }));
         }
+      } else if (hit.userData.type === 'portal') {
+        handlePortalClick(hit.userData);
       }
       return; // don't process further
     } else {

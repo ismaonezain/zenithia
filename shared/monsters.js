@@ -152,6 +152,31 @@ const MONSTERS = {
     respawnTime: 45,
   },
 
+  marsh_snapper: {
+    name: 'Marsh Snapper',
+    level: 8,
+    hp: 180,
+    atk: 18,
+    def: 15,
+    spd: 3,
+    xp: 120,
+    zen: [0, 0],
+    color: 0x2E7D32,
+    accentColor: 0x66BB6A,
+    size: 1.0,
+    aggroRange: 12,
+    attackRange: 2,
+    attackSpeed: 1.5,
+    behavior: 'aggressive',
+    retreatHp: 0.1,
+    spawnAreas: [
+      { x: -15, z: -15, radius: 12 },
+      { x: 15, z: 10, radius: 10 },
+    ],
+    maxSpawn: 4,
+    respawnTime: 90,
+  },
+
   bramble_boar: {
     name: 'Bramble Boar',
     level: 5,

@@ -18,6 +18,7 @@ const { SHOPS } = require('./shared/shop');
 const { CRAFTING_RECIPES } = require('./shared/crafting');
 const { FISHING_SPOTS, FISHING_LOOT, GATHERING_NODES, GATHERING_LOOT } = require('./shared/gathering');
 const { WORLD_BOSSES } = require('./shared/bosses');
+const { ZONES } = require('./shared/zones');
 
 // Module-level CLASS_STATS (used by getOrCreatePlayer + recalcClassStats)
 const CLASS_STATS = {
@@ -546,12 +547,80 @@ setInterval(() => { try {
   }
 } catch(e) { console.error('[BOSS-TIMER ERROR]', e.message); } }, 10000);
 
-// Spawn initial monsters
+
+
+// ═══════════════════════════════════════
+// ZONE-BASED MOB SPAWNING
+// ═══════════════════════════════════════
+function spawnZoneMobs(zoneId) {
+  const zone = ZONES[zoneId];
+  if (!zone) return;
+  // Count existing mobs in this zone
+  const existing = Object.values(world.monsters).filter(m => m.alive && m.zone === zoneId);
+  const toSpawn = (zone.maxMobs || 10) - existing.length;
+  if (toSpawn <= 0) return;
+  for (let i = 0; i < toSpawn; i++) {
+    const mobType = zone.mobTypes[Math.floor(Math.random() * zone.mobTypes.length)];
+    const data = MONSTERS[mobType];
+    if (!data) continue;
+    const area = zone.spawnAreas[Math.floor(Math.random() * zone.spawnAreas.length)];
+    const angle = Math.random() * Math.PI * 2;
+    const dist = Math.random() * area.radius;
+    const monster = {
+      id: `zmob_${zoneId}_${++monsterIdCounter}`,
+      type: mobType,
+      zone: zoneId,
+      name: data.name,
+      x: area.x + Math.cos(angle) * dist,
+      y: 0,
+      z: area.z + Math.sin(angle) * dist,
+      spawnX: area.x + Math.cos(angle) * dist,
+      spawnZ: area.z + Math.sin(angle) * dist,
+      hp: data.hp,
+      maxHp: data.hp,
+      atk: data.atk,
+      def: data.def,
+      spd: data.spd,
+      level: data.level,
+      alive: true,
+      targetId: null,
+      state: 'idle',
+      lastAttack: 0,
+    };
+    world.monsters[monster.id] = monster;
+  }
+  console.log('[ZONE-SPAWN] ' + zoneId + ': spawned ' + Math.min(toSpawn, zone.mobTypes.length) + ' mobs');
+}
+
+// Spawn initial zone mobs
+for (const zoneId of Object.keys(ZONES)) {
+  spawnZoneMobs(zoneId);
+}
+
+// Spawn initial monsters (legacy willowmere)
 spawnMonsters();
 
 // Respawn timer
 setInterval(() => { try {
   Object.values(world.monsters).forEach(m => {
+    if (m.isBoss) return; // bosses use their own spawn timer
+    // Respawn zone mobs that are dead
+    if (!m.alive && m.zone && m.respawnAt && Date.now() >= m.respawnAt) {
+      const zDef = ZONES[m.zone];
+      const data = MONSTERS[m.type];
+      if (zDef && data) {
+        const area = zDef.spawnAreas[Math.floor(Math.random() * zDef.spawnAreas.length)];
+        const angle = Math.random() * Math.PI * 2;
+        const dist = Math.random() * area.radius;
+        m.x = area.x + Math.cos(angle) * dist;
+        m.z = area.z + Math.sin(angle) * dist;
+        m.spawnX = m.x; m.spawnZ = m.z;
+        m.hp = data.hp; m.alive = true; m.targetId = null; m.state = 'idle';
+        delete m.respawnAt;
+        broadcast({ type: 'monster_spawn', monster: sanitizeMonster(m) });
+      }
+      return;
+    }
     if (m.isBoss) return; // bosses use their own spawn timer
     if (!m.alive && !m.respawnAt) {
       m.respawnAt = Date.now() + (MONSTERS[m.type]?.respawnTime || 30) * 1000;
@@ -625,11 +694,12 @@ setInterval(() => {
       }
     }
 
-    // Find closest player
+    // Find closest player (same zone only)
     let closestPlayer = null;
     let closestDist = Infinity;
     for (const p of Object.values(connectedPlayers)) {
       if (!p || p.hp <= 0) continue;
+      if (m.zone && p.region !== m.zone) continue; // zone filter
       const dx = (p.x || 0) - m.x;
       const dz = (p.z || 0) - m.z;
       const d = Math.sqrt(dx * dx + dz * dz);
@@ -967,7 +1037,13 @@ wss.on('connection', (ws) => {
   console.log(`[CONNECT] ${playerId}`);
   ws.playerId = playerId;
 
-  ws.send(JSON.stringify({ type: 'welcome', playerId, version: 'v3-combat-rebuild', world: { time: Date.now(), region: 'willowmere' }, dayTime: getGameTime() }));
+  const playerZone = player.region || 'willowmere';
+  const zoneDef = ZONES[playerZone];
+  ws.send(JSON.stringify({ type: 'welcome', playerId, version: 'v3-combat-rebuild', world: { time: Date.now(), region: playerZone }, dayTime: getGameTime() }));
+  // Send zone data (portals, ground color, etc.)
+  if (zoneDef) {
+    ws.send(JSON.stringify({ type: 'zone_enter', zone: { id: zoneDef.id, name: zoneDef.name, subtitle: zoneDef.subtitle, level: zoneDef.level, groundColor: zoneDef.groundColor, portals: zoneDef.portals || [], decorations: zoneDef.decorations || [] } }));
+  }
 
   ws.on('message', (data) => {
     try { handleMessage(ws, playerId, JSON.parse(data)); }
@@ -1792,6 +1868,42 @@ function handleMessage(ws, playerId, msg) {
       console.log('[KIOSK] ' + player.name + ' bought ' + qty + 'x ' + item.name + ' from ' + kiosk.ownerName);
       break;
     }
+
+    // ═══════════════════════════════════════
+    // ZONE CHANGE (portals)
+    // ═══════════════════════════════════════
+    case 'zone_change': {
+      const player = connectedPlayers[playerId];
+      if (!player) break;
+      const targetZone = msg.targetZone;
+      const zoneDef = ZONES[targetZone];
+      if (!zoneDef) { ws.send(JSON.stringify({ type: 'zone_error', error: 'Zone tidak ditemukan' })); break; }
+      // Change player zone
+      player.region = targetZone;
+      player.x = msg.targetX || 0;
+      player.z = msg.targetZ || 0;
+      // Send zone data to player
+      ws.send(JSON.stringify({ type: 'zone_enter', zone: { id: zoneDef.id, name: zoneDef.name, subtitle: zoneDef.subtitle, level: zoneDef.level, groundColor: zoneDef.groundColor, portals: zoneDef.portals || [], decorations: zoneDef.decorations || [] } }));
+      // Notify other players in OLD zone
+      broadcast({ type: 'player_left_zone', playerId, name: player.name }, ws);
+      // Send updated player position to all
+      broadcast({ type: 'player_moved', playerId, x: player.x, z: player.z });
+      // Spawn zone mobs for this player
+      spawnZoneMobs(targetZone);
+      saveWorld();
+      console.log('[ZONE] ' + player.name + ' → ' + zoneDef.name);
+      break;
+    }
+    case 'zone_sync': {
+      // Client requests current zone data (e.g. on reconnect)
+      const player = connectedPlayers[playerId];
+      if (!player) break;
+      const z = ZONES[player.region || 'willowmere'];
+      if (z) {
+        ws.send(JSON.stringify({ type: 'zone_enter', zone: { id: z.id, name: z.name, subtitle: z.subtitle, level: z.level, groundColor: z.groundColor, portals: z.portals || [], decorations: z.decorations || [] } }));
+      }
+      break;
+    }
     case 'respawn': {
       const player = connectedPlayers[playerId];
       if (player) {
@@ -1978,6 +2090,20 @@ function broadcast(data, exclude = null) {
   try {
     const payload = JSON.stringify(data);
     wss.clients.forEach(c => { try { if (c !== exclude && c.readyState === 1) c.send(payload); } catch(_) {} });
+  } catch(_) {}
+}
+// Broadcast only to players in a specific zone
+function zoneBroadcast(zoneId, data, exclude = null) {
+  try {
+    const payload = JSON.stringify(data);
+    wss.clients.forEach(c => {
+      try {
+        if (c === exclude || c.readyState !== 1) return;
+        const pid = c.playerId;
+        const p = connectedPlayers[pid];
+        if (p && (p.region || 'willowmere') === zoneId) c.send(payload);
+      } catch(_) {}
+    });
   } catch(_) {}
 }
 
