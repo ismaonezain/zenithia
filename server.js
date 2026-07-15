@@ -161,7 +161,7 @@ function initNPCs() {
 }
 
 let world = loadWorld();
-const connectedPlayers = {};
+const connectedPlayers = {}; // keyed by playerId (string), NOT ws object
 const playerWs = new Map(); // playerId → ws (kept off player objects to avoid JSON.stringify issues)
 
 // --- Ground Loot System ---
@@ -497,7 +497,7 @@ setInterval(() => {
 }, 200);
 
 function handleAttack(ws, playerId, msg) {
-  const player = connectedPlayers[ws];
+  const player = connectedPlayers[playerId];
   const monster = world.monsters[msg.monsterId];
   if (!player || !monster || !monster.alive) return;
   if (monster.hp <= 0) return;
@@ -697,7 +697,7 @@ wss.on('connection', (ws) => {
     console.log(`[DISCONNECT] ${playerId}`);
     playerWs.delete(playerId);
     saveWorld();
-    delete connectedPlayers[ws];
+    delete connectedPlayers[playerId];
     broadcast({ type: 'player_left', playerId });
   });
 
@@ -710,7 +710,7 @@ function handleMessage(ws, playerId, msg) {
       const isNew = !world.players[Object.keys(world.players).find(k => world.players[k].wallet === msg.wallet)] && msg.wallet;
       const player = getOrCreatePlayer(playerId, msg.name, msg.wallet, msg.customization, msg.persistentId);
       hydrateInventory(player); // merge latest item defs (icons, descriptions)
-      connectedPlayers[ws] = player;
+      connectedPlayers[playerId] = player;
       playerWs.set(playerId, ws);
       ws.playerId = playerId;
       ws.send(JSON.stringify({
@@ -723,7 +723,7 @@ function handleMessage(ws, playerId, msg) {
       break;
     }
     case 'move': {
-      const player = connectedPlayers[ws];
+      const player = connectedPlayers[playerId];
       if (player) {
         player.x = msg.x; player.y = msg.y; player.z = msg.z;
         broadcast({ type: 'player_moved', playerId, x: msg.x, y: msg.y, z: msg.z }, ws);
@@ -731,7 +731,7 @@ function handleMessage(ws, playerId, msg) {
       break;
     }
     case 'chat': {
-      const player = connectedPlayers[ws];
+      const player = connectedPlayers[playerId];
       if (player) broadcast({ type: 'chat', playerId, name: player.name, message: (msg.message || '').slice(0, 200) }, ws);
       break;
     }
@@ -740,7 +740,7 @@ function handleMessage(ws, playerId, msg) {
       if (npc) {
         ws.send(JSON.stringify({ type: 'npc_dialogue', npcId: npc.id, name: npc.name, title: npc.title }));
         // Track talk objectives for quests
-        const player = connectedPlayers[ws];
+        const player = connectedPlayers[playerId];
         if (player) trackQuestTalk(player, msg.npcId);
       }
       break;
@@ -750,7 +750,7 @@ function handleMessage(ws, playerId, msg) {
       break;
     }
     case 'use_item': {
-      const player = connectedPlayers[ws];
+      const player = connectedPlayers[playerId];
       if (player) {
         const itemIdx = player.inventory.findIndex(i => i.id === msg.itemId);
         if (itemIdx >= 0) {
@@ -772,7 +772,7 @@ function handleMessage(ws, playerId, msg) {
       break;
     }
     case 'equip_item': {
-      const player = connectedPlayers[ws];
+      const player = connectedPlayers[playerId];
       if (player) {
         const itemIdx = player.inventory.findIndex(i => i.id === msg.itemId);
         if (itemIdx >= 0) {
@@ -810,7 +810,7 @@ function handleMessage(ws, playerId, msg) {
       break;
     }
     case 'unequip_item': {
-      const player = connectedPlayers[ws];
+      const player = connectedPlayers[playerId];
       if (player && player.equipment[msg.slot]) {
         player.inventory.push(player.equipment[msg.slot]);
         delete player.equipment[msg.slot];
@@ -836,7 +836,7 @@ function handleMessage(ws, playerId, msg) {
       break;
     }
     case 'quest_start': {
-      const player = connectedPlayers[ws];
+      const player = connectedPlayers[playerId];
       if (player && QUESTS[msg.questId]) {
         if (!player.quests) player.quests = {};
         player.quests[msg.questId] = { status: 'active', progress: {} };
@@ -846,7 +846,7 @@ function handleMessage(ws, playerId, msg) {
       break;
     }
     case 'quest_complete': {
-      const player = connectedPlayers[ws];
+      const player = connectedPlayers[playerId];
       if (player && QUESTS[msg.questId]) {
         const quest = QUESTS[msg.questId];
         const qState = player.quests?.[msg.questId];
@@ -865,11 +865,13 @@ function handleMessage(ws, playerId, msg) {
           if (player.xp >= xpNeeded) {
             player.level++;
             player.xp -= xpNeeded;
-            player.maxHp += 10;
-            player.hp = player.maxHp;
-            player.maxMp += 5;
-            player.mp = player.maxMp;
-            ws.send(JSON.stringify({ type: 'level_up', level: player.level, xp: player.xp, maxHp: player.maxHp, maxMp: player.maxMp }));
+            player.maxHp += 10; player.hp = player.maxHp;
+            player.maxMp += 5; player.mp = player.maxMp;
+            player.atk += 1; player.def += 1;
+            if (!player.unlockedSkills) player.unlockedSkills = ['tier1'];
+            if (player.level >= 3 && !player.unlockedSkills.includes('tier2b')) player.unlockedSkills.push('tier2b');
+            if (player.level >= 5 && !player.unlockedSkills.includes('tier2a')) player.unlockedSkills.push('tier2a');
+            ws.send(JSON.stringify({ type: 'level_up', level: player.level, xp: player.xp, maxHp: player.maxHp, maxMp: player.maxMp, unlockedSkills: player.unlockedSkills }));
           }
         }
         if (quest.rewards.items) {
@@ -903,7 +905,7 @@ function handleMessage(ws, playerId, msg) {
       break;
     }
     case 'quest_progress': {
-      const player = connectedPlayers[ws];
+      const player = connectedPlayers[playerId];
       if (player && player.quests?.[msg.questId]) {
         const qState = player.quests[msg.questId];
         if (!qState.progress) qState.progress = {};
@@ -913,63 +915,62 @@ function handleMessage(ws, playerId, msg) {
       break;
     }
     case 'get_quests': {
-      const player = connectedPlayers[ws];
+      const player = connectedPlayers[playerId];
       if (player) ws.send(JSON.stringify({ type: 'quest_list', quests: player.quests || {} }));
       break;
     }
     case 'party_invite': {
-      const inviter = connectedPlayers[ws];
-      const targetWs = Object.keys(connectedPlayers).find(k => connectedPlayers[k]?.name === msg.targetName);
-      if (inviter && targetWs) {
-        const target = connectedPlayers[targetWs];
+      const inviter = connectedPlayers[playerId];
+      if (inviter) {
         if (!inviter.party) inviter.party = { leader: inviter.id, members: [inviter.id] };
-        // Send via broadcast loop below
-        wss.clients.forEach(c => {
-          if (connectedPlayers[c] && connectedPlayers[c].name === msg.targetName) {
-            c.send(JSON.stringify({ type: 'party_invite', from: inviter.name, fromId: inviter.id }));
+        const targetPlayer = Object.values(connectedPlayers).find(p => p.name === msg.targetName);
+        if (targetPlayer) {
+          const targetWs = playerWs.get(targetPlayer.id);
+          if (targetWs && targetWs.readyState === 1) {
+            targetWs.send(JSON.stringify({ type: 'party_invite', from: inviter.name, fromId: inviter.id }));
           }
-        });
+        }
       }
       break;
     }
     case 'party_accept': {
-      const player = connectedPlayers[ws];
-      const inviter = Object.values(connectedPlayers).find(p => p.id === msg.inviterId);
+      const player = connectedPlayers[playerId];
+      const inviter = connectedPlayers[msg.inviterId];
       if (player && inviter) {
         if (!inviter.party) inviter.party = { leader: inviter.id, members: [inviter.id] };
         inviter.party.members.push(player.id);
         player.party = inviter.party;
         // Notify all party members
         inviter.party.members.forEach(mId => {
-          wss.clients.forEach(c => {
-            if (connectedPlayers[c]?.id === mId) {
-              const members = inviter.party.members.map(mid => {
-                const p = connectedPlayers[Object.keys(connectedPlayers).find(k => connectedPlayers[k]?.id === mid)];
-                return p ? { id: p.id, name: p.name } : null;
+          const p = connectedPlayers[mId];
+          if (p) {
+            const mWs = playerWs.get(mId);
+            const members = inviter.party.members.map(mid => {
+              const mp = connectedPlayers[mid];
+                return mp ? { id: mp.id, name: mp.name } : null;
               }).filter(Boolean);
-              c.send(JSON.stringify({ type: 'party_update', party: { leader: inviter.party.leader, members } }));
-            }
-          });
+              if (mWs && mWs.readyState === 1) mWs.send(JSON.stringify({ type: 'party_update', party: { leader: inviter.party.leader, members } }));
+          }
         });
       }
       break;
     }
     case 'party_leave': {
-      const player = connectedPlayers[ws];
+      const player = connectedPlayers[playerId];
       if (player && player.party) {
         const party = player.party;
         party.members = party.members.filter(id => id !== player.id);
         // Notify remaining members
         party.members.forEach(mId => {
-          wss.clients.forEach(c => {
-            if (connectedPlayers[c]?.id === mId) {
-              const members = party.members.map(mid => {
-                const p = connectedPlayers[Object.keys(connectedPlayers).find(k => connectedPlayers[k]?.id === mid)];
-                return p ? { id: p.id, name: p.name } : null;
+          const p = connectedPlayers[mId];
+          if (p) {
+            const mWs = playerWs.get(mId);
+            const members = party.members.map(mid => {
+              const mp = connectedPlayers[mid];
+                return mp ? { id: mp.id, name: mp.name } : null;
               }).filter(Boolean);
-              c.send(JSON.stringify({ type: 'party_update', party: { leader: party.leader, members } }));
-            }
-          });
+              if (mWs && mWs.readyState === 1) mWs.send(JSON.stringify({ type: 'party_update', party: { leader: party.leader, members } }));
+          }
         });
         player.party = null;
         ws.send(JSON.stringify({ type: 'party_update', party: null }));
@@ -983,7 +984,7 @@ function handleMessage(ws, playerId, msg) {
     }
     case 'save': saveWorld(); ws.send(JSON.stringify({ type: 'saved' })); break;
     case 'shop_open': {
-      const player = connectedPlayers[ws];
+      const player = connectedPlayers[playerId];
       const shop = SHOPS[msg.npcId];
       if (player && shop) {
         const catalog = shop.inventory.map(s => {
@@ -1005,7 +1006,7 @@ function handleMessage(ws, playerId, msg) {
       break;
     }
     case 'buy_item': {
-      const player = connectedPlayers[ws];
+      const player = connectedPlayers[playerId];
       const shop = SHOPS[msg.shopId];
       if (player && shop && msg.itemId) {
         const itemDef = ITEMS[msg.itemId];
@@ -1027,7 +1028,7 @@ function handleMessage(ws, playerId, msg) {
       break;
     }
     case 'sell_item': {
-      const player = connectedPlayers[ws];
+      const player = connectedPlayers[playerId];
       const shop = SHOPS[msg.shopId];
       if (player && shop && msg.itemId) {
         const itemIdx = player.inventory.findIndex(i => i.id === msg.itemId);
@@ -1046,7 +1047,7 @@ function handleMessage(ws, playerId, msg) {
       break;
     }
     case 'respawn': {
-      const player = connectedPlayers[ws];
+      const player = connectedPlayers[playerId];
       if (player) {
         if (msg.location === 'checkpoint' && msg.checkpointId) {
           // TODO: checkpoint system — for now, respawn at city
@@ -1065,13 +1066,13 @@ function handleMessage(ws, playerId, msg) {
     }
     case 'unlock_skill': {
       // Skills auto-unlock by level — this is now a no-op
-      const player = connectedPlayers[ws];
+      const player = connectedPlayers[playerId];
       if (!player) break;
       ws.send(JSON.stringify({ type: 'skill_unlocked', tier: msg.tier, skillPoints: 0, unlockedSkills: player.unlockedSkills }));
       break;
     }
     case 'use_skill': {
-      const player = connectedPlayers[ws];
+      const player = connectedPlayers[playerId];
       if (!player) break;
       // Full skill definitions for all tiers (must match client)
       const ALL_SKILLS = {
@@ -1140,7 +1141,7 @@ function handleMessage(ws, playerId, msg) {
       if (!monster || !monster.alive) { player.mp += skill.mpCost; break; }
 
       const data = MONSTERS[monster.type];
-      if (!data) break;
+      if (!data) { player.mp += skill.mpCost; break; }
 
       const dx = player.x - monster.x;
       const dz = player.z - monster.z;
@@ -1208,7 +1209,7 @@ function handleMessage(ws, playerId, msg) {
         break;
     }
     case 'pickup_loot': {
-      const player = connectedPlayers[ws];
+      const player = connectedPlayers[playerId];
       if (player && msg.lootId && groundLoot[msg.lootId]) {
         const lootEntry = groundLoot[msg.lootId];
         addLootToPlayer(player, lootEntry.items);

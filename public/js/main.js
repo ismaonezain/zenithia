@@ -1358,6 +1358,7 @@ function showChatBubble(model, message) {
   // Bubble background
   ctx.fillStyle = 'rgba(0,0,0,0.7)';
   const radius = 16;
+  ctx.font = '22px Arial';
   const w = Math.min(ctx.measureText(message).width + 40, 480);
   const bx = (512 - w) / 2;
   ctx.beginPath();
@@ -1563,7 +1564,7 @@ function showDamageNumber(monsterId, damage, isCrit, targetId) {
   }
 
   // Play hit sound
-  window.ZenSFX?.crit();
+  if (isCrit) window.ZenSFX?.crit();
 
   // Random X offset so stacked numbers don't overlap
   pos.x += (Math.random() - 0.5) * 0.4;
@@ -2650,9 +2651,10 @@ document.addEventListener('keydown', (e) => {
   // Hotbar keys 1-9, 0 → slots 0-9
   const hotbarKeys = { '1':0,'2':1,'3':2,'4':3,'5':4,'6':5,'7':6,'8':7,'9':8,'0':9 };
   if (hotbarKeys[e.key] !== undefined) {
-    e.preventDefault();
-    const idx = hotbarKeys[e.key];
-    activateHotbarSlot(idx);
+      e.preventDefault();
+      if (state.isDead) return;
+      const idx = hotbarKeys[e.key];
+      activateHotbarSlot(idx);
     return;
   }
 
