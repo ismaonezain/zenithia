@@ -743,6 +743,7 @@ function handleServerMessage(msg) {
 
       if (msg.npcs) {
         state._npcRots = {}; // store default rotations
+        state._npcData = msg.npcs; // cache raw data for scene rebuild
         console.log('[NPC] Received', Object.keys(msg.npcs).length, 'NPCs:', Object.keys(msg.npcs));
         Object.values(msg.npcs).forEach(npc => {
           try {
@@ -1040,13 +1041,11 @@ function handleServerMessage(msg) {
         console.log('[ZONE] Ignoring stale zone_enter:', msg.zone?.id, '(expected:', state._expectedZone + ')');
         break;
       }
-      // Portal click: full scene reload (like fresh login)
+      // Portal click: full scene rebuild (like login, no reload)
       if (state._expectedZone) {
         state._expectedZone = null;
-        // Show zone overlay first, then reload
-        showZoneOverlay(msg.zone?.name, msg.zone?.subtitle, msg.zone?.level);
-        console.log('[ZONE] Reloading for zone:', msg.zone?.id);
-        setTimeout(() => { window.location.reload(); }, 1500);
+        rebuildScene(msg.zone?.playerX, msg.zone?.playerZ);
+        enterZone(msg.zone);
         break;
       }
       state._expectedZone = null;
@@ -2183,6 +2182,58 @@ let _currentZone = null;
 let _zonePortals = []; // 3D portal meshes
 let _zoneDecorations = []; // 3D decoration meshes
 
+function rebuildScene(playerX, playerZ) {
+  // 1. Remove ALL objects from scene (keep camera, renderer)
+  const keep = new Set([state.camera, state.renderer, state.sunLight, state.ambientLight, state.moonLight, state.sunMesh, state.moonMesh, state.moonGlow]);
+  const toRemove = [];
+  state.scene.traverse(obj => { if (!keep.has(obj) && obj !== state.scene) toRemove.push(obj); });
+  toRemove.forEach(obj => { obj.parent?.remove(obj); if (obj.geometry) obj.geometry.dispose(); if (obj.material) { if (Array.isArray(obj.material)) obj.material.forEach(m => m.dispose()); else obj.material.dispose(); } });
+  // Reset state maps
+  state.players = {};
+  state.npcs = {};
+  state.monsters = {};
+  state._npcRots = {};
+  state.playerModel = null;
+  state._gatherNodes = [];
+  state.groundLoot = {};
+  _zonePortals = [];
+  _zoneDecorations = [];
+
+  // 2. Rebuild terrain (same shared layout)
+  buildTerrain(state.scene);
+
+  // 3. Re-create player model
+  if (state.player) {
+    state.player.x = playerX;
+    state.player.z = playerZ;
+    createPlayerModelInWorld(state.player);
+    if (state.player.equipment) applyEquipment(state.playerModel, state.player.equipment);
+  }
+
+  // 4. Re-add NPCs from cached raw data
+  if (state._npcData) {
+    Object.values(state._npcData).forEach(npc => {
+      try {
+        const model = createNPCModel(npc);
+        state.scene.add(model);
+        state.npcs[npc.id] = model;
+        state._npcRots[npc.id] = npc.rot || 0;
+      } catch(e) {
+        // Fallback cylinder
+        const g = new THREE.Group();
+        const body = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.4, 1.5, 8), new THREE.MeshLambertMaterial({ color: 0xFFD700 }));
+        body.position.y = 0.75; g.add(body);
+        const head = new THREE.Mesh(new THREE.SphereGeometry(0.35, 8, 8), new THREE.MeshLambertMaterial({ color: 0xFFCC00 }));
+        head.position.y = 1.8; g.add(head);
+        g.position.set(npc.x, 0, npc.z);
+        g.userData = { id: npc.id, name: npc.name, type: 'npc' };
+        state.scene.add(g);
+        state.npcs[npc.id] = g;
+      }
+    });
+  }
+}
+
 function enterZone(zoneData) {
   _currentZone = zoneData;
   // Update player position from server
@@ -2341,9 +2392,8 @@ function clearZoneObjects() {
 
 function handlePortalClick(portalData) {
   addChatMessage('System', '🌀 Memasuki ' + portalData.name + '...');
-  // Tell server to change zone, then reload fresh (like login)
+  state._expectedZone = portalData.targetZone;
   wsSend(JSON.stringify({ type: 'zone_change', targetZone: portalData.targetZone, targetX: portalData.targetX, targetZ: portalData.targetZ }));
-  setTimeout(() => { window.location.reload(); }, 800);
 }
 
 // ============================
