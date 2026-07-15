@@ -20,15 +20,15 @@ const ITEMS = {
   // ═══════════════════════════════════════
   // MATERIALS
   // ═══════════════════════════════════════
-  moss_shell:      { name: 'Moss Shell',      type: 'material', description: 'Cangkang keras dari Moss Beetle. Bisa dipakai buat crafting armor awal.',     price: 4,  icon: { bg: 0x4CAF50, fg: 0x81C784, symbol: '◆', image: '/assets/icons/moss_shell.png' } },
+  moss_shell:      { name: 'Moss Shell',      type: 'material', description: 'Cangkang keras dari Moss Beetle. Bisa dipakai buat crafting armor awal.',     price: 3,  icon: { bg: 0x4CAF50, fg: 0x81C784, symbol: '◆', image: '/assets/icons/moss_shell.png' } },
   thorn:           { name: 'Thorn',            type: 'material', description: 'Duri tajam dari punggung Thorn Lizard. Bahan crafting weapon tier awal.',    price: 4, icon: { bg: 0x689F38, fg: 0xCDDC39, symbol: '▲', image: '/assets/icons/thorn.png' } },
-  dust_pouch:      { name: 'Dust Pouch',       type: 'material', description: 'Kantung debu dari Dust Mouse. Kadang meledak kalau dipegang kasar.',   price: 4,  icon: { bg: 0xBCAAA4, fg: 0xEFEBE9, symbol: '○', image: '/assets/icons/dust_pouch.png' } },
-  frog_leg:        { name: 'Frog Leg',         type: 'material', description: 'Kaki Puddle Frog. Bisa dimasak jadi makanan buff.',            price: 4, icon: { bg: 0x00BCD4, fg: 0xE0F7FA, symbol: '▬', image: '/assets/icons/frog_leg.png' } },
-  wind_essence:    { name: 'Wind Essence',     type: 'material', description: 'Esensi angin dari Wind Sprite. Mengandung Aether terkristalisasi. Tidak bisa didapat dari serangan melee.', price: 4, icon: { bg: 0x81D4FA, fg: 0xFFFFFF, symbol: '✦', image: '/assets/icons/wind_essence.png' } },
-  stone_fragment:  { name: 'Stone Fragment',   type: 'material', description: 'Pecahan batu dari Rock Crawler. Mereka berpura-pura jadi batu tapi isinya mineral berharga.',       price: 4, icon: { bg: 0x9E9E9E, fg: 0xE0E0E0, symbol: '■', image: '/assets/icons/stone_fragment.png' } },
-  boar_tusk:       { name: 'Boar Tusk',        type: 'material', description: 'Taring besar dari Bramble Boar. Cukup kuat buat jadi weapon.',     price: 4, icon: { bg: 0x5D4037, fg: 0xFFF9C4, symbol: '◄', image: '/assets/icons/boar_tusk.png' } },
-  bramble_core:    { name: 'Bramble Core',     type: 'material', description: 'Inti langka dari Bramble Boar. Mengandung Aether yang sudah terkristalisasi.',      price: 4, icon: { bg: 0x33691E, fg: 0x76FF03, symbol: '◆', image: '/assets/icons/bramble_core.png' } },
-  turtle_shell:    { name: 'Turtle Shell',     type: 'material', description: 'Cangkang kura-kura raksasa dari Marsh Snapper. Sangat keras, cocok buat crafting shield.', price: 4, icon: { bg: 0x2E7D32, fg: 0xA5D6A7, symbol: '◎', image: '/assets/icons/turtle_shell.png' } },
+  dust_pouch:      { name: 'Dust Pouch',       type: 'material', description: 'Kantung debu dari Dust Mouse. Kadang meledak kalau dipegang kasar.',   price: 2,  icon: { bg: 0xBCAAA4, fg: 0xEFEBE9, symbol: '○', image: '/assets/icons/dust_pouch.png' } },
+  frog_leg:        { name: 'Frog Leg',         type: 'material', description: 'Kaki Puddle Frog. Bisa dimasak jadi makanan buff.',            price: 3, icon: { bg: 0x00BCD4, fg: 0xE0F7FA, symbol: '▬', image: '/assets/icons/frog_leg.png' } },
+  wind_essence:    { name: 'Wind Essence',     type: 'material', description: 'Esensi angin dari Wind Sprite. Mengandung Aether terkristalisasi. Tidak bisa didapat dari serangan melee.', price: 6, icon: { bg: 0x81D4FA, fg: 0xFFFFFF, symbol: '✦', image: '/assets/icons/wind_essence.png' } },
+  stone_fragment:  { name: 'Stone Fragment',   type: 'material', description: 'Pecahan batu dari Rock Crawler. Mereka berpura-pura jadi batu tapi isinya mineral berharga.',       price: 5, icon: { bg: 0x9E9E9E, fg: 0xE0E0E0, symbol: '■', image: '/assets/icons/stone_fragment.png' } },
+  boar_tusk:       { name: 'Boar Tusk',        type: 'material', description: 'Taring besar dari Bramble Boar. Cukup kuat buat jadi weapon.',     price: 5, icon: { bg: 0x5D4037, fg: 0xFFF9C4, symbol: '◄', image: '/assets/icons/boar_tusk.png' } },
+  bramble_core:    { name: 'Bramble Core',     type: 'material', description: 'Inti langka dari Bramble Boar. Mengandung Aether yang sudah terkristalisasi.',      price: 10, icon: { bg: 0x33691E, fg: 0x76FF03, symbol: '◆', image: '/assets/icons/bramble_core.png' } },
+  turtle_shell:    { name: 'Turtle Shell',     type: 'material', description: 'Cangkang kura-kura raksasa dari Marsh Snapper. Sangat keras, cocok buat crafting shield.', price: 7, icon: { bg: 0x2E7D32, fg: 0xA5D6A7, symbol: '◎', image: '/assets/icons/turtle_shell.png' } },
 
   // ═══════════════════════════════════════
   // WEAPONS — Per job, 3 tiers
