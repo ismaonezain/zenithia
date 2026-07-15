@@ -1005,6 +1005,7 @@ function handleServerMessage(msg) {
       const attackerMob = state.monsters[msg.monsterId];
       if (attackerMob) monsterAttackAnim(attackerMob);
       if (msg.targetId === state.playerId) {
+        if (state.isDead) break;
         window.ZenSFX?.damageTaken();
         hitFlash();
         state.player.hp = Math.max(0, (state.player.hp || 0) - msg.damage);
@@ -1041,6 +1042,23 @@ function handleServerMessage(msg) {
       if (msg.targetId && msg.targetId !== state.playerId) break;
       state.isDead = true;
       cancelTarget();
+      state.targetPos = null;
+      state.pathWaypoints = null;
+      state.isAttacking = false;
+      state.attackEndTime = 0;
+      state.skillArmed = null;
+      state.player.hp = 0;
+      updatePlayerHP(0, state.player.maxHp);
+      // Safety: force recovery if no respawn in 15s
+      clearTimeout(state._deathTimeout);
+      state._deathTimeout = setTimeout(() => {
+        if (state.isDead) {
+          console.warn('[DEATH] No respawn received — forcing recovery');
+          hideDeathScreen();
+          state.player.hp = state.player.maxHp || 100;
+          updatePlayerHP(state.player.hp, state.player.maxHp);
+        }
+      }, 15000);
       addChatMessage('System', 'You died! Respawning in 5 seconds...');
       const deathEl = document.getElementById('death-screen');
       if (deathEl) deathEl.style.display = 'flex';
@@ -1073,7 +1091,11 @@ function handleServerMessage(msg) {
 
     case 'player_respawn': {
       if (msg.targetId && msg.targetId !== state.playerId) break;
+      clearTimeout(state._deathTimeout);
       state.isDead = false;
+      state.targetPos = null;
+      state.pathWaypoints = null;
+      state.skillArmed = null;
       state.player.hp = msg.hp;
       state.player.maxHp = msg.maxHp;
       state.player.mp = msg.mp;
@@ -1141,7 +1163,11 @@ function handleServerMessage(msg) {
       break;
     }
     case 'respawned': {
+      clearTimeout(state._deathTimeout);
       state.isDead = false;
+      state.targetPos = null;
+      state.pathWaypoints = null;
+      state.skillArmed = null;
       state.player.x = msg.x;
       state.player.z = msg.z;
       state.player.hp = msg.hp;
@@ -1166,9 +1192,9 @@ function handleServerMessage(msg) {
         updatePlayerHP(msg.hp, state.player.maxHp);
         addChatMessage('Skill', `💚 ${msg.skillName || 'Heal'} — Healed ${msg.heal} HP!`);
       } else if (msg.buff) {
-        window.ZenSFX?.buff();
-        addChatMessage
-      } else {
+          window.ZenSFX?.buff();
+          addChatMessage('Skill', `🔮 ${msg.skillName || 'Buff'} activated!`);
+        } else {
         addChatMessage('Skill', `⚔️ ${msg.skillName || 'Skill'} used!`);
       }
       break;
@@ -2084,7 +2110,7 @@ function showClickIndicator(x, z) {
 canvas.addEventListener('click', (e) => {
   if (!state.connected || !state.player) return;
   if (state.isDead) return;
-  if (state.dialogue.container.style.display === 'block') return;
+  if (state.dialogue?.container?.style.display === 'block') return;
 
   // Check ground loot click first (screen-space)
   tryPickupGroundLoot(e);
@@ -2419,8 +2445,9 @@ function findNearestMonster() {
 
 // Perform attack on targeted monster
 function performAttack() {
-  const mobId = state.targetedMonster;
-  if (!mobId) return;
+    if (state.isDead) return;
+    const mobId = state.targetedMonster;
+    if (!mobId) return;
   const mob = state.monsters[mobId];
   if (!mob) { cancelTarget(); return; }
 
@@ -2631,7 +2658,8 @@ document.addEventListener('keydown', (e) => {
 
   if (e.key === 'w' || e.key === 'W') {
     e.preventDefault();
-    // If no target, auto-target nearest monster
+    if (state.isDead) return;
+    if (!state.targetedMonster) {
     if (!state.targetedMonster) {
       const nearest = findNearestMonster();
       if (nearest) {

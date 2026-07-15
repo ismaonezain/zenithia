@@ -16,6 +16,15 @@ const { ITEMS, LOOT_TABLES } = require('./shared/items');
 const { QUESTS, NPC_QUESTS } = require('./shared/quests');
 const { SHOPS } = require('./shared/shop');
 
+// Module-level CLASS_STATS (used by getOrCreatePlayer + recalcClassStats)
+const CLASS_STATS = {
+  laborer:  { hp: 120, mp: 30, atk: 8,  def: 7,  spd: 6,  crit: 0.05 },
+  miner:    { hp: 90,  mp: 40, atk: 12, def: 4,  spd: 10, crit: 0.10 },
+  gardener: { hp: 100, mp: 50, atk: 6,  def: 6,  spd: 8,  crit: 0.08 },
+  herbalist:{ hp: 85,  mp: 70, atk: 5,  def: 5,  spd: 7,  crit: 0.05 },
+  watchman: { hp: 110, mp: 35, atk: 10, def: 8,  spd: 7,  crit: 0.07 },
+};
+
 const app = express();
 const server = http.createServer(app);
 const wss = new WebSocketServer({ server });
@@ -171,7 +180,7 @@ function spawnGroundLoot(lootItems, x, z, killerId) {
 }
 
 // Despawn old ground loot every 5 seconds
-setInterval(() => {
+setInterval(() => { try {
   const now = Date.now();
   Object.keys(groundLoot).forEach(id => {
     if (now - groundLoot[id].spawnTime > GROUND_LOOT_DESPAWN_MS) {
@@ -179,7 +188,7 @@ setInterval(() => {
       broadcast({ type: 'ground_loot_remove', lootId: id });
     }
   });
-}, 5000);
+} catch(e) { console.error('[LOOT-DESPAWN ERROR]', e.message); } }, 5000);
 
 
 // Startup diagnostics
@@ -197,13 +206,6 @@ if (playerCount > 0) {
 
 // --- Player Management ---
 function recalcClassStats(customization) {
-  const CLASS_STATS = {
-    laborer:  { hp: 120, mp: 30, atk: 8,  def: 7,  spd: 6,  crit: 0.05 },
-    miner:    { hp: 90,  mp: 40, atk: 12, def: 4,  spd: 10, crit: 0.10 },
-    gardener: { hp: 100, mp: 50, atk: 6,  def: 6,  spd: 8,  crit: 0.08 },
-    herbalist:{ hp: 85,  mp: 70, atk: 5,  def: 5,  spd: 7,  crit: 0.05 },
-    watchman: { hp: 110, mp: 35, atk: 10, def: 8,  spd: 7,  crit: 0.07 },
-  };
   const cls = (customization && customization.classType) || 'laborer';
   return CLASS_STATS[cls] || CLASS_STATS.laborer;
 }
@@ -274,14 +276,6 @@ function getOrCreatePlayer(playerId, name, wallet, customization, persistentId) 
     }
   }
   // Create new
-  // Class base stats
-  const CLASS_STATS = {
-    laborer:  { hp: 120, mp: 30, atk: 8,  def: 7,  spd: 6,  crit: 0.05 },
-    miner:    { hp: 90,  mp: 40, atk: 12, def: 4,  spd: 10, crit: 0.10 },
-    gardener: { hp: 100, mp: 50, atk: 6,  def: 6,  spd: 8,  crit: 0.08 },
-    herbalist:{ hp: 85,  mp: 70, atk: 5,  def: 5,  spd: 7,  crit: 0.05 },
-    watchman: { hp: 110, mp: 35, atk: 10, def: 8,  spd: 7,  crit: 0.07 },
-  };
   const cls = (customization && customization.classType) || 'laborer';
   const s = CLASS_STATS[cls] || CLASS_STATS.laborer;
   const player = {
@@ -371,7 +365,7 @@ function respawnMonster(monster) {
 spawnMonsters();
 
 // Respawn timer
-setInterval(() => {
+setInterval(() => { try {
   Object.values(world.monsters).forEach(m => {
     if (!m.alive && !m.respawnAt) {
       m.respawnAt = Date.now() + (MONSTERS[m.type]?.respawnTime || 30) * 1000;
@@ -384,7 +378,7 @@ setInterval(() => {
       broadcast({ type: 'monster_spawn', monster: sanitizeMonster(m) });
     }
   });
-}, 5000);
+} catch(e) { console.error('[RESPAWN-LOOP ERROR]', e.message); } }, 5000);
 
 // --- Monster AI (Cahaya v2 pattern) ---
 let aiDebugCounter = 0;
@@ -477,8 +471,9 @@ setInterval(() => {
             closestPlayer.x = 0;
             closestPlayer.z = 0;
             broadcast({ type: 'player_respawn', targetId: closestPlayer.id, hp: closestPlayer.hp, maxHp: closestPlayer.maxHp, mp: closestPlayer.mp, maxMp: closestPlayer.maxMp, x: 0, z: 0 });
-            if (dyingWs && dyingWs.readyState === 1) {
-              dyingWs.send(JSON.stringify({ type: 'respawned', x: 0, z: 0, hp: closestPlayer.hp, maxHp: closestPlayer.maxHp, mp: closestPlayer.mp, maxMp: closestPlayer.maxMp }));
+            const freshWs = playerWs.get(closestPlayer.id);
+            if (freshWs && freshWs.readyState === 1) {
+              freshWs.send(JSON.stringify({ type: 'respawned', x: 0, z: 0, hp: closestPlayer.hp, maxHp: closestPlayer.maxHp, mp: closestPlayer.mp, maxMp: closestPlayer.maxMp }));
             }
           }, 5000);
           m.state = 'idle';
@@ -844,6 +839,7 @@ function handleMessage(ws, playerId, msg) {
       if (player && QUESTS[msg.questId]) {
         if (!player.quests) player.quests = {};
         player.quests[msg.questId] = { status: 'active', progress: {} };
+        saveWorld();
         ws.send(JSON.stringify({ type: 'quest_started', quest: QUESTS[msg.questId] }));
       }
       break;
@@ -892,6 +888,7 @@ function handleMessage(ws, playerId, msg) {
             player.reputation[npcId] = (player.reputation[npcId] || 0) + rep;
           });
         }
+        saveWorld();
         ws.send(JSON.stringify({
           type: 'quest_completed',
           questId: msg.questId,
@@ -1122,6 +1119,7 @@ function handleMessage(ws, playerId, msg) {
       // Buff skill (no damage/heal, just applies buff)
       if (skill.buff && skill.range === 0) {
         // Apply buff to player (simplified: just notify client)
+        saveWorld();
         ws.send(JSON.stringify({ type: 'skill_used', skillId: skillTier, skillName: skill.name, mp: player.mp, buff: skill.buff }));
         break;
       }
@@ -1130,6 +1128,7 @@ function handleMessage(ws, playerId, msg) {
       if (skill.healMulti > 0) {
         const healAmt = Math.floor(player.maxHp * skill.healMulti);
         player.hp = Math.min(player.maxHp, player.hp + healAmt);
+        saveWorld();
         ws.send(JSON.stringify({ type: 'skill_used', skillId: skillTier, skillName: skill.name, hp: player.hp, mp: player.mp, heal: healAmt }));
         break;
       }
@@ -1213,6 +1212,7 @@ function handleMessage(ws, playerId, msg) {
         const lootEntry = groundLoot[msg.lootId];
         addLootToPlayer(player, lootEntry.items);
         delete groundLoot[msg.lootId];
+        saveWorld();
         broadcast({ type: 'ground_loot_remove', lootId: msg.lootId });
         ws.send(JSON.stringify({ type: 'inventory_update', inventory: player.inventory }));
       }
@@ -1251,6 +1251,7 @@ setInterval(() => {
 setInterval(() => { saveWorld(); console.log('[SAVE]'); }, 5 * 60 * 1000);
 process.on('SIGINT', () => { saveWorld(); process.exit(0); });
 process.on('SIGTERM', () => { saveWorld(); process.exit(0); });
+process.on('unhandledRejection', (reason) => { console.error('[UNHANDLED REJECTION]', reason); });
 
 server.listen(PORT, () => {
   console.log(`\n⚔️  Zenithia Server running on http://localhost:${PORT}`);
