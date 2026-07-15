@@ -3269,8 +3269,8 @@ canvas.addEventListener('click', (e) => {
     -(e.clientY / window.innerHeight) * 2 + 1
   );
 
-  const raycaster = new THREE.Raycaster();
-  raycaster.setFromCamera(mouse2, state.camera);
+  const raycaster2 = new THREE.Raycaster();
+  raycaster2.setFromCamera(mouse2, state.camera);
 
   // === 1. Raycast directly against NPC + Monster meshes ===
   const clickTargets = [];
@@ -3290,7 +3290,7 @@ canvas.addEventListener('click', (e) => {
     pm.traverse?.(child => { if (child.isMesh) clickTargets.push(child); });
   }
 
-  const hits = raycaster.intersectObjects(clickTargets, false);
+  const hits = raycaster2.intersectObjects(clickTargets, false);
   if (hits.length > 0) {
     const hit = hits[0].object;
     // Walk up to find userData with id
