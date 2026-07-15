@@ -2169,7 +2169,7 @@ let _zonePortals = []; // 3D portal meshes
 let _zoneDecorations = []; // 3D decoration meshes
 
 function enterZone(zoneData) {
-  
+  console.log('[ZONE] enterZone:', zoneData?.id, 'groundColor:', zoneData?.groundColor, 'portals:', zoneData?.portals?.length, 'playerX:', zoneData?.playerX, 'playerZ:', zoneData?.playerZ);
   _currentZone = zoneData;
   // Update player position from server
   if (zoneData.playerX !== undefined && state.player) {
@@ -2186,13 +2186,7 @@ function enterZone(zoneData) {
       state.camera.lookAt(zoneData.playerX, 0, zoneData.playerZ);
     }
   }
-  // Rebuild terrain for new zone
-  const oldTerrain = state.scene?.getObjectByName('terrain');
-  if (oldTerrain) {
-    state.scene.remove(oldTerrain);
-  }
-  buildTerrain(state.scene);
-  // Change ground color (after rebuild)
+  // Change ground color
   const ground = state.scene?.getObjectByName('ground');
   if (ground && ground.material) {
     ground.material.color.setHex(zoneData.groundColor || 0x7CBA3F);
