@@ -536,7 +536,8 @@ function handleAttack(ws, playerId, msg) {
       zen: zenGain,
       loot,
       level: player.level,
-      expToNext: xpNeeded,
+      expToNext: 100 + (player.level - 1) * 200,
+      currentXp: player.xp,
       leveledUp,
       hp: player.hp,
       maxHp: player.maxHp,
@@ -1150,7 +1151,7 @@ function handleMessage(ws, playerId, msg) {
         broadcast({
           type: 'monster_killed', monsterId: monster.id, killerId: playerId,
           xp: xpGain, zen: zenGain, loot, level: player.level,
-          expToNext: xpNeeded, leveledUp,
+          expToNext: 100 + (player.level - 1) * 200, currentXp: player.xp, leveledUp,
           hp: player.hp, maxHp: player.maxHp, mp: player.mp, maxMp: player.maxMp,
         });
         broadcast({ type: 'monster_died', monsterId: monster.id });

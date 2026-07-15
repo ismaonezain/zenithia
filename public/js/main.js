@@ -873,10 +873,14 @@ function handleServerMessage(msg) {
       addChatMessage('System', `Defeated! +${msg.xp} XP | Loot: ${lootText}`);
       if (msg.hp !== undefined) updatePlayerHP(msg.hp, msg.maxHp);
       if (msg.mp !== undefined) updatePlayerMP(msg.mp, msg.maxMp);
-      if (msg.xp !== undefined) state.player.xp = (state.player.xp || 0) + msg.xp;
-      // Update XP bar
-      const xpNeeded = 100 + ((state.player.level || 1) - 1) * 200;
-      updatePlayerXP(state.player.xp || 0, xpNeeded);
+      // Use server's authoritative XP value (already includes level-up subtract)
+      if (msg.currentXp !== undefined) {
+        state.player.xp = msg.currentXp;
+      } else if (msg.xp !== undefined) {
+        state.player.xp = (state.player.xp || 0) + msg.xp;
+      }
+      // Update XP bar with server's expToNext
+      updatePlayerXP(state.player.xp || 0, msg.expToNext || 100);
       if (msg.leveledUp) {
         state.player.level = msg.level;
         state.player.maxHp = msg.maxHp;
@@ -887,8 +891,7 @@ function handleServerMessage(msg) {
         updatePlayerLevel(msg.level);
         updatePlayerHP(msg.hp, msg.maxHp);
         updatePlayerMP(msg.mp, msg.maxMp);
-        const newXpNeeded = 100 + (msg.level - 1) * 200;
-        updatePlayerXP(state.player.xp || 0, newXpNeeded);
+        // XP bar already updated above with server's currentXp + expToNext
         updateSkillPointsUI();
         showLevelUpEffect();
         addChatMessage('System', `🎉 Level Up! Now Lv.${msg.level} (+1 SP)`);
